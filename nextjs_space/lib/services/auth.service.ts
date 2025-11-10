@@ -1,19 +1,26 @@
+/**
+ * Authentication Service (Optimized)
+ * Handles all authentication-related operations with improved error handling and best practices
+ */
 
 'use client'
 
 import { createClient } from '../supabase/client'
-import type { 
-  AuthUser, 
-  AuthState, 
-  LoginCredentials, 
-  RegisterData, 
-  UpdateProfileData, 
+import type {
+  AuthUser,
+  AuthState,
+  LoginCredentials,
+  RegisterData,
+  UpdateProfileData,
   ChangePasswordData,
   SessionConfig,
   AuthError,
-  AssignedLocation 
+  AssignedLocation
 } from '../types/auth'
-import { STORAGE_KEYS, DEFAULT_PERMISSIONS } from '../types/auth'
+import { STORAGE_KEYS, DEFAULT_PERMISSIONS, AUTH_CONSTANTS } from '../constants/auth'
+import { ROUTES } from '../constants/routes'
+import { parseAuthError, logError, AuthenticationError } from '../utils/error-handler'
+import { logger } from '../utils/logger'
 import type { User } from '@supabase/supabase-js'
 
 class AuthService {
@@ -29,15 +36,20 @@ class AuthService {
     }
   }
 
-  // Initialize authentication state
+  /**
+   * Initialize authentication state
+   */
   async initializeAuth(): Promise<void> {
     if (this.initialized) return
-    
+
     try {
       this.setLoading(true)
-      
+      logger.info('Initializing authentication')
+
       // Listen to auth changes
       this.supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+        logger.debug('Auth state changed', { event })
+
         if (event === 'SIGNED_IN' && session?.user) {
           await this.loadUserProfile(session.user.id)
         } else if (event === 'SIGNED_OUT') {
@@ -52,18 +64,22 @@ class AuthService {
       }
 
       this.initialized = true
+      logger.info('Authentication initialized successfully')
     } catch (error) {
-      console.error('Error initializing auth:', error)
+      logger.error('Error initializing auth', { error })
       this.handleAuthError(error as AuthError)
     } finally {
       this.setLoading(false)
     }
   }
 
-  // Login method
+  /**
+   * Login with email and password
+   */
   async login(credentials: LoginCredentials): Promise<AuthUser> {
     try {
       this.setLoading(true)
+      logger.info('Attempting login', { email: credentials.email })
 
       const { data, error } = await this.supabase.auth.signInWithPassword({
         email: credentials.email,
@@ -71,11 +87,11 @@ class AuthService {
       })
 
       if (error) throw error
-      if (!data.user) throw new Error('No user returned from login')
+      if (!data.user) throw new AuthenticationError('No user returned from login')
 
       // Load full user profile
       const user = await this.loadUserProfile(data.user.id)
-      
+
       // Create session record
       await this.createUserSession({
         ipAddress: await this.getClientIP(),
@@ -87,18 +103,23 @@ class AuthService {
         localStorage.setItem(STORAGE_KEYS.REMEMBER_ME, 'true')
       }
 
+      logger.info('Login successful', { userId: user.id })
       return user
     } catch (error) {
+      logger.error('Login failed', { error })
       throw this.handleAuthError(error as AuthError)
     } finally {
       this.setLoading(false)
     }
   }
 
-  // Register method
+  /**
+   * Register new user with email and password
+   */
   async register(data: RegisterData): Promise<AuthUser> {
     try {
       this.setLoading(true)
+      logger.info('Attempting registration', { email: data.email })
 
       const { data: authData, error } = await this.supabase.auth.signUp({
         email: data.email,
@@ -106,7 +127,7 @@ class AuthService {
       })
 
       if (error) throw error
-      if (!authData.user) throw new Error('No user returned from registration')
+      if (!authData.user) throw new AuthenticationError('No user returned from registration')
 
       // Create user profile in pos_core.users
       const { error: profileError } = await this.supabase
@@ -117,7 +138,7 @@ class AuthService {
           first_name: data.firstName,
           last_name: data.lastName,
           phone: data.phone || null,
-          role_id: 3, // Default to 'Seller' role
+          role_id: AUTH_CONSTANTS.ROLES.SELLER, // Default to 'Seller' role
           is_active: true,
           email_verified: false,
           metadata: { acceptedTerms: data.acceptTerms }
@@ -128,21 +149,27 @@ class AuthService {
       // Load the complete user profile
       const user = await this.loadUserProfile(authData.user.id)
 
+      logger.info('Registration successful', { userId: user.id })
       return user
     } catch (error) {
+      logger.error('Registration failed', { error })
       throw this.handleAuthError(error as AuthError)
     } finally {
       this.setLoading(false)
     }
   }
 
-  // Google OAuth login
+  /**
+   * Login with Google OAuth
+   */
   async loginWithGoogle(): Promise<void> {
     try {
+      logger.info('Initiating Google OAuth login')
+
       const { error } = await this.supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: AUTH_CONSTANTS.OAUTH_PROVIDERS.GOOGLE,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}${ROUTES.AUTH.CALLBACK}`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -152,11 +179,14 @@ class AuthService {
 
       if (error) throw error
     } catch (error) {
+      logger.error('Google OAuth login failed', { error })
       throw this.handleAuthError(error as AuthError)
     }
   }
 
-  // Check if user profile is complete (for OAuth users)
+  /**
+   * Check if user profile is complete (for OAuth users)
+   */
   async isProfileComplete(userId: string): Promise<boolean> {
     try {
       const { data, error } = await this.supabase
@@ -170,15 +200,18 @@ class AuthService {
       // Profile is complete if both first_name and last_name exist
       return !!(data?.first_name && data?.last_name)
     } catch (error) {
-      console.error('Error checking profile completeness:', error)
+      logger.error('Error checking profile completeness', { error, userId })
       return false
     }
   }
 
-  // Complete OAuth user profile
+  /**
+   * Complete OAuth user profile
+   */
   async completeOAuthProfile(userId: string, data: { firstName: string; lastName: string; phone?: string }): Promise<AuthUser> {
     try {
       this.setLoading(true)
+      logger.info('Completing OAuth profile', { userId })
 
       const { error } = await this.supabase
         .from('pos_core.users')
@@ -195,15 +228,20 @@ class AuthService {
       // Load the complete user profile
       return await this.loadUserProfile(userId)
     } catch (error) {
+      logger.error('Failed to complete OAuth profile', { error, userId })
       throw this.handleAuthError(error as AuthError)
     } finally {
       this.setLoading(false)
     }
   }
 
-  // Handle OAuth callback - ensure user profile exists
+  /**
+   * Handle OAuth callback - ensure user profile exists
+   */
   async handleOAuthCallback(userId: string, email: string): Promise<{ needsProfileCompletion: boolean; user?: AuthUser }> {
     try {
+      logger.info('Handling OAuth callback', { userId, email })
+
       // Check if user profile exists
       const { data: existingUser, error: fetchError } = await this.supabase
         .from('pos_core.users')
@@ -213,15 +251,17 @@ class AuthService {
 
       // If user doesn't exist, create basic profile
       if (fetchError || !existingUser) {
+        logger.info('Creating new OAuth user profile', { userId })
+
         const { error: insertError } = await this.supabase
           .from('pos_core.users')
           .insert({
             id: userId,
             email: email,
-            role_id: 3, // Default to 'Seller' role
+            role_id: AUTH_CONSTANTS.ROLES.SELLER,
             is_active: true,
             email_verified: true, // OAuth users are considered verified
-            metadata: { oauth_provider: 'google' }
+            metadata: { oauth_provider: AUTH_CONSTANTS.OAUTH_PROVIDERS.GOOGLE }
           })
 
         if (insertError) throw insertError
@@ -241,39 +281,49 @@ class AuthService {
       const user = await this.loadUserProfile(userId)
       return { needsProfileCompletion: false, user }
     } catch (error) {
+      logger.error('OAuth callback failed', { error, userId })
       throw this.handleAuthError(error as AuthError)
     }
   }
 
-  // Logout method
+  /**
+   * Logout user
+   */
   async logout(): Promise<void> {
     try {
       this.setLoading(true)
-      
+      logger.info('Logging out user')
+
       // End session record
       await this.endUserSession()
-      
+
       // Sign out from Supabase
       await this.supabase.auth.signOut()
-      
+
       await this.handleSignOut()
+      logger.info('Logout successful')
     } catch (error) {
-      console.error('Error during logout:', error)
+      logger.error('Error during logout', { error })
     } finally {
       this.setLoading(false)
     }
   }
 
-  // Reset password
+  /**
+   * Reset password
+   */
   async resetPassword(email: string): Promise<void> {
     const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`
+      redirectTo: `${window.location.origin}${ROUTES.AUTH.RESET_PASSWORD}`
     })
-    
+
     if (error) throw this.handleAuthError(error as AuthError)
+    logger.info('Password reset email sent', { email })
   }
 
-  // Change password
+  /**
+   * Change password
+   */
   async changePassword(data: ChangePasswordData): Promise<void> {
     if (data.newPassword !== data.confirmPassword) {
       throw new Error('New passwords do not match')
@@ -282,13 +332,16 @@ class AuthService {
     const { error } = await this.supabase.auth.updateUser({
       password: data.newPassword
     })
-    
+
     if (error) throw this.handleAuthError(error as AuthError)
+    logger.info('Password changed successfully')
   }
 
-  // Update profile
+  /**
+   * Update user profile
+   */
   async updateProfile(data: UpdateProfileData): Promise<AuthUser> {
-    if (!this.currentUser) throw new Error('No authenticated user')
+    if (!this.currentUser) throw new AuthenticationError('No authenticated user')
 
     const { error } = await this.supabase
       .from('pos_core.users')
@@ -304,10 +357,14 @@ class AuthService {
     if (error) throw this.handleAuthError(error as AuthError)
 
     // Reload user profile
+    logger.info('Profile updated successfully', { userId: this.currentUser.id })
     return await this.loadUserProfile(this.currentUser.id)
   }
 
-  // Load user profile with relations
+  /**
+   * Load user profile with relations
+   * @private
+   */
   private async loadUserProfile(userId: string): Promise<AuthUser> {
     const { data, error } = await this.supabase
       .from('pos_core.users')
@@ -327,7 +384,7 @@ class AuthService {
       .single()
 
     if (error) throw this.handleAuthError(error as AuthError)
-    if (!data) throw new Error('User not found')
+    if (!data) throw new AuthenticationError('User not found')
 
     // Type assertion for data since we're using custom schemas
     const userData = data as any
@@ -339,7 +396,7 @@ class AuthService {
       firstName: userData.first_name || '',
       lastName: userData.last_name || '',
       phone: userData.phone || undefined,
-      roleId: userData.role_id || 3,
+      roleId: userData.role_id || AUTH_CONSTANTS.ROLES.SELLER,
       roleName: userData.role?.name || 'Seller',
       permissions: this.parsePermissions(userData.role?.permissions),
       defaultLocationId: userData.default_location_id || undefined,
@@ -365,10 +422,12 @@ class AuthService {
     return user
   }
 
-  // Permission helpers
+  /**
+   * Permission helpers
+   */
   hasPermission(permission: string): boolean {
     if (!this.currentUser) return false
-    
+
     const [module, action] = permission.split(':')
     return this.currentUser.permissions[module]?.includes(action) || false
   }
@@ -382,7 +441,9 @@ class AuthService {
     return permissions.some(permission => this.hasPermission(permission))
   }
 
-  // Session management
+  /**
+   * Session management
+   */
   async createUserSession(config: SessionConfig = {}): Promise<void> {
     if (!this.currentUser) return
 
@@ -400,12 +461,12 @@ class AuthService {
         .single()
 
       if (error) throw error
-      
+
       if (data?.id) {
         localStorage.setItem(STORAGE_KEYS.SESSION_ID, data.id.toString())
       }
     } catch (error) {
-      console.error('Error creating session:', error)
+      logger.error('Error creating session', { error })
     }
   }
 
@@ -416,17 +477,19 @@ class AuthService {
     try {
       await this.supabase
         .from('pos_core.user_sessions')
-        .update({ 
+        .update({
           ended_at: new Date().toISOString(),
-          is_active: false 
+          is_active: false
         })
         .eq('id', parseInt(sessionId))
     } catch (error) {
-      console.error('Error ending session:', error)
+      logger.error('Error ending session', { error })
     }
   }
 
-  // Getters
+  /**
+   * Getters
+   */
   getCurrentUser(): AuthUser | null {
     return this.currentUser
   }
@@ -439,26 +502,30 @@ class AuthService {
     return this.loading
   }
 
-  // State management
+  /**
+   * State management
+   */
   subscribe(callback: (state: AuthState) => void): () => void {
     this.authListeners.push(callback)
-    
+
     // Immediately call with current state
     callback({
       user: this.currentUser,
       loading: this.loading,
       initialized: this.initialized
     })
-    
+
     return () => {
       this.authListeners = this.authListeners.filter(listener => listener !== callback)
     }
   }
 
-  // Private methods
+  /**
+   * Private helper methods
+   */
   private parsePermissions(permissions: any): Record<string, string[]> {
-    if (!permissions) return {}
-    
+    if (!permissions) return DEFAULT_PERMISSIONS['Seller'] || {}
+
     try {
       if (typeof permissions === 'string') {
         return JSON.parse(permissions)
@@ -503,7 +570,7 @@ class AuthService {
       loading: this.loading,
       initialized: this.initialized
     }
-    
+
     this.authListeners.forEach(listener => listener(state))
   }
 
@@ -522,13 +589,8 @@ class AuthService {
   }
 
   private handleAuthError(error: any): AuthError {
-    const authError: AuthError = {
-      code: error.code || 'AUTH_ERROR',
-      message: error.message || 'An authentication error occurred',
-      details: error
-    }
-    
-    console.error('Auth Error:', authError)
+    const authError = parseAuthError(error)
+    logError(authError, 'AuthService')
     return authError
   }
 

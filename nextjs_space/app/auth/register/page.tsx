@@ -9,10 +9,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { useAuth } from '@/lib/auth/use-auth'
+import { useAuth } from '@/lib/hooks/use-auth'
 import { RegisterData } from '@/lib/types/auth'
 import { useToast } from '@/hooks/use-toast'
 import { Eye, EyeOff, Lock, Mail, User, Phone, UserPlus } from 'lucide-react'
+import { GoogleOAuthButton } from '@/components/auth/GoogleOAuthButton'
+import { ROUTES, MESSAGES, AUTH_CONSTANTS } from '@/lib/constants'
+import { getUserFriendlyMessage } from '@/lib/utils/error-handler'
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState<RegisterData>({
@@ -50,12 +53,11 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Validation
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
       toast({
-        title: "Error",
-        description: "Please fill in all required fields",
+        ...MESSAGES.AUTH.MISSING_FIELDS,
         variant: "destructive",
       })
       return
@@ -63,17 +65,15 @@ export default function RegisterPage() {
 
     if (formData.password !== confirmPassword) {
       toast({
-        title: "Error",
-        description: "Passwords do not match",
+        ...MESSAGES.AUTH.PASSWORDS_NOT_MATCH,
         variant: "destructive",
       })
       return
     }
 
-    if (passwordStrength < 3) {
+    if (passwordStrength < 3 || formData.password.length < AUTH_CONSTANTS.PASSWORD.MIN_LENGTH) {
       toast({
-        title: "Weak password",
-        description: "Please choose a stronger password with at least 8 characters",
+        ...MESSAGES.AUTH.WEAK_PASSWORD,
         variant: "destructive",
       })
       return
@@ -81,8 +81,7 @@ export default function RegisterPage() {
 
     if (!formData.acceptTerms) {
       toast({
-        title: "Error",
-        description: "Please accept the terms and conditions",
+        ...MESSAGES.AUTH.ACCEPT_TERMS,
         variant: "destructive",
       })
       return
@@ -92,15 +91,12 @@ export default function RegisterPage() {
 
     try {
       await register(formData)
-      toast({
-        title: "Account created!",
-        description: "Your account has been created successfully. Please check your email for verification.",
-      })
-      router.push('/dashboard')
+      toast(MESSAGES.AUTH.REGISTER_SUCCESS)
+      router.push(ROUTES.DASHBOARD)
     } catch (error: any) {
       toast({
-        title: "Registration failed",
-        description: error.message || "Failed to create account",
+        ...MESSAGES.AUTH.REGISTER_FAILED,
+        description: getUserFriendlyMessage(error),
         variant: "destructive",
       })
     } finally {
@@ -131,6 +127,19 @@ export default function RegisterPage() {
         <p className="text-gray-600">
           Get started with your POS system today
         </p>
+      </div>
+
+      {/* Google OAuth Button */}
+      <GoogleOAuthButton mode="register" />
+
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-300"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 bg-white text-gray-500">Or register with email</span>
+        </div>
       </div>
 
       {/* Registration Form */}
@@ -315,11 +324,11 @@ export default function RegisterPage() {
           />
           <Label htmlFor="accept-terms" className="text-sm text-gray-600 leading-relaxed">
             I agree to the{' '}
-            <Link href="/terms" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link href={ROUTES.TERMS} className="font-medium text-blue-600 hover:text-blue-500">
               Terms and Conditions
             </Link>
             {' '}and{' '}
-            <Link href="/privacy" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link href={ROUTES.PRIVACY} className="font-medium text-blue-600 hover:text-blue-500">
               Privacy Policy
             </Link>
           </Label>
@@ -349,8 +358,8 @@ export default function RegisterPage() {
       <div className="text-center">
         <p className="text-sm text-gray-600">
           Already have an account?{' '}
-          <Link 
-            href="/auth/login" 
+          <Link
+            href={ROUTES.AUTH.LOGIN}
             className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
           >
             Sign in here

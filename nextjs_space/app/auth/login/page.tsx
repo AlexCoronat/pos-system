@@ -9,10 +9,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { useAuth } from '@/lib/auth/use-auth'
+import { useAuth } from '@/lib/hooks/use-auth'
 import { LoginCredentials } from '@/lib/types/auth'
 import { useToast } from '@/hooks/use-toast'
 import { Eye, EyeOff, Lock, Mail, LogIn } from 'lucide-react'
+import { GoogleOAuthButton } from '@/components/auth/GoogleOAuthButton'
+import { ROUTES, MESSAGES } from '@/lib/constants'
+import { getUserFriendlyMessage } from '@/lib/utils/error-handler'
 
 export default function LoginPage() {
   const [formData, setFormData] = useState<LoginCredentials>({
@@ -28,15 +31,14 @@ export default function LoginPage() {
   const { login } = useAuth()
   const { toast } = useToast()
 
-  const redirectTo = searchParams?.get('redirectTo') || '/dashboard'
+  const redirectTo = searchParams?.get('redirectTo') || ROUTES.DASHBOARD
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.email || !formData.password) {
       toast({
-        title: "Error",
-        description: "Please fill in all required fields",
+        ...MESSAGES.AUTH.MISSING_FIELDS,
         variant: "destructive",
       })
       return
@@ -46,15 +48,12 @@ export default function LoginPage() {
 
     try {
       await login(formData)
-      toast({
-        title: "Welcome back!",
-        description: "You have been successfully logged in.",
-      })
+      toast(MESSAGES.AUTH.LOGIN_SUCCESS)
       router.push(redirectTo)
     } catch (error: any) {
       toast({
-        title: "Login failed",
-        description: error.message || "Invalid email or password",
+        ...MESSAGES.AUTH.LOGIN_FAILED,
+        description: getUserFriendlyMessage(error),
         variant: "destructive",
       })
     } finally {
@@ -157,8 +156,8 @@ export default function LoginPage() {
             </Label>
           </div>
           
-          <Link 
-            href="/auth/recover-password" 
+          <Link
+            href={ROUTES.AUTH.RECOVER_PASSWORD}
             className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors"
           >
             Forgot your password?
@@ -185,12 +184,25 @@ export default function LoginPage() {
         </Button>
       </form>
 
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-300"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 bg-white text-gray-500">Or continue with</span>
+        </div>
+      </div>
+
+      {/* Google OAuth Button */}
+      <GoogleOAuthButton mode="login" />
+
       {/* Register Link */}
       <div className="text-center">
         <p className="text-sm text-gray-600">
           Don&apos;t have an account?{' '}
-          <Link 
-            href="/auth/register" 
+          <Link
+            href={ROUTES.AUTH.REGISTER}
             className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
           >
             Create one now

@@ -1,0 +1,97 @@
+/**
+ * Authentication constants
+ */
+
+export const AUTH_CONSTANTS = {
+  // Default role IDs
+  ROLES: {
+    ADMIN: 1,
+    MANAGER: 2,
+    SELLER: 3,
+    SUPPORT: 4,
+    INVENTORY_MANAGER: 5,
+  },
+
+  // Session configuration
+  SESSION: {
+    MAX_AGE: 30 * 24 * 60 * 60, // 30 days in seconds
+    IDLE_TIMEOUT: 60 * 60, // 1 hour in seconds
+  },
+
+  // Password requirements
+  PASSWORD: {
+    MIN_LENGTH: 8,
+    REQUIRE_UPPERCASE: true,
+    REQUIRE_LOWERCASE: true,
+    REQUIRE_NUMBER: true,
+    REQUIRE_SPECIAL_CHAR: false,
+  },
+
+  // OAuth providers
+  OAUTH_PROVIDERS: {
+    GOOGLE: 'google',
+    // Add more providers as needed
+  },
+} as const
+
+// Storage keys (from auth.ts but centralized here)
+export const STORAGE_KEYS = {
+  USER_DATA: 'pos_user_data',
+  SELECTED_LOCATION: 'pos_selected_location',
+  SESSION_ID: 'pos_session_id',
+  REMEMBER_ME: 'pos_remember_me',
+} as const
+
+// Permission modules and actions
+export const PERMISSIONS = {
+  MODULES: {
+    SALES: 'sales',
+    INVENTORY: 'inventory',
+    CUSTOMERS: 'customers',
+    REPORTS: 'reports',
+    SETTINGS: 'settings',
+    USERS: 'users',
+    LOCATIONS: 'locations',
+  },
+  ACTIONS: {
+    READ: 'read',
+    CREATE: 'create',
+    UPDATE: 'update',
+    DELETE: 'delete',
+  },
+} as const
+
+// Default role permissions
+export const DEFAULT_PERMISSIONS: Record<string, Record<string, string[]>> = {
+  'Admin': {
+    [PERMISSIONS.MODULES.SALES]: Object.values(PERMISSIONS.ACTIONS),
+    [PERMISSIONS.MODULES.INVENTORY]: Object.values(PERMISSIONS.ACTIONS),
+    [PERMISSIONS.MODULES.CUSTOMERS]: Object.values(PERMISSIONS.ACTIONS),
+    [PERMISSIONS.MODULES.REPORTS]: [PERMISSIONS.ACTIONS.READ],
+    [PERMISSIONS.MODULES.SETTINGS]: [PERMISSIONS.ACTIONS.READ, PERMISSIONS.ACTIONS.UPDATE],
+    [PERMISSIONS.MODULES.USERS]: Object.values(PERMISSIONS.ACTIONS),
+    [PERMISSIONS.MODULES.LOCATIONS]: Object.values(PERMISSIONS.ACTIONS),
+  },
+  'Manager': {
+    [PERMISSIONS.MODULES.SALES]: Object.values(PERMISSIONS.ACTIONS),
+    [PERMISSIONS.MODULES.INVENTORY]: [PERMISSIONS.ACTIONS.READ, PERMISSIONS.ACTIONS.CREATE, PERMISSIONS.ACTIONS.UPDATE],
+    [PERMISSIONS.MODULES.CUSTOMERS]: [PERMISSIONS.ACTIONS.READ, PERMISSIONS.ACTIONS.CREATE, PERMISSIONS.ACTIONS.UPDATE],
+    [PERMISSIONS.MODULES.REPORTS]: [PERMISSIONS.ACTIONS.READ],
+    [PERMISSIONS.MODULES.SETTINGS]: [PERMISSIONS.ACTIONS.READ],
+  },
+  'Seller': {
+    [PERMISSIONS.MODULES.SALES]: [PERMISSIONS.ACTIONS.READ, PERMISSIONS.ACTIONS.CREATE, PERMISSIONS.ACTIONS.UPDATE],
+    [PERMISSIONS.MODULES.CUSTOMERS]: [PERMISSIONS.ACTIONS.READ, PERMISSIONS.ACTIONS.CREATE, PERMISSIONS.ACTIONS.UPDATE],
+    [PERMISSIONS.MODULES.INVENTORY]: [PERMISSIONS.ACTIONS.READ],
+  },
+  'Support': {
+    [PERMISSIONS.MODULES.CUSTOMERS]: [PERMISSIONS.ACTIONS.READ, PERMISSIONS.ACTIONS.UPDATE],
+    [PERMISSIONS.MODULES.INVENTORY]: [PERMISSIONS.ACTIONS.READ],
+    [PERMISSIONS.MODULES.REPORTS]: [PERMISSIONS.ACTIONS.READ],
+  },
+  'Inventory Manager': {
+    [PERMISSIONS.MODULES.INVENTORY]: Object.values(PERMISSIONS.ACTIONS),
+    [PERMISSIONS.MODULES.SALES]: [PERMISSIONS.ACTIONS.READ],
+    [PERMISSIONS.MODULES.REPORTS]: [PERMISSIONS.ACTIONS.READ],
+  },
+}
