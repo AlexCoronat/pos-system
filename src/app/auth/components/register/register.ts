@@ -1,50 +1,46 @@
-import { Component, OnInit, OnDestroy, inject, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { PasswordModule } from 'primeng/password';
 import { FloatLabelModule } from 'primeng/floatlabel';
-import { CheckboxModule } from 'primeng/checkbox';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 
 import { AuthService } from '../../services/auth.service';
-import { LoginCredentials } from '../../../models/auth.models';
+import { RegisterData } from '../../../models/auth.models';
 
 @Component({
-  selector: 'app-login',
+  selector: 'app-register',
   standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    CardModule,
     InputTextModule,
     ButtonModule,
-    CheckboxModule,
     ToastModule,
     PasswordModule,
     FloatLabelModule
   ],
   providers: [MessageService],
-  templateUrl: './login.html',
-  styleUrl: './login.scss',
+  templateUrl: './register.html',
+  styleUrl: './register.scss',
 })
-export class Login implements OnInit, OnDestroy {
+export class Register implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
+  private router = inject(Router);
   private messageService = inject(MessageService);
 
-  @Output() forgotPassword = new EventEmitter<void>();
-  @Output() navigate = new EventEmitter<string>();
-
-  loginForm!: FormGroup;
+  registerForm!: FormGroup;
   loading = false;
   showPassword = false;
+  showConfirmPassword = false;
   private destroy$ = new Subject<void>();
 
   ngOnInit(): void {
@@ -57,49 +53,58 @@ export class Login implements OnInit, OnDestroy {
   }
 
   private initForm(): void {
-    this.loginForm = this.fb.group({
+    this.registerForm = this.fb.group({
+      firstName: ['', [Validators.required, Validators.minLength(2)]],
+      lastName: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]],
-      rememberMe: [false]
+      confirmPassword: ['', [Validators.required]]
+    }, {
+      validators: this.passwordMatchValidator
     });
   }
 
+  private passwordMatchValidator(group: FormGroup): { [key: string]: boolean } | null {
+    const password = group.get('password')?.value;
+    const confirmPassword = group.get('confirmPassword')?.value;
+    return password === confirmPassword ? null : { passwordMismatch: true };
+  }
+
   onSubmit(): void {
-    if (this.loginForm.invalid) {
-      this.markFormGroupTouched(this.loginForm);
+    if (this.registerForm.invalid) {
+      this.markFormGroupTouched(this.registerForm);
       return;
     }
 
     this.loading = true;
-    const credentials: LoginCredentials = {
-      email: this.loginForm.value.email,
-      password: this.loginForm.value.password
+    const registerData: RegisterData = {
+      email: this.registerForm.value.email,
+      password: this.registerForm.value.password,
+      firstName: this.registerForm.value.firstName,
+      lastName: this.registerForm.value.lastName,
+      roleId: 2
     };
 
-    this.authService.login(credentials)
+    this.authService.register(registerData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          // Stop loading before proceeding
-          this.loading = false;
-
           this.messageService.add({
             severity: 'success',
-            summary: 'Bienvenido',
-            detail: `Hola ${response.user.firstName}, inicio de sesión exitoso`
+            summary: 'Registro exitoso',
+            detail: 'Tu cuenta ha sido creada correctamente'
           });
 
-          // Emit navigation event instead of navigating directly.
           setTimeout(() => {
-            this.navigate.emit('/dashboard');
+            this.router.navigate(['/dashboard']);
           }, 500);
         },
         error: (error) => {
           this.loading = false;
           this.messageService.add({
             severity: 'error',
-            summary: 'Error de autenticación',
-            detail: error.message || 'Credenciales inválidas'
+            summary: 'Error en el registro',
+            detail: error.message || 'No se pudo crear la cuenta'
           });
         }
       });
@@ -109,26 +114,29 @@ export class Login implements OnInit, OnDestroy {
     this.showPassword = !this.showPassword;
   }
 
-  goToPasswordRecovery(): void {
-    // Emit an event so the parent unified view handles navigation.
-    this.forgotPassword.emit();
+  toggleConfirmPasswordVisibility(): void {
+    this.showConfirmPassword = !this.showConfirmPassword;
   }
 
-  // Removed loginWithGoogle to make the component independent.
-  // Social login and navigation are handled by the parent unified view.
-
   hasError(field: string, error: string): boolean {
-    const control = this.loginForm.get(field);
+    const control = this.registerForm.get(field);
     return !!(control && control.hasError(error) && (control.dirty || control.touched));
   }
 
   getErrorMessage(field: string): string {
-    const control = this.loginForm.get(field);
+    const control = this.registerForm.get(field);
 
     if (!control) return '';
 
     if (control.hasError('required')) {
-      return field === 'email' ? 'El email es requerido' : 'La contraseña es requerida';
+      const fieldNames: { [key: string]: string } = {
+        firstName: 'El nombre',
+        lastName: 'El apellido',
+        email: 'El email',
+        password: 'La contraseña',
+        confirmPassword: 'La confirmación de contraseña'
+      };
+      return `${fieldNames[field]} es requerido`;
     }
 
     if (control.hasError('email')) {
@@ -137,7 +145,11 @@ export class Login implements OnInit, OnDestroy {
 
     if (control.hasError('minlength')) {
       const minLength = control.errors?.['minlength'].requiredLength;
-      return `La contraseña debe tener al menos ${minLength} caracteres`;
+      return `Debe tener al menos ${minLength} caracteres`;
+    }
+
+    if (field === 'confirmPassword' && this.registerForm.hasError('passwordMismatch')) {
+      return 'Las contraseñas no coinciden';
     }
 
     return '';

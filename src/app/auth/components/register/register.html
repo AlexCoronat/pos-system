@@ -1,0 +1,49 @@
+<form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+  <div class="field">
+    <p-floatlabel variant="on">
+      <input class="w-full" pInputText id="firstName" formControlName="firstName" autocomplete="off" />
+      <label for="firstName" class="block mb-2">
+        Nombre <span class="required">*</span>
+      </label>
+    </p-floatlabel>
+  </div>
+
+  <div class="field">
+    <p-floatlabel variant="on">
+      <input class="w-full" pInputText id="lastName" formControlName="lastName" autocomplete="off" />
+      <label for="lastName" class="block mb-2">
+        Apellido <span class="required">*</span>
+      </label>
+    </p-floatlabel>
+  </div>
+
+  <div class="field">
+    <p-floatlabel variant="on">
+      <input class="w-full" pInputText id="email" formControlName="email" autocomplete="off" />
+      <label for="email" class="block mb-2">
+        Email <span class="required">*</span>
+      </label>
+    </p-floatlabel>
+  </div>
+
+  <div class="field">
+    <p-floatlabel variant="on">
+      <p-password fluid inputId="password" formControlName="password" [toggleMask]="true" />
+      <label for="password">Contraseña <span class="required">*</span></label>
+    </p-floatlabel>
+  </div>
+
+  <div class="field">
+    <p-floatlabel variant="on">
+      <p-password fluid inputId="confirmPassword" formControlName="confirmPassword" [toggleMask]="true" [feedback]="false" />
+      <label for="confirmPassword">Confirmar Contraseña <span class="required">*</span></label>
+    </p-floatlabel>
+  </div>
+
+  <div class="field">
+    <p-button type="submit" label="Crear Cuenta" icon="pi pi-user-plus" [loading]="loading" [disabled]="loading"
+      styleClass="w-full p-button-lg"></p-button>
+  </div>
+</form>
+
+<p-toast position="top-right" [life]="5000"></p-toast>

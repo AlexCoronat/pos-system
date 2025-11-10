@@ -1,0 +1,69 @@
+<div class="auth-container">
+  <div class="auth-wrapper">
+    <div class="auth-left">
+      <div class="auth-left-card">
+        <div class="illustration-container">
+          <div class="illustration-content">
+            <i class="pi pi-shopping-cart illustration-icon"></i>
+            <h1 class="illustration-title">Sistema POS</h1>
+            <p class="illustration-subtitle">Gestión integral para tu papelería</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-right">
+      <div class="auth-form-container">
+        <div class="form-header">
+          <h2>{{ activeTab === 'login' ? 'Bienvenido' : 'Crear Cuenta' }}</h2>
+          <p>{{ activeTab === 'login' ? 'Inicia sesión en tu cuenta' : 'Regístrate para comenzar' }}</p>
+        </div>
+
+        <div class="tabs">
+          <button 
+            class="tab-button" 
+            [class.active]="activeTab === 'login'"
+            (click)="switchTab('login')"
+            type="button">
+            Iniciar Sesión
+          </button>
+          <button 
+            class="tab-button" 
+            [class.active]="activeTab === 'register'"
+            (click)="switchTab('register')"
+            type="button">
+            Registrarse
+          </button>
+        </div>
+
+        <div class="tab-content">
+          <app-login *ngIf="activeTab === 'login'" (forgotPassword)="goToPasswordRecovery()"></app-login>
+          <app-register *ngIf="activeTab === 'register'"></app-register>
+        </div>
+
+        <div class="divider">
+          <span>o continuar con</span>
+        </div>
+
+        <div class="social-login">
+          <p-button 
+            type="button" 
+            label="Google" 
+            icon="pi pi-google" 
+            (click)="loginWithGoogle()"
+            [loading]="loadingGoogle" 
+            [disabled]="loadingGoogle"
+            styleClass="w-full p-button-lg google-button" 
+            severity="secondary">
+          </p-button>
+        </div>
+
+        <div class="auth-footer">
+          <p>© 2024 Sistema POS - Papelería</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p-toast position="top-right" [life]="5000"></p-toast>

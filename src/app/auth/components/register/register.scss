@@ -1,0 +1,26 @@
+form {
+  .field {
+    margin-bottom: 1.5rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .required {
+    color: var(--red-500);
+  }
+}
+
+.recovery-link {
+  color: var(--primary-color);
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+
+  &:hover {
+    color: var(--primary-600);
+    text-decoration: underline;
+  }
+}

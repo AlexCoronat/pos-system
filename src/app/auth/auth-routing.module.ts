@@ -6,7 +6,8 @@
 
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { Login } from '../auth/components/login/login';
+import { AuthView } from './components/auth-view/auth-view';
+import { AuthCallback } from './components/auth-callback/auth-callback';
 import { PasswordRecovery } from './components/password-recovery/password-recovery';
 import { ChangePassword } from './components/change-password/change-password';
 
@@ -18,8 +19,20 @@ const routes: Routes = [
   },
   {
     path: 'login',
-    component: Login,
-    title: 'Iniciar Sesión'
+    component: AuthView,
+    title: 'Iniciar Sesión',
+    data: { mode: 'login' }
+  },
+  {
+    path: 'register',
+    component: AuthView,
+    title: 'Crear Cuenta',
+    data: { mode: 'register' }
+  },
+  {
+    path: 'callback',
+    component: AuthCallback,
+    title: 'Autenticando...'
   },
   {
     path: 'password-recovery',

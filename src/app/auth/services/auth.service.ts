@@ -235,6 +235,34 @@ export class AuthService {
   }
 
   /**
+   * Inicia sesión con Google
+   */
+  loginWithGoogle(): Observable<void> {
+    return from(
+      this.supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      })
+    ).pipe(
+      map(({ error }) => {
+        if (error) {
+          throw this.errorHandler.handleError(error, 'Login con Google');
+        }
+      }),
+      catchError((error) => {
+        throw this.errorHandler.handleError(error, 'Login con Google');
+      })
+    );
+  }
+
+
+  /**
    * Cierra la sesión del usuario
    */
   logout(): Observable<void> {
