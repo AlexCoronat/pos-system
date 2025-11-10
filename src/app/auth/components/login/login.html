@@ -1,0 +1,76 @@
+<div class="login-container">
+  <div class="login-wrapper">
+    <div class="login-left">
+      <div class="login-left-card">
+        <div class="illustration-container">
+          <div class="illustration-content">
+            <i class="pi pi-shopping-cart illustration-icon"></i>
+            <h1 class="illustration-title">Sistema POS</h1>
+            <p class="illustration-subtitle">Gestión integral para tu papelería</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="login-right">
+      <div class="login-form-container">
+        <div class="form-header">
+          <h2>Bienvenido</h2>
+          <p>Inicia sesión en tu cuenta</p>
+        </div>
+
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+          <div class="field">
+            <p-floatlabel variant="on">
+              <input class="w-full" pInputText id="email" formControlName="email" autocomplete="off" />
+              <label for="email" class="block mb-2">
+                Email <span class="required">*</span>
+              </label>
+            </p-floatlabel>
+          </div>
+
+          <div class="field">
+            <p-floatlabel variant="on">
+              <p-password fluid inputId="password" formControlName="password" [toggleMask]="true" />
+              <label for="password">Contraseña <span class="required">*</span></label>
+            </p-floatlabel>
+          </div>
+
+          <div class="field-checkbox">
+            <p-checkbox formControlName="rememberMe" [binary]="true" inputId="rememberMe"></p-checkbox>
+            <label for="rememberMe" class="ml-2">Recordarme</label>
+          </div>
+
+          <div class="field">
+            <p-button type="submit" label="Iniciar Sesión" icon="pi pi-sign-in" [loading]="loading" [disabled]="loading"
+              styleClass="w-full p-button-lg"></p-button>
+          </div>
+
+          <div class="divider">
+            <span>o continuar con</span>
+          </div>
+
+          <div class="field">
+            <p-button type="button" label="Google" icon="pi pi-google" (click)="loginWithGoogle()"
+              [loading]="loadingGoogle" [disabled]="loading || loadingGoogle"
+              styleClass="w-full p-button-lg google-button" severity="secondary"></p-button>
+          </div>
+
+          <div class="field text-center">
+            <div class="flex justify-between">
+              <a class="recovery-link" (click)="goToPasswordRecovery()" tabindex="0">Crea una cuenta</a>
+              <a class="recovery-link" (click)="goToPasswordRecovery()" tabindex="0">¿Olvidaste tu contraseña?</a>
+            </div>
+          </div>
+        </form>
+
+        <div class="login-footer">
+          <p>&copy; 2024 Sistema POS - Papelería</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Messages -->
+<p-toast position="top-right" [life]="5000"></p-toast>
