@@ -74,7 +74,7 @@ export default function CompleteProfilePage() {
       // If address is provided, you could save it to metadata or a separate table
       if (formData.address) {
         await supabase
-          .from('users')
+          .from('pos_core.users')
           .update({
             metadata: { address: formData.address }
           })

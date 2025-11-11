@@ -129,9 +129,9 @@ class AuthService {
       if (error) throw error
       if (!authData.user) throw new AuthenticationError('No user returned from registration')
 
-      // Create user profile in pos_core.users
+      // Create user profile in users
       const { error: profileError } = await this.supabase
-        .from('pos_core.users')
+        .from('users')
         .insert({
           id: authData.user.id,
           email: data.email,
@@ -190,7 +190,7 @@ class AuthService {
   async isProfileComplete(userId: string): Promise<boolean> {
     try {
       const { data, error } = await this.supabase
-        .from('pos_core.users')
+        .from('users')
         .select('first_name, last_name')
         .eq('id', userId)
         .single()
@@ -214,7 +214,7 @@ class AuthService {
       logger.info('Completing OAuth profile', { userId })
 
       const { error } = await this.supabase
-        .from('pos_core.users')
+        .from('users')
         .update({
           first_name: data.firstName,
           last_name: data.lastName,
@@ -244,7 +244,7 @@ class AuthService {
 
       // Check if user profile exists
       const { data: existingUser, error: fetchError } = await this.supabase
-        .from('pos_core.users')
+        .from('users')
         .select('*')
         .eq('id', userId)
         .single()
@@ -254,7 +254,7 @@ class AuthService {
         logger.info('Creating new OAuth user profile', { userId })
 
         const { error: insertError } = await this.supabase
-          .from('pos_core.users')
+          .from('users')
           .insert({
             id: userId,
             email: email,
@@ -344,7 +344,7 @@ class AuthService {
     if (!this.currentUser) throw new AuthenticationError('No authenticated user')
 
     const { error } = await this.supabase
-      .from('pos_core.users')
+      .from('users')
       .update({
         first_name: data.firstName,
         last_name: data.lastName,
@@ -367,7 +367,7 @@ class AuthService {
    */
   private async loadUserProfile(userId: string): Promise<AuthUser> {
     const { data, error } = await this.supabase
-      .from('pos_core.users')
+      .from('users')
       .select(`
         *,
         role:roles!role_id(*),
@@ -411,7 +411,7 @@ class AuthService {
 
     // Update login timestamp
     await this.supabase
-      .from('pos_core.users')
+      .from('users')
       .update({ last_login_at: new Date().toISOString() })
       .eq('id', userId)
 
@@ -449,7 +449,7 @@ class AuthService {
 
     try {
       const { data, error } = await this.supabase
-        .from('pos_core.user_sessions')
+        .from('user_sessions')
         .insert({
           user_id: this.currentUser.id,
           location_id: config.locationId || this.currentUser.defaultLocationId,
@@ -476,7 +476,7 @@ class AuthService {
 
     try {
       await this.supabase
-        .from('pos_core.user_sessions')
+        .from('user_sessions')
         .update({
           ended_at: new Date().toISOString(),
           is_active: false

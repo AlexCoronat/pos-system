@@ -2,6 +2,43 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+/**
+ * Route configuration with role-based access control
+ */
+const ROUTE_CONFIG = {
+  public: ['/', '/auth/login', '/auth/register', '/auth/recover-password', '/auth/reset-password', '/auth/verify-email', '/auth/callback', '/privacy', '/terms', '/test-env'],
+  auth: ['/auth/login', '/auth/register', '/auth/recover-password', '/auth/reset-password'],
+  protected: {
+    '/dashboard': { roles: ['Admin', 'Manager', 'Seller', 'Support', 'Inventory Manager'] },
+    '/sales': { roles: ['Admin', 'Manager', 'Seller'], permissions: ['sales:read'] },
+    '/inventory': { roles: ['Admin', 'Manager', 'Inventory Manager'], permissions: ['inventory:read'] },
+    '/customers': { roles: ['Admin', 'Manager', 'Seller'], permissions: ['customers:read'] },
+    '/suppliers': { roles: ['Admin', 'Manager', 'Inventory Manager'], permissions: ['suppliers:read'] },
+    '/reports': { roles: ['Admin', 'Manager'], permissions: ['reports:read'] },
+    '/users': { roles: ['Admin'], permissions: ['users:read'] },
+    '/settings': { roles: ['Admin', 'Manager'] },
+  }
+}
+
+/**
+ * Check if user has required role
+ */
+function hasRequiredRole(userRole: string, allowedRoles: string[]): boolean {
+  return allowedRoles.includes(userRole)
+}
+
+/**
+ * Check if user has required permission
+ */
+function hasRequiredPermission(userPermissions: Record<string, string[]>, requiredPermissions: string[]): boolean {
+  if (!requiredPermissions || requiredPermissions.length === 0) return true
+
+  return requiredPermissions.some(permission => {
+    const [module, action] = permission.split(':')
+    return userPermissions[module]?.includes(action) || false
+  })
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -33,19 +70,25 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Protected routes
-  const protectedRoutes = ['/dashboard', '/sales', '/inventory', '/customers', '/reports']
-  const authRoutes = ['/auth/login', '/auth/register', '/auth/recover-password']
-  
-  const isProtectedRoute = protectedRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
-  )
-  const isAuthRoute = authRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
+  const pathname = request.nextUrl.pathname
+
+  // Check if route is public
+  const isPublicRoute = ROUTE_CONFIG.public.some(route =>
+    pathname === route || pathname.startsWith(route + '/')
   )
 
-  // Redirect unauthenticated users to login page
-  if (isProtectedRoute && !user) {
+  // Check if route is auth route
+  const isAuthRoute = ROUTE_CONFIG.auth.some(route =>
+    pathname.startsWith(route)
+  )
+
+  // Allow public routes
+  if (isPublicRoute && !Object.keys(ROUTE_CONFIG.protected).some(route => pathname.startsWith(route))) {
+    return supabaseResponse
+  }
+
+  // Redirect unauthenticated users to login
+  if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     url.searchParams.set('redirectTo', request.nextUrl.pathname)
@@ -57,6 +100,72 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
+  }
+
+  // Check role and permission based access for protected routes
+  if (user) {
+    const protectedRoute = Object.entries(ROUTE_CONFIG.protected).find(([route]) =>
+      pathname.startsWith(route)
+    )
+
+    if (protectedRoute) {
+      const [route, config] = protectedRoute
+
+      try {
+        // Fetch user profile with role and permissions
+        const { data: userProfile, error } = await supabase
+          .from('users')
+          .select(`
+            role_id,
+            is_active,
+            role:roles!role_id(name, permissions)
+          `)
+          .eq('id', user.id)
+          .single()
+
+        if (error || !userProfile) {
+          console.error('Error fetching user profile:', error)
+          const url = request.nextUrl.clone()
+          url.pathname = '/auth/login'
+          return NextResponse.redirect(url)
+        }
+
+        // Check if user is active
+        if (!userProfile.is_active) {
+          const url = request.nextUrl.clone()
+          url.pathname = '/auth/login'
+          url.searchParams.set('error', 'account_inactive')
+          return NextResponse.redirect(url)
+        }
+
+        // Supabase returns role as an array due to the foreign key relationship
+        const roleData = Array.isArray(userProfile.role) ? userProfile.role[0] : userProfile.role
+        const userRole = roleData?.name || 'Seller'
+        const userPermissions = typeof roleData?.permissions === 'string'
+          ? JSON.parse(roleData.permissions)
+          : roleData?.permissions || {}
+
+        // Check role access
+        if (config.roles && !hasRequiredRole(userRole, config.roles)) {
+          const url = request.nextUrl.clone()
+          url.pathname = '/dashboard'
+          url.searchParams.set('error', 'access_denied')
+          return NextResponse.redirect(url)
+        }
+
+        // Check permission access
+        if ('permissions' in config && config.permissions && !hasRequiredPermission(userPermissions, config.permissions)) {
+          const url = request.nextUrl.clone()
+          url.pathname = '/dashboard'
+          url.searchParams.set('error', 'insufficient_permissions')
+          return NextResponse.redirect(url)
+        }
+      } catch (error) {
+        console.error('Error checking permissions:', error)
+        // Allow access if there's an error checking permissions (fail open for better UX)
+        // In production, you might want to fail closed instead
+      }
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're

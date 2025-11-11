@@ -31,7 +31,7 @@ export interface Database {
 
 // Custom schema types - since Supabase client may not support custom schemas directly
 export interface POSDatabase {
-  'pos_core.roles': {
+  'roles': {
     Row: {
       id: number
       name: string
@@ -57,7 +57,7 @@ export interface POSDatabase {
       updated_at?: string
     }
   }
-  'pos_core.locations': {
+  'locations': {
     Row: {
       id: number
       name: string
@@ -115,7 +115,7 @@ export interface POSDatabase {
       deleted_at?: string | null
     }
   }
-  'pos_core.users': {
+  'users': {
     Row: {
       id: string  // UUID from Supabase Auth
       email: string
@@ -165,7 +165,7 @@ export interface POSDatabase {
       deleted_at?: string | null
     }
   }
-  'pos_core.user_locations': {
+  'user_locations': {
     Row: {
       id: number
       user_id: string
@@ -183,7 +183,7 @@ export interface POSDatabase {
       is_primary?: boolean
     }
   }
-  'pos_core.user_sessions': {
+  'user_sessions': {
     Row: {
       id: number
       user_id: string

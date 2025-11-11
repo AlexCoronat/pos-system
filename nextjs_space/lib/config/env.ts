@@ -1,40 +1,39 @@
 /**
  * Environment variables configuration
  * Centralized access to environment variables with type safety
+ * 
+ * IMPORTANT: Variables de entorno en Next.js
+ * - Las variables que empiezan con NEXT_PUBLIC_ están disponibles en el cliente
+ * - Otras variables solo están disponibles en el servidor
+ * - process.env debe accederse con notación de punto, no con corchetes
  */
 
-const getEnvVar = (key: string): string => {
-  const value = process.env[key]
-  if (!value) {
-    throw new Error(`Missing environment variable: ${key}`)
-  }
-  return value
+// Acceso directo a las variables - evaluadas en tiempo de construcción
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'POS System'
+const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+
+// Validación en tiempo de construcción
+if (!SUPABASE_URL) {
+  throw new Error('Missing environment variable: NEXT_PUBLIC_SUPABASE_URL')
 }
 
-const getOptionalEnvVar = (key: string, defaultValue: string = ''): string => {
-  return process.env[key] || defaultValue
+if (!SUPABASE_ANON_KEY) {
+  throw new Error('Missing environment variable: NEXT_PUBLIC_SUPABASE_ANON_KEY')
 }
 
-// Use getters to defer evaluation until access time
 export const env = {
-  // Supabase
+  // Supabase - disponibles en cliente y servidor
   supabase: {
-    get url() {
-      return getEnvVar('NEXT_PUBLIC_SUPABASE_URL')
-    },
-    get anonKey() {
-      return getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY')
-    },
+    url: SUPABASE_URL,
+    anonKey: SUPABASE_ANON_KEY,
   },
 
   // App
   app: {
-    get name() {
-      return getOptionalEnvVar('NEXT_PUBLIC_APP_NAME', 'POS System')
-    },
-    get url() {
-      return getOptionalEnvVar('NEXTAUTH_URL', 'http://localhost:3000')
-    },
+    name: APP_NAME,
+    url: NEXTAUTH_URL,
   },
 
   // Node environment

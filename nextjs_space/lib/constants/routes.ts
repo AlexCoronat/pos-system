@@ -15,10 +15,13 @@ export const ROUTES = {
     COMPLETE_PROFILE: '/auth/complete-profile',
     RECOVER_PASSWORD: '/auth/recover-password',
     RESET_PASSWORD: '/auth/reset-password',
+    VERIFY_EMAIL: '/auth/verify-email',
   },
 
   // App routes
   DASHBOARD: '/dashboard',
+  SESSIONS: '/dashboard/sessions',
+  PROFILE: '/dashboard/profile',
 
   // Legal routes
   PRIVACY: '/privacy',
@@ -45,6 +48,7 @@ export const isPublicRoute = (pathname: string): boolean => {
     ROUTES.AUTH.CALLBACK,
     ROUTES.AUTH.RECOVER_PASSWORD,
     ROUTES.AUTH.RESET_PASSWORD,
+    ROUTES.AUTH.VERIFY_EMAIL,
     ROUTES.PRIVACY,
     ROUTES.TERMS,
   ]

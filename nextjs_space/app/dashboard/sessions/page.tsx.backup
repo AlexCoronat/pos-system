@@ -1,0 +1,373 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { useAuth } from '@/lib/hooks/use-auth'
+import { useToast } from '@/hooks/use-toast'
+import { createClient } from '@/lib/supabase/client'
+import { Laptop, Smartphone, Tablet, Globe, Clock, MapPin, XCircle, CheckCircle, RefreshCw } from 'lucide-react'
+
+interface Session {
+  id: number
+  user_id: string
+  location_id: number | null
+  location_name?: string
+  ip_address: string | null
+  user_agent: string | null
+  is_active: boolean
+  started_at: string
+  ended_at: string | null
+}
+
+export default function SessionsPage() {
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [terminatingSession, setTerminatingSession] = useState<number | null>(null)
+
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/auth/login')
+      return
+    }
+    loadSessions()
+  }, [user, router])
+
+  const loadSessions = async () => {
+    setIsLoading(true)
+    try {
+      const supabase = createClient()
+
+      const { data, error } = await supabase
+        .from('pos_core.user_sessions')
+        .select(`
+          *,
+          location:locations(name)
+        `)
+        .eq('user_id', user?.id)
+        .order('started_at', { ascending: false })
+        .limit(20)
+
+      if (error) throw error
+
+      // Transform the data
+      const transformedSessions = data.map((session: any) => ({
+        ...session,
+        location_name: session.location?.name
+      }))
+
+      setSessions(transformedSessions)
+    } catch (error: any) {
+      console.error('Error loading sessions:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load sessions",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const terminateSession = async (sessionId: number) => {
+    setTerminatingSession(sessionId)
+    try {
+      const supabase = createClient()
+
+      const { error } = await supabase
+        .from('pos_core.user_sessions')
+        .update({
+          ended_at: new Date().toISOString(),
+          is_active: false
+        })
+        .eq('id', sessionId)
+
+      if (error) throw error
+
+      toast({
+        title: "Session terminated",
+        description: "The session has been successfully terminated",
+      })
+
+      // Reload sessions
+      await loadSessions()
+    } catch (error: any) {
+      console.error('Error terminating session:', error)
+      toast({
+        title: "Error",
+        description: "Failed to terminate session",
+        variant: "destructive",
+      })
+    } finally {
+      setTerminatingSession(null)
+    }
+  }
+
+  const terminateAllSessions = async () => {
+    if (!confirm('Are you sure you want to terminate all other sessions? You will remain logged in on this device.')) {
+      return
+    }
+
+    try {
+      const supabase = createClient()
+      const currentSessionId = localStorage.getItem('session_id')
+
+      const { error } = await supabase
+        .from('pos_core.user_sessions')
+        .update({
+          ended_at: new Date().toISOString(),
+          is_active: false
+        })
+        .eq('user_id', user?.id)
+        .eq('is_active', true)
+        .neq('id', currentSessionId ? parseInt(currentSessionId) : 0)
+
+      if (error) throw error
+
+      toast({
+        title: "All sessions terminated",
+        description: "All other sessions have been successfully terminated",
+      })
+
+      // Reload sessions
+      await loadSessions()
+    } catch (error: any) {
+      console.error('Error terminating sessions:', error)
+      toast({
+        title: "Error",
+        description: "Failed to terminate sessions",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const getDeviceIcon = (userAgent: string | null) => {
+    if (!userAgent) return <Laptop className="w-5 h-5" />
+
+    const ua = userAgent.toLowerCase()
+    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
+      return <Smartphone className="w-5 h-5" />
+    }
+    if (ua.includes('tablet') || ua.includes('ipad')) {
+      return <Tablet className="w-5 h-5" />
+    }
+    return <Laptop className="w-5 h-5" />
+  }
+
+  const getBrowserName = (userAgent: string | null): string => {
+    if (!userAgent) return 'Unknown Browser'
+
+    if (userAgent.includes('Chrome')) return 'Chrome'
+    if (userAgent.includes('Firefox')) return 'Firefox'
+    if (userAgent.includes('Safari')) return 'Safari'
+    if (userAgent.includes('Edge')) return 'Edge'
+    if (userAgent.includes('Opera')) return 'Opera'
+
+    return 'Unknown Browser'
+  }
+
+  const getOSName = (userAgent: string | null): string => {
+    if (!userAgent) return 'Unknown OS'
+
+    if (userAgent.includes('Windows')) return 'Windows'
+    if (userAgent.includes('Mac')) return 'macOS'
+    if (userAgent.includes('Linux')) return 'Linux'
+    if (userAgent.includes('Android')) return 'Android'
+    if (userAgent.includes('iOS') || userAgent.includes('iPhone') || userAgent.includes('iPad')) return 'iOS'
+
+    return 'Unknown OS'
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const getSessionDuration = (startedAt: string, endedAt: string | null) => {
+    const start = new Date(startedAt)
+    const end = endedAt ? new Date(endedAt) : new Date()
+    const diff = end.getTime() - start.getTime()
+
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`
+    }
+    return `${minutes}m`
+  }
+
+  const currentSessionId = typeof window !== 'undefined' ? localStorage.getItem('session_id') : null
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Active Sessions</h1>
+          <p className="mt-2 text-gray-600">
+            Manage your active sessions and see where you're logged in
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="mb-6 flex justify-between items-center">
+          <Button
+            onClick={loadSessions}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </Button>
+
+          <Button
+            onClick={terminateAllSessions}
+            variant="destructive"
+            className="flex items-center gap-2"
+          >
+            <XCircle className="w-4 h-4" />
+            Terminate All Other Sessions
+          </Button>
+        </div>
+
+        {/* Sessions List */}
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading sessions...</p>
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg shadow">
+            <p className="text-gray-600">No sessions found</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {sessions.map((session) => {
+              const isCurrentSession = currentSessionId === session.id.toString()
+
+              return (
+                <div
+                  key={session.id}
+                  className={`bg-white rounded-lg shadow-md p-6 ${
+                    isCurrentSession ? 'border-2 border-blue-500' : ''
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4 flex-1">
+                      {/* Device Icon */}
+                      <div className="mt-1 text-gray-600">
+                        {getDeviceIcon(session.user_agent)}
+                      </div>
+
+                      {/* Session Info */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-gray-900">
+                            {getBrowserName(session.user_agent)} on {getOSName(session.user_agent)}
+                          </h3>
+                          {isCurrentSession && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                              Current Session
+                            </span>
+                          )}
+                          {session.is_active && !isCurrentSession && (
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                          )}
+                        </div>
+
+                        <div className="space-y-1 text-sm text-gray-600">
+                          {session.ip_address && (
+                            <div className="flex items-center gap-2">
+                              <Globe className="w-4 h-4" />
+                              <span>IP: {session.ip_address}</span>
+                            </div>
+                          )}
+
+                          {session.location_name && (
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-4 h-4" />
+                              <span>Location: {session.location_name}</span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            <span>
+                              Started: {formatDate(session.started_at)}
+                            </span>
+                          </div>
+
+                          {session.ended_at && (
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4" />
+                              <span>Ended: {formatDate(session.ended_at)}</span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">
+                              Duration: {getSessionDuration(session.started_at, session.ended_at)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-2">
+                      {session.is_active && !isCurrentSession && (
+                        <Button
+                          onClick={() => terminateSession(session.id)}
+                          disabled={terminatingSession === session.id}
+                          variant="destructive"
+                          size="sm"
+                        >
+                          {terminatingSession === session.id ? (
+                            <div className="flex items-center gap-2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                              <span>Terminating...</span>
+                            </div>
+                          ) : (
+                            'Terminate'
+                          )}
+                        </Button>
+                      )}
+
+                      {!session.is_active && (
+                        <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                          Inactive
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Security Notice */}
+        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="font-medium text-blue-900 mb-2">Security Notice</h3>
+          <ul className="text-sm text-blue-700 space-y-1">
+            <li>• If you see any sessions you don't recognize, terminate them immediately</li>
+            <li>• Always log out when using shared or public computers</li>
+            <li>• Sessions expire automatically after a period of inactivity</li>
+            <li>• Terminating a session will immediately log out that device</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -1,0 +1,21 @@
+{
+  "name": "POS System",
+  "short_name": "POS",
+  "description": "Complete point of sale system for retail businesses",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e88e5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "finance", "productivity"],
+  "lang": "en-US",
+  "dir": "ltr"
+}
