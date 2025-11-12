@@ -114,7 +114,7 @@ export async function updateSession(request: NextRequest) {
       try {
         // Fetch user profile with role and permissions
         const { data: userProfile, error } = await supabase
-          .from('users')
+          .from('user_details')
           .select(`
             role_id,
             is_active,

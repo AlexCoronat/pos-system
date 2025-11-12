@@ -55,7 +55,7 @@ export default function VerifyEmailPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
           await supabase
-            .from('users')
+            .from('user_details')
             .update({ email_verified: true })
             .eq('id', user.id)
         }

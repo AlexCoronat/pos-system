@@ -121,6 +121,7 @@ class AuthService {
       this.setLoading(true)
       logger.info('Attempting registration', { email: data.email })
 
+      // Step 1: Create user in auth.users (trigger will auto-create user_details)
       const { data: authData, error } = await this.supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -129,22 +130,22 @@ class AuthService {
       if (error) throw error
       if (!authData.user) throw new AuthenticationError('No user returned from registration')
 
-      // Create user profile in users
-      const { error: profileError } = await this.supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          email: data.email,
+      // Step 2: Update user_details with additional info
+      // The trigger already created the basic record, now we add first_name, last_name, phone
+      const { error: updateError } = await this.supabase
+        .from('user_details')
+        .update({
           first_name: data.firstName,
           last_name: data.lastName,
           phone: data.phone || null,
-          role_id: AUTH_CONSTANTS.ROLES.SELLER, // Default to 'Seller' role
-          is_active: true,
-          email_verified: false,
           metadata: { acceptedTerms: data.acceptTerms }
         })
+        .eq('id', authData.user.id)
 
-      if (profileError) throw profileError
+      if (updateError) {
+        logger.error('Error updating user details', { error: updateError })
+        // Don't throw, the user is already created in auth.users
+      }
 
       // Load the complete user profile
       const user = await this.loadUserProfile(authData.user.id)
@@ -190,7 +191,7 @@ class AuthService {
   async isProfileComplete(userId: string): Promise<boolean> {
     try {
       const { data, error } = await this.supabase
-        .from('users')
+        .from('user_details')
         .select('first_name, last_name')
         .eq('id', userId)
         .single()
@@ -214,7 +215,7 @@ class AuthService {
       logger.info('Completing OAuth profile', { userId })
 
       const { error } = await this.supabase
-        .from('users')
+        .from('user_details')
         .update({
           first_name: data.firstName,
           last_name: data.lastName,
@@ -242,19 +243,21 @@ class AuthService {
     try {
       logger.info('Handling OAuth callback', { userId, email })
 
-      // Check if user profile exists
+      // Check if user profile exists in user_details
+      // Note: The trigger should have already created it when the user logged in via OAuth
       const { data: existingUser, error: fetchError } = await this.supabase
-        .from('users')
+        .from('user_details')
         .select('*')
         .eq('id', userId)
         .single()
 
-      // If user doesn't exist, create basic profile
+      // If user doesn't exist in user_details (shouldn't happen with trigger, but just in case)
       if (fetchError || !existingUser) {
-        logger.info('Creating new OAuth user profile', { userId })
+        logger.warn('User details not found after OAuth, trigger may have failed', { userId })
 
+        // Manually create the profile as fallback
         const { error: insertError } = await this.supabase
-          .from('users')
+          .from('user_details')
           .insert({
             id: userId,
             email: email,
@@ -270,7 +273,7 @@ class AuthService {
         return { needsProfileCompletion: true }
       }
 
-      // Check if profile is complete
+      // Check if profile is complete (has first_name and last_name)
       const isComplete = await this.isProfileComplete(userId)
 
       if (!isComplete) {
@@ -344,7 +347,7 @@ class AuthService {
     if (!this.currentUser) throw new AuthenticationError('No authenticated user')
 
     const { error } = await this.supabase
-      .from('users')
+      .from('user_details')
       .update({
         first_name: data.firstName,
         last_name: data.lastName,
@@ -367,12 +370,12 @@ class AuthService {
    */
   private async loadUserProfile(userId: string): Promise<AuthUser> {
     const { data, error } = await this.supabase
-      .from('users')
+      .from('user_details')
       .select(`
         *,
         role:roles!role_id(*),
         defaultLocation:locations!default_location_id(*),
-        userLocations:user_locations(
+        userLocations:user_locations!user_locations_user_id_fkey(
           id,
           location_id,
           is_primary,
@@ -411,7 +414,7 @@ class AuthService {
 
     // Update login timestamp
     await this.supabase
-      .from('users')
+      .from('user_details')
       .update({ last_login_at: new Date().toISOString() })
       .eq('id', userId)
 
