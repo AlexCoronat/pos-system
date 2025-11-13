@@ -125,8 +125,11 @@ export async function updateSession(request: NextRequest) {
 
         if (error || !userProfile) {
           console.error('Error fetching user profile:', error)
+          console.error('User ID:', user.id)
+          console.error('Full error details:', JSON.stringify(error, null, 2))
           const url = request.nextUrl.clone()
           url.pathname = '/auth/login'
+          url.searchParams.set('error', 'profile_not_found')
           return NextResponse.redirect(url)
         }
 
@@ -145,8 +148,20 @@ export async function updateSession(request: NextRequest) {
           ? JSON.parse(roleData.permissions)
           : roleData?.permissions || {}
 
+        // Debug logging
+        console.log('=== MIDDLEWARE DEBUG ===')
+        console.log('User ID:', user.id)
+        console.log('User Profile:', JSON.stringify(userProfile, null, 2))
+        console.log('Role Data:', roleData)
+        console.log('User Role:', userRole)
+        console.log('User Permissions:', userPermissions)
+        console.log('Required Roles:', config.roles)
+        console.log('Has Required Role:', hasRequiredRole(userRole, config.roles || []))
+        console.log('========================')
+
         // Check role access
         if (config.roles && !hasRequiredRole(userRole, config.roles)) {
+          console.error('Access denied - User role:', userRole, 'Required roles:', config.roles)
           const url = request.nextUrl.clone()
           url.pathname = '/dashboard'
           url.searchParams.set('error', 'access_denied')

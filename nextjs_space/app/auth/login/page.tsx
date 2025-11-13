@@ -36,6 +36,8 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    console.log('=== LOGIN FORM SUBMIT ===')
+
     if (!formData.email || !formData.password) {
       toast({
         ...MESSAGES.AUTH.MISSING_FIELDS,
@@ -45,18 +47,24 @@ export default function LoginPage() {
     }
 
     setIsLoading(true)
+    console.log('Loading state set to true')
 
     try {
-      await login(formData)
+      console.log('Calling login...')
+      const user = await login(formData)
+      console.log('Login returned successfully:', user)
       toast(MESSAGES.AUTH.LOGIN_SUCCESS)
+      console.log('Redirecting to:', redirectTo)
       router.push(redirectTo)
     } catch (error: any) {
+      console.error('Login error caught:', error)
       toast({
         ...MESSAGES.AUTH.LOGIN_FAILED,
         description: getUserFriendlyMessage(error),
         variant: "destructive",
       })
     } finally {
+      console.log('Finally block - setting loading to false')
       setIsLoading(false)
     }
   }

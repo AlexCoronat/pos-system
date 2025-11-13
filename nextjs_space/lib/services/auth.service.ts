@@ -49,18 +49,23 @@ class AuthService {
       // Listen to auth changes
       this.supabase.auth.onAuthStateChange(async (event: any, session: any) => {
         logger.debug('Auth state changed', { event })
+        console.log('=== AUTH STATE CHANGE ===', event)
 
-        if (event === 'SIGNED_IN' && session?.user) {
-          await this.loadUserProfile(session.user.id)
-        } else if (event === 'SIGNED_OUT') {
+        // IMPORTANT: Don't load profile here for SIGNED_IN
+        // The login/register methods handle loading the profile
+        // We only handle SIGNED_OUT to clean up state
+        if (event === 'SIGNED_OUT') {
           await this.handleSignOut()
         }
       })
 
-      // Check for existing session
+      // Check for existing session (on page load/refresh)
       const { data: { session } } = await this.supabase.auth.getSession()
       if (session?.user) {
+        console.log('=== EXISTING SESSION FOUND ===', session.user.id)
         await this.loadUserProfile(session.user.id)
+      } else {
+        console.log('=== NO EXISTING SESSION ===')
       }
 
       this.initialized = true
@@ -80,17 +85,32 @@ class AuthService {
     try {
       this.setLoading(true)
       logger.info('Attempting login', { email: credentials.email })
+      console.log('=== LOGIN START ===', credentials.email)
 
       const { data, error } = await this.supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
       })
 
-      if (error) throw error
-      if (!data.user) throw new AuthenticationError('No user returned from login')
+      console.log('=== SUPABASE AUTH RESPONSE ===')
+      console.log('Error:', error)
+      console.log('User ID:', data?.user?.id)
+
+      if (error) {
+        console.error('Auth error:', error)
+        throw error
+      }
+      if (!data.user) {
+        console.error('No user returned from login')
+        throw new AuthenticationError('No user returned from login')
+      }
+
+      console.log('Auth successful, loading user profile...')
 
       // Load full user profile
       const user = await this.loadUserProfile(data.user.id)
+
+      console.log('User profile loaded successfully:', user.email)
 
       // Create session record
       await this.createUserSession({
@@ -104,12 +124,15 @@ class AuthService {
       }
 
       logger.info('Login successful', { userId: user.id })
+      console.log('=== LOGIN COMPLETE ===')
       return user
     } catch (error) {
       logger.error('Login failed', { error })
+      console.error('=== LOGIN ERROR ===', error)
       throw this.handleAuthError(error as AuthError)
     } finally {
       this.setLoading(false)
+      console.log('=== LOGIN FINALLY - setLoading(false) ===')
     }
   }
 
@@ -121,31 +144,27 @@ class AuthService {
       this.setLoading(true)
       logger.info('Attempting registration', { email: data.email })
 
-      // Step 1: Create user in auth.users (trigger will auto-create user_details)
+      // Step 1: Create user in auth.users with metadata
+      // The trigger will read user_metadata and create user_details with all info
       const { data: authData, error } = await this.supabase.auth.signUp({
         email: data.email,
         password: data.password,
+        options: {
+          data: {
+            first_name: data.firstName,
+            last_name: data.lastName,
+            phone: data.phone || null,
+            accepted_terms: data.acceptTerms
+          }
+        }
       })
 
       if (error) throw error
       if (!authData.user) throw new AuthenticationError('No user returned from registration')
 
-      // Step 2: Update user_details with additional info
-      // The trigger already created the basic record, now we add first_name, last_name, phone
-      const { error: updateError } = await this.supabase
-        .from('user_details')
-        .update({
-          first_name: data.firstName,
-          last_name: data.lastName,
-          phone: data.phone || null,
-          metadata: { acceptedTerms: data.acceptTerms }
-        })
-        .eq('id', authData.user.id)
-
-      if (updateError) {
-        logger.error('Error updating user details', { error: updateError })
-        // Don't throw, the user is already created in auth.users
-      }
+      logger.info('User created in auth.users, trigger should create user_details', {
+        userId: authData.user.id
+      })
 
       // Load the complete user profile
       const user = await this.loadUserProfile(authData.user.id)
@@ -369,6 +388,9 @@ class AuthService {
    * @private
    */
   private async loadUserProfile(userId: string): Promise<AuthUser> {
+    console.log('=== loadUserProfile START ===')
+    console.log('User ID:', userId)
+
     const { data, error } = await this.supabase
       .from('user_details')
       .select(`
@@ -386,8 +408,19 @@ class AuthService {
       .eq('is_active', true)
       .single()
 
-    if (error) throw this.handleAuthError(error as AuthError)
-    if (!data) throw new AuthenticationError('User not found')
+    console.log('=== loadUserProfile QUERY RESULT ===')
+    console.log('Error:', error)
+    console.log('Data:', data ? 'User found' : 'No data')
+    console.log('===================================')
+
+    if (error) {
+      console.error('Error loading user profile:', error)
+      throw this.handleAuthError(error as AuthError)
+    }
+    if (!data) {
+      console.error('No user data returned for userId:', userId)
+      throw new AuthenticationError('User not found')
+    }
 
     // Type assertion for data since we're using custom schemas
     const userData = data as any

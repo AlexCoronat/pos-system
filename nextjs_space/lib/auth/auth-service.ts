@@ -38,9 +38,12 @@ class AuthService {
       
       // Listen to auth changes
       this.supabase.auth.onAuthStateChange(async (event: any, session: any) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          await this.loadUserProfile(session.user.id)
-        } else if (event === 'SIGNED_OUT') {
+        console.log('=== AUTH STATE CHANGE (auth-service.ts) ===', event)
+
+        // IMPORTANT: Don't load profile here for SIGNED_IN
+        // The login/register methods handle loading the profile
+        // We only handle SIGNED_OUT to clean up state
+        if (event === 'SIGNED_OUT') {
           await this.handleSignOut()
         }
       })
@@ -63,6 +66,8 @@ class AuthService {
   // Login method
   async login(credentials: LoginCredentials): Promise<AuthUser> {
     try {
+      console.log('=== LOGIN START ===')
+      console.log('Email:', credentials.email)
       this.setLoading(true)
 
       const { data, error } = await this.supabase.auth.signInWithPassword({
@@ -70,12 +75,27 @@ class AuthService {
         password: credentials.password,
       })
 
-      if (error) throw error
-      if (!data.user) throw new Error('No user returned from login')
+      console.log('=== SUPABASE AUTH RESPONSE ===')
+      console.log('Error:', error)
+      console.log('User ID:', data?.user?.id)
+      console.log('==============================')
+
+      if (error) {
+        console.error('Auth error:', error)
+        throw error
+      }
+      if (!data.user) {
+        console.error('No user returned from login')
+        throw new Error('No user returned from login')
+      }
+
+      console.log('Auth successful, loading user profile...')
 
       // Load full user profile
       const user = await this.loadUserProfile(data.user.id)
-      
+
+      console.log('User profile loaded successfully:', user.email)
+
       // Create session record
       await this.createUserSession({
         ipAddress: await this.getClientIP(),
@@ -87,8 +107,12 @@ class AuthService {
         localStorage.setItem(STORAGE_KEYS.REMEMBER_ME, 'true')
       }
 
+      console.log('=== LOGIN COMPLETE ===')
       return user
     } catch (error) {
+      console.error('=== LOGIN ERROR ===')
+      console.error('Error:', error)
+      console.error('==================')
       throw this.handleAuthError(error as AuthError)
     } finally {
       this.setLoading(false)
@@ -100,31 +124,27 @@ class AuthService {
     try {
       this.setLoading(true)
 
-      // Step 1: Create user in auth.users (trigger will auto-create user_details)
+      // Step 1: Create user in auth.users with metadata
+      // The trigger will read user_metadata and create user_details with all info
       const { data: authData, error } = await this.supabase.auth.signUp({
         email: data.email,
         password: data.password,
+        options: {
+          data: {
+            first_name: data.firstName,
+            last_name: data.lastName,
+            phone: data.phone || null,
+            accepted_terms: data.acceptTerms
+          }
+        }
       })
 
       if (error) throw error
       if (!authData.user) throw new Error('No user returned from registration')
 
-      // Step 2: Update user_details with additional info
-      // The trigger already created the basic record, now we add first_name, last_name, phone
-      const { error: updateError } = await this.supabase
-        .from('user_details')
-        .update({
-          first_name: data.firstName,
-          last_name: data.lastName,
-          phone: data.phone || null,
-          metadata: { acceptedTerms: data.acceptTerms }
-        })
-        .eq('id', authData.user.id)
-
-      if (updateError) {
-        console.error('Error updating user details:', updateError)
-        // Don't throw, the user is already created in auth.users
-      }
+      console.log('User created in auth.users, trigger should create user_details', {
+        userId: authData.user.id
+      })
 
       // Load the complete user profile
       const user = await this.loadUserProfile(authData.user.id)
@@ -314,6 +334,9 @@ class AuthService {
 
   // Load user profile with relations
   private async loadUserProfile(userId: string): Promise<AuthUser> {
+    console.log('=== loadUserProfile START ===')
+    console.log('Loading profile for user:', userId)
+
     const { data, error } = await this.supabase
       .from('user_details')
       .select(`
@@ -331,8 +354,19 @@ class AuthService {
       .eq('is_active', true)
       .single()
 
-    if (error) throw this.handleAuthError(error as AuthError)
-    if (!data) throw new Error('User not found')
+    console.log('=== loadUserProfile QUERY RESULT ===')
+    console.log('Error:', error)
+    console.log('Data:', data)
+    console.log('===================================')
+
+    if (error) {
+      console.error('Error loading user profile:', error)
+      throw this.handleAuthError(error as AuthError)
+    }
+    if (!data) {
+      console.error('No user data returned')
+      throw new Error('User not found')
+    }
 
     // Type assertion for data since we're using custom schemas
     const userData = data as any
