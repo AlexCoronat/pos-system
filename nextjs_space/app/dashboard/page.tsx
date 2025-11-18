@@ -16,7 +16,6 @@ import {
   ArrowDownRight
 } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import DashboardLayout from '@/components/layout/DashboardLayout'
 
 interface DashboardStats {
   todaySales: number
@@ -64,11 +63,17 @@ export default function DashboardPage() {
     try {
       const supabase = createClient()
       const today = new Date().toISOString().split('T')[0]
-      const locationId = user?.defaultLocationId
+      const locationId = user?.defaultLocationId || user?.assignedLocations?.[0]?.locationId
+
+      if (!locationId) {
+        console.warn('No location assigned to user')
+        setLoading(false)
+        return
+      }
 
       // Fetch today's sales from materialized view
       const { data: todaySalesData, error: salesError } = await supabase
-        .from('mv_daily_sales_by_location')
+        .from('pos_core.mv_daily_sales_by_location')
         .select('total_sales, total_transactions')
         .eq('sale_date', today)
         .eq('location_id', locationId)
@@ -80,7 +85,7 @@ export default function DashboardPage() {
 
       // Fetch low stock products
       const { data: lowStockData, error: stockError } = await supabase
-        .from('products')
+        .from('pos_core.products')
         .select('id')
         .eq('location_id', locationId)
         .eq('deleted_at', null)
@@ -92,7 +97,7 @@ export default function DashboardPage() {
 
       // Fetch pending quotes count
       const { count: quotesCount, error: quotesError } = await supabase
-        .from('quotes')
+        .from('pos_core.quotes')
         .select('*', { count: 'exact', head: true })
         .eq('location_id', locationId)
         .eq('status', 'Pending')
@@ -106,7 +111,7 @@ export default function DashboardPage() {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
       const { data: weekSalesData, error: weekError } = await supabase
-        .from('mv_daily_sales_by_location')
+        .from('pos_core.mv_daily_sales_by_location')
         .select('sale_date, total_sales, total_transactions')
         .eq('location_id', locationId)
         .gte('sale_date', sevenDaysAgo.toISOString().split('T')[0])
@@ -118,7 +123,7 @@ export default function DashboardPage() {
 
       // Fetch top selling products
       const { data: topProductsData, error: topProductsError } = await supabase
-        .from('mv_top_selling_products')
+        .from('pos_core.mv_top_selling_products')
         .select('product_name, total_quantity_sold, total_revenue')
         .eq('location_id', locationId)
         .order('total_quantity_sold', { ascending: false })
@@ -228,17 +233,14 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+      </div>
     )
   }
 
   return (
-    <DashboardLayout>
-      <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6">
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
@@ -389,6 +391,5 @@ export default function DashboardPage() {
           </Card>
         )}
       </div>
-    </DashboardLayout>
   )
 }

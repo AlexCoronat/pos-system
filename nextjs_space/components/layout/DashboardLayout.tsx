@@ -35,12 +35,12 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Sales', href: '/sales', icon: ShoppingCart, permissions: ['sales:read'], roles: ['Admin', 'Manager', 'Seller'] },
-  { name: 'Inventory', href: '/inventory', icon: Package, permissions: ['inventory:read'], roles: ['Admin', 'Manager', 'Inventory Manager'] },
-  { name: 'Customers', href: '/customers', icon: Users, permissions: ['customers:read'], roles: ['Admin', 'Manager', 'Seller'] },
-  { name: 'Quotes', href: '/quotes', icon: FileText, permissions: ['quotes:read'], roles: ['Admin', 'Manager', 'Seller'] },
-  { name: 'Reports', href: '/reports', icon: TrendingUp, permissions: ['reports:read'], roles: ['Admin', 'Manager'] },
-  { name: 'Settings', href: '/settings', icon: Settings, roles: ['Admin', 'Manager'] },
+  { name: 'Sales', href: '/dashboard/sales', icon: ShoppingCart, permissions: ['sales:read'], roles: ['Admin', 'Manager', 'Seller'] },
+  { name: 'Inventory', href: '/dashboard/inventory', icon: Package, permissions: ['inventory:read'], roles: ['Admin', 'Manager', 'Inventory Manager'] },
+  { name: 'Customers', href: '/dashboard/customers', icon: Users, permissions: ['customers:read'], roles: ['Admin', 'Manager', 'Seller'] },
+  { name: 'Quotes', href: '/dashboard/quotes', icon: FileText, permissions: ['quotes:read'], roles: ['Admin', 'Manager', 'Seller'] },
+  { name: 'Reports', href: '/dashboard/reports', icon: TrendingUp, permissions: ['reports:read'], roles: ['Admin', 'Manager'] },
+  { name: 'Settings', href: '/dashboard/settings', icon: Settings, roles: ['Admin', 'Manager'] },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

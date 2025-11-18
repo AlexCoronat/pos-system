@@ -9,7 +9,9 @@
       "WebSearch",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:code.claude.com)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(cat:*)",
+      "Bash(npx supabase:*)"
     ],
     "deny": [],
     "ask": []
