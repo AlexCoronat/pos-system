@@ -12,7 +12,12 @@ export interface Product {
   isActive: boolean
   imageUrl?: string
   barcode?: string
-  unit?: string
+  unitOfMeasure?: string
+  costPrice?: number
+  sellingPrice?: number
+  taxRate?: number
+  isTaxable?: boolean
+  hasVariants?: boolean
   metadata?: Record<string, any>
   createdAt: Date
   updatedAt: Date
@@ -31,10 +36,13 @@ export interface ProductPrice {
 export interface ProductVariant {
   id: number
   productId: number
-  name: string
+  variantName: string
   sku?: string
-  additionalPrice: number
+  barcode?: string
+  costPrice?: number
+  sellingPrice?: number
   isActive: boolean
+  attributes?: Record<string, any>
 }
 
 export interface ProductWithPrice extends Product {
@@ -43,18 +51,24 @@ export interface ProductWithPrice extends Product {
 }
 
 export interface InventoryItem {
-  id: number
+  id?: number
   productId: number
   variantId?: number
   locationId: number
-  quantity: number
+  quantityAvailable: number
+  quantityReserved: number
   minStockLevel: number
+  maxStockLevel?: number
   reorderPoint: number
-  lastRestocked?: Date
+  lastRestockDate?: Date
+  lastRestockQuantity?: number
+  isTracked?: boolean
 }
 
 export interface ProductSearchResult {
-  product: ProductWithPrice
+  product: Product & {
+    variants?: ProductVariant[]
+  }
   inventory: InventoryItem
   availableStock: number
 }
@@ -67,15 +81,20 @@ export interface CreateProductData {
   isActive?: boolean
   imageUrl?: string
   barcode?: string
-  unit?: string
+  unitOfMeasure?: string
   costPrice: number
-  salePrice: number
+  sellingPrice: number
+  taxRate?: number
+  isTaxable?: boolean
   currency?: string
   variants?: {
-    name: string
+    variantName: string
     sku?: string
-    additionalPrice?: number
+    barcode?: string
+    costPrice?: number
+    sellingPrice?: number
     isActive?: boolean
+    attributes?: Record<string, any>
   }[]
 }
 
@@ -87,8 +106,10 @@ export interface UpdateProductData {
   isActive?: boolean
   imageUrl?: string
   barcode?: string
-  unit?: string
+  unitOfMeasure?: string
   costPrice?: number
-  salePrice?: number
+  sellingPrice?: number
+  taxRate?: number
+  isTaxable?: boolean
   currency?: string
 }

@@ -73,7 +73,7 @@ export default function DashboardPage() {
 
       // Fetch today's sales from materialized view
       const { data: todaySalesData, error: salesError } = await supabase
-        .from('pos_core.mv_daily_sales_by_location')
+        .from('mv_daily_sales_by_location')
         .select('total_sales, total_transactions')
         .eq('sale_date', today)
         .eq('location_id', locationId)
@@ -85,7 +85,7 @@ export default function DashboardPage() {
 
       // Fetch low stock products
       const { data: lowStockData, error: stockError } = await supabase
-        .from('pos_core.products')
+        .from('products')
         .select('id')
         .eq('location_id', locationId)
         .eq('deleted_at', null)
@@ -97,7 +97,7 @@ export default function DashboardPage() {
 
       // Fetch pending quotes count
       const { count: quotesCount, error: quotesError } = await supabase
-        .from('pos_core.quotes')
+        .from('quotes')
         .select('*', { count: 'exact', head: true })
         .eq('location_id', locationId)
         .eq('status', 'Pending')
@@ -111,7 +111,7 @@ export default function DashboardPage() {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
       const { data: weekSalesData, error: weekError } = await supabase
-        .from('pos_core.mv_daily_sales_by_location')
+        .from('mv_daily_sales_by_location')
         .select('sale_date, total_sales, total_transactions')
         .eq('location_id', locationId)
         .gte('sale_date', sevenDaysAgo.toISOString().split('T')[0])
@@ -123,7 +123,7 @@ export default function DashboardPage() {
 
       // Fetch top selling products
       const { data: topProductsData, error: topProductsError } = await supabase
-        .from('pos_core.mv_top_selling_products')
+        .from('mv_top_selling_products')
         .select('product_name, total_quantity_sold, total_revenue')
         .eq('location_id', locationId)
         .order('total_quantity_sold', { ascending: false })

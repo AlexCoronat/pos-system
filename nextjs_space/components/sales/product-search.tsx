@@ -63,11 +63,11 @@ export function ProductSearch({ locationId, onProductAdded }: ProductSearchProps
         productName: result.product.name,
         productSku: result.product.sku,
         quantity: 1,
-        unitPrice: result.product.price.salePrice,
+        unitPrice: result.product.sellingPrice,
         availableStock: result.availableStock,
         imageUrl: result.product.imageUrl,
         discountPercentage: 0,
-        taxPercentage: 16
+        taxPercentage: result.product.taxRate || 16
       })
 
       toast.success(`${result.product.name} agregado al carrito`)
@@ -150,7 +150,7 @@ export function ProductSearch({ locationId, onProductAdded }: ProductSearchProps
                           </span>
                         </div>
                         <div className="font-semibold text-lg">
-                          ${result.product.price.salePrice.toFixed(2)}
+                          ${result.product.sellingPrice.toFixed(2)}
                         </div>
                       </div>
                     </div>

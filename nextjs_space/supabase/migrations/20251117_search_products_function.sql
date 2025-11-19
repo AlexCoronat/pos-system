@@ -26,25 +26,25 @@ BEGIN
       'isActive', p.is_active,
       'imageUrl', p.image_url,
       'barcode', p.barcode,
-      'unit', p.unit,
-      'price', jsonb_build_object(
-        'id', pp.id,
-        'productId', pp.product_id,
-        'costPrice', pp.cost_price,
-        'salePrice', pp.sale_price,
-        'currency', pp.currency,
-        'isActive', pp.is_active
-      ),
+      'unitOfMeasure', p.unit_of_measure,
+      'costPrice', p.cost_price,
+      'sellingPrice', p.selling_price,
+      'taxRate', p.tax_rate,
+      'isTaxable', p.is_taxable,
+      'hasVariants', p.has_variants,
       'variants', COALESCE(
         (
           SELECT jsonb_agg(
             jsonb_build_object(
               'id', pv.id,
               'productId', pv.product_id,
-              'name', pv.name,
+              'variantName', pv.variant_name,
               'sku', pv.sku,
-              'additionalPrice', pv.additional_price,
-              'isActive', pv.is_active
+              'barcode', pv.barcode,
+              'costPrice', pv.cost_price,
+              'sellingPrice', pv.selling_price,
+              'isActive', pv.is_active,
+              'attributes', pv.attributes
             )
           )
           FROM public.product_variants pv
@@ -61,23 +61,21 @@ BEGIN
     jsonb_build_object(
       'id', i.id,
       'productId', i.product_id,
-      'variantId', i.variant_id,
       'locationId', i.location_id,
-      'quantity', COALESCE(i.quantity, 0),
+      'quantityAvailable', COALESCE(i.quantity_available, 0),
+      'quantityReserved', COALESCE(i.quantity_reserved, 0),
       'minStockLevel', COALESCE(i.min_stock_level, 0),
+      'maxStockLevel', COALESCE(i.max_stock_level, 0),
       'reorderPoint', COALESCE(i.reorder_point, 0),
-      'lastRestocked', i.last_restocked
+      'lastRestockDate', i.last_restock_date,
+      'lastRestockQuantity', i.last_restock_quantity,
+      'isTracked', i.is_tracked
     ) AS inventory,
 
     -- Available stock as integer
-    COALESCE(i.quantity, 0)::INTEGER AS available_stock
+    COALESCE(i.quantity_available, 0)::INTEGER AS available_stock
 
   FROM public.products p
-
-  -- Join with active price
-  INNER JOIN public.product_prices pp
-    ON pp.product_id = p.id
-    AND pp.is_active = true
 
   -- Join with category
   LEFT JOIN public.categories c
@@ -87,17 +85,17 @@ BEGIN
   LEFT JOIN public.inventory i
     ON i.product_id = p.id
     AND i.location_id = p_location_id
-    AND i.variant_id IS NULL
 
   WHERE
     -- Only active products
     p.is_active = true
+    AND (p.deleted_at IS NULL OR p.deleted_at > NOW())
 
-    -- Search by name or SKU (case-insensitive)
+    -- Search by name, SKU or barcode (case-insensitive)
     AND (
       LOWER(p.name) LIKE LOWER('%' || p_search_term || '%')
       OR LOWER(p.sku) LIKE LOWER('%' || p_search_term || '%')
-      OR LOWER(p.barcode) LIKE LOWER('%' || p_search_term || '%')
+      OR (p.barcode IS NOT NULL AND LOWER(p.barcode) LIKE LOWER('%' || p_search_term || '%'))
     )
 
   ORDER BY
@@ -105,9 +103,10 @@ BEGIN
     CASE
       WHEN LOWER(p.sku) = LOWER(p_search_term) THEN 1
       WHEN LOWER(p.name) = LOWER(p_search_term) THEN 2
-      WHEN LOWER(p.sku) LIKE LOWER(p_search_term || '%') THEN 3
-      WHEN LOWER(p.name) LIKE LOWER(p_search_term || '%') THEN 4
-      ELSE 5
+      WHEN p.barcode IS NOT NULL AND LOWER(p.barcode) = LOWER(p_search_term) THEN 3
+      WHEN LOWER(p.sku) LIKE LOWER(p_search_term || '%') THEN 4
+      WHEN LOWER(p.name) LIKE LOWER(p_search_term || '%') THEN 5
+      ELSE 6
     END,
     p.name ASC
 
