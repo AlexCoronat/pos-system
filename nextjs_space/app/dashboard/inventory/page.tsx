@@ -1,0 +1,635 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import {
+  Plus,
+  Search,
+  Filter,
+  Package,
+  AlertTriangle,
+  RefreshCw,
+  Edit,
+  Trash2,
+  Eye,
+  ArrowUpDown,
+  MoreHorizontal
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { productService, ProductFilters } from '@/lib/services/product.service'
+import { inventoryService, InventoryWithProduct } from '@/lib/services/inventory.service'
+import { StockAdjustmentDialog } from '@/components/inventory/stock-adjustment-dialog'
+import type { ProductWithPrice } from '@/lib/types/product'
+import { toast } from 'sonner'
+
+export default function InventoryPage() {
+  const router = useRouter()
+  const [activeTab, setActiveTab] = useState('products')
+
+  // Products state
+  const [products, setProducts] = useState<ProductWithPrice[]>([])
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalProducts, setTotalProducts] = useState(0)
+  const pageSize = 20
+
+  // Inventory state
+  const [inventory, setInventory] = useState<InventoryWithProduct[]>([])
+  const [isLoadingInventory, setIsLoadingInventory] = useState(true)
+  const [lowStockItems, setLowStockItems] = useState<InventoryWithProduct[]>([])
+
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [productToDelete, setProductToDelete] = useState<ProductWithPrice | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // Stock adjustment dialog state
+  const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false)
+  const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryWithProduct | null>(null)
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN'
+    }).format(amount)
+  }
+
+  const loadProducts = async () => {
+    setIsLoadingProducts(true)
+    try {
+      const filters: ProductFilters = {}
+
+      if (searchTerm) {
+        filters.searchTerm = searchTerm
+      }
+
+      if (statusFilter !== 'all') {
+        filters.isActive = statusFilter === 'active'
+      }
+
+      const response = await productService.getProducts(filters, currentPage, pageSize)
+      setProducts(response.products)
+      setTotalPages(response.totalPages)
+      setTotalProducts(response.total)
+    } catch (error: any) {
+      console.error('Error loading products:', error)
+      toast.error('Error al cargar los productos')
+    } finally {
+      setIsLoadingProducts(false)
+    }
+  }
+
+  const loadInventory = async () => {
+    setIsLoadingInventory(true)
+    try {
+      // Load all inventory for location 1 (default)
+      const inventoryData = await inventoryService.getInventory({ locationId: 1 })
+      setInventory(inventoryData)
+
+      // Load low stock alerts
+      const lowStock = await inventoryService.getLowStockAlerts(1)
+      setLowStockItems(lowStock)
+    } catch (error: any) {
+      console.error('Error loading inventory:', error)
+      toast.error('Error al cargar el inventario')
+    } finally {
+      setIsLoadingInventory(false)
+    }
+  }
+
+  useEffect(() => {
+    loadProducts()
+  }, [currentPage, statusFilter])
+
+  useEffect(() => {
+    if (activeTab === 'stock') {
+      loadInventory()
+    }
+  }, [activeTab])
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    setCurrentPage(1)
+    loadProducts()
+  }
+
+  const handleDeleteClick = (product: ProductWithPrice) => {
+    setProductToDelete(product)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete) return
+
+    setIsDeleting(true)
+    try {
+      await productService.deleteProduct(productToDelete.id)
+      toast.success('Producto eliminado correctamente')
+      loadProducts()
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar el producto')
+    } finally {
+      setIsDeleting(false)
+      setDeleteDialogOpen(false)
+      setProductToDelete(null)
+    }
+  }
+
+  const handleAdjustStock = (item: InventoryWithProduct) => {
+    setSelectedInventoryItem(item)
+    setAdjustmentDialogOpen(true)
+  }
+
+  const handleAdjustmentSuccess = () => {
+    loadInventory()
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Inventario</h1>
+          <p className="text-muted-foreground">
+            Gestiona productos y controla el stock de tu negocio
+          </p>
+        </div>
+        <Link href="/dashboard/inventory/products/new">
+          <Button size="lg">
+            <Plus className="h-5 w-5 mr-2" />
+            Nuevo Producto
+          </Button>
+        </Link>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Productos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalProducts}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Productos Activos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {products.filter(p => p.isActive).length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Bajo Stock
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">
+              {lowStockItems.length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Sin Stock
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              {inventory.filter(i => i.quantity <= 0).length}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="products" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Productos
+          </TabsTrigger>
+          <TabsTrigger value="stock" className="flex items-center gap-2">
+            <ArrowUpDown className="h-4 w-4" />
+            Stock
+          </TabsTrigger>
+          <TabsTrigger value="alerts" className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Alertas
+            {lowStockItems.length > 0 && (
+              <Badge variant="destructive" className="ml-1">
+                {lowStockItems.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Products Tab */}
+        <TabsContent value="products" className="space-y-4">
+          {/* Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filtros
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSearch} className="flex gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Buscar por nombre o SKU..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="active">Activos</SelectItem>
+                    <SelectItem value="inactive">Inactivos</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button type="submit">
+                  <Search className="h-4 w-4 mr-2" />
+                  Buscar
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={loadProducts}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Actualizar
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Products Table */}
+          <Card>
+            <CardContent className="p-0">
+              {isLoadingProducts ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  Cargando productos...
+                </div>
+              ) : products.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  No se encontraron productos
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>SKU</TableHead>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead className="text-right">Costo</TableHead>
+                        <TableHead className="text-right">Precio Venta</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products.map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell className="font-mono text-sm">
+                            {product.sku}
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{product.name}</div>
+                              {product.description && (
+                                <div className="text-sm text-muted-foreground truncate max-w-[200px]">
+                                  {product.description}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {product.categoryName || '-'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(product.price.costPrice)}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {formatCurrency(product.price.salePrice)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={product.isActive ? 'default' : 'secondary'}
+                              className={product.isActive ? 'bg-green-100 text-green-800' : ''}
+                            >
+                              {product.isActive ? 'Activo' : 'Inactivo'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => router.push(`/dashboard/inventory/products/${product.id}`)}
+                                >
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Ver detalles
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => router.push(`/dashboard/inventory/products/${product.id}/edit`)}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-red-600"
+                                  onClick={() => handleDeleteClick(product)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Eliminar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between p-4 border-t">
+                  <div className="text-sm text-muted-foreground">
+                    Pagina {currentPage} de {totalPages} ({totalProducts} productos en total)
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Stock Tab */}
+        <TabsContent value="stock" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Niveles de Stock</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {isLoadingInventory ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  Cargando inventario...
+                </div>
+              ) : inventory.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  No hay registros de inventario
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>SKU</TableHead>
+                        <TableHead>Producto</TableHead>
+                        <TableHead>Variante</TableHead>
+                        <TableHead className="text-right">Cantidad</TableHead>
+                        <TableHead className="text-right">Min. Stock</TableHead>
+                        <TableHead className="text-right">Punto Reorden</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead>Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {inventory.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-mono text-sm">
+                            {item.productSku}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {item.productName}
+                          </TableCell>
+                          <TableCell>
+                            {item.variantName || '-'}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {item.quantity}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.minStockLevel}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.reorderPoint}
+                          </TableCell>
+                          <TableCell>
+                            {item.quantity <= 0 ? (
+                              <Badge variant="destructive">Sin Stock</Badge>
+                            ) : item.quantity <= item.reorderPoint ? (
+                              <Badge className="bg-yellow-100 text-yellow-800">Bajo Stock</Badge>
+                            ) : (
+                              <Badge className="bg-green-100 text-green-800">Normal</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleAdjustStock(item)}
+                            >
+                              Ajustar
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Alerts Tab */}
+        <TabsContent value="alerts" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                Productos con Bajo Stock
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {isLoadingInventory ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  Cargando alertas...
+                </div>
+              ) : lowStockItems.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  No hay productos con bajo stock
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>SKU</TableHead>
+                        <TableHead>Producto</TableHead>
+                        <TableHead className="text-right">Cantidad Actual</TableHead>
+                        <TableHead className="text-right">Punto Reorden</TableHead>
+                        <TableHead className="text-right">Faltante</TableHead>
+                        <TableHead>Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {lowStockItems.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-mono text-sm">
+                            {item.productSku}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {item.productName}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-red-600">
+                            {item.quantity}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.reorderPoint}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.reorderPoint - item.quantity}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleAdjustStock(item)}
+                            >
+                              Reabastecer
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar Producto</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estas seguro de que deseas eliminar el producto "{productToDelete?.name}"?
+              Esta accion desactivara el producto y no podra ser utilizado en nuevas ventas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? 'Eliminando...' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Stock Adjustment Dialog */}
+      <StockAdjustmentDialog
+        open={adjustmentDialogOpen}
+        onOpenChange={setAdjustmentDialogOpen}
+        inventoryItem={selectedInventoryItem}
+        onSuccess={handleAdjustmentSuccess}
+      />
+    </div>
+  )
+}

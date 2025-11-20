@@ -63,7 +63,7 @@ export function ProductSearch({ locationId, onProductAdded }: ProductSearchProps
         productName: result.product.name,
         productSku: result.product.sku,
         quantity: 1,
-        unitPrice: result.product.sellingPrice,
+        unitPrice: result.product.sellingPrice || 0,
         availableStock: result.availableStock,
         imageUrl: result.product.imageUrl,
         discountPercentage: 0,
@@ -150,7 +150,7 @@ export function ProductSearch({ locationId, onProductAdded }: ProductSearchProps
                           </span>
                         </div>
                         <div className="font-semibold text-lg">
-                          ${result.product.sellingPrice.toFixed(2)}
+                          ${(result.product.sellingPrice || 0).toFixed(2)}
                         </div>
                       </div>
                     </div>

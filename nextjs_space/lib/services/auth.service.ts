@@ -44,12 +44,9 @@ class AuthService {
 
     try {
       this.setLoading(true)
-      logger.info('Initializing authentication')
 
       // Listen to auth changes
       this.supabase.auth.onAuthStateChange(async (event: any, session: any) => {
-        logger.debug('Auth state changed', { event })
-        console.log('=== AUTH STATE CHANGE ===', event)
 
         // IMPORTANT: Don't load profile here for SIGNED_IN
         // The login/register methods handle loading the profile
@@ -62,14 +59,10 @@ class AuthService {
       // Check for existing session (on page load/refresh)
       const { data: { session } } = await this.supabase.auth.getSession()
       if (session?.user) {
-        console.log('=== EXISTING SESSION FOUND ===', session.user.id)
         await this.loadUserProfile(session.user.id)
-      } else {
-        console.log('=== NO EXISTING SESSION ===')
-      }
+      } 
 
       this.initialized = true
-      logger.info('Authentication initialized successfully')
     } catch (error) {
       logger.error('Error initializing auth', { error })
       this.handleAuthError(error as AuthError)
@@ -84,17 +77,11 @@ class AuthService {
   async login(credentials: LoginCredentials): Promise<AuthUser> {
     try {
       this.setLoading(true)
-      logger.info('Attempting login', { email: credentials.email })
-      console.log('=== LOGIN START ===', credentials.email)
 
       const { data, error } = await this.supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
       })
-
-      console.log('=== SUPABASE AUTH RESPONSE ===')
-      console.log('Error:', error)
-      console.log('User ID:', data?.user?.id)
 
       if (error) {
         console.error('Auth error:', error)
@@ -104,13 +91,8 @@ class AuthService {
         console.error('No user returned from login')
         throw new AuthenticationError('No user returned from login')
       }
-
-      console.log('Auth successful, loading user profile...')
-
       // Load full user profile
       const user = await this.loadUserProfile(data.user.id)
-
-      console.log('User profile loaded successfully:', user.email)
 
       // Create session record
       await this.createUserSession({
@@ -122,9 +104,6 @@ class AuthService {
       if (credentials.rememberMe) {
         localStorage.setItem(STORAGE_KEYS.REMEMBER_ME, 'true')
       }
-
-      logger.info('Login successful', { userId: user.id })
-      console.log('=== LOGIN COMPLETE ===')
       return user
     } catch (error) {
       logger.error('Login failed', { error })
@@ -132,7 +111,6 @@ class AuthService {
       throw this.handleAuthError(error as AuthError)
     } finally {
       this.setLoading(false)
-      console.log('=== LOGIN FINALLY - setLoading(false) ===')
     }
   }
 
@@ -142,7 +120,6 @@ class AuthService {
   async register(data: RegisterData): Promise<AuthUser> {
     try {
       this.setLoading(true)
-      logger.info('Attempting registration', { email: data.email })
 
       // Step 1: Create user in auth.users with metadata
       // The trigger will read user_metadata and create user_details with all info
@@ -162,14 +139,9 @@ class AuthService {
       if (error) throw error
       if (!authData.user) throw new AuthenticationError('No user returned from registration')
 
-      logger.info('User created in auth.users, trigger should create user_details', {
-        userId: authData.user.id
-      })
-
       // Load the complete user profile
       const user = await this.loadUserProfile(authData.user.id)
 
-      logger.info('Registration successful', { userId: user.id })
       return user
     } catch (error) {
       logger.error('Registration failed', { error })
@@ -184,7 +156,6 @@ class AuthService {
    */
   async loginWithGoogle(): Promise<void> {
     try {
-      logger.info('Initiating Google OAuth login')
 
       const { error } = await this.supabase.auth.signInWithOAuth({
         provider: AUTH_CONSTANTS.OAUTH_PROVIDERS.GOOGLE,
@@ -231,7 +202,6 @@ class AuthService {
   async completeOAuthProfile(userId: string, data: { firstName: string; lastName: string; phone?: string }): Promise<AuthUser> {
     try {
       this.setLoading(true)
-      logger.info('Completing OAuth profile', { userId })
 
       const { error } = await this.supabase
         .from('user_details')
@@ -260,7 +230,6 @@ class AuthService {
    */
   async handleOAuthCallback(userId: string, email: string): Promise<{ needsProfileCompletion: boolean; user?: AuthUser }> {
     try {
-      logger.info('Handling OAuth callback', { userId, email })
 
       // Check if user profile exists in user_details
       // Note: The trigger should have already created it when the user logged in via OAuth
@@ -314,7 +283,6 @@ class AuthService {
   async logout(): Promise<void> {
     try {
       this.setLoading(true)
-      logger.info('Logging out user')
 
       // End session record
       await this.endUserSession()
@@ -323,7 +291,6 @@ class AuthService {
       await this.supabase.auth.signOut()
 
       await this.handleSignOut()
-      logger.info('Logout successful')
     } catch (error) {
       logger.error('Error during logout', { error })
     } finally {
@@ -340,7 +307,6 @@ class AuthService {
     })
 
     if (error) throw this.handleAuthError(error as AuthError)
-    logger.info('Password reset email sent', { email })
   }
 
   /**
@@ -356,7 +322,6 @@ class AuthService {
     })
 
     if (error) throw this.handleAuthError(error as AuthError)
-    logger.info('Password changed successfully')
   }
 
   /**
@@ -379,7 +344,6 @@ class AuthService {
     if (error) throw this.handleAuthError(error as AuthError)
 
     // Reload user profile
-    logger.info('Profile updated successfully', { userId: this.currentUser.id })
     return await this.loadUserProfile(this.currentUser.id)
   }
 
@@ -388,9 +352,6 @@ class AuthService {
    * @private
    */
   private async loadUserProfile(userId: string): Promise<AuthUser> {
-    console.log('=== loadUserProfile START ===')
-    console.log('User ID:', userId)
-
     const { data, error } = await this.supabase
       .from('user_details')
       .select(`
@@ -407,11 +368,6 @@ class AuthService {
       .eq('id', userId)
       .eq('is_active', true)
       .single()
-
-    console.log('=== loadUserProfile QUERY RESULT ===')
-    console.log('Error:', error)
-    console.log('Data:', data ? 'User found' : 'No data')
-    console.log('===================================')
 
     if (error) {
       console.error('Error loading user profile:', error)

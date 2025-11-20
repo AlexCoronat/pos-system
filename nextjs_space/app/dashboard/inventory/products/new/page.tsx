@@ -1,0 +1,474 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowLeft, Save, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { productService } from '@/lib/services/product.service'
+import { inventoryService } from '@/lib/services/inventory.service'
+import { supabase } from '@/lib/supabase/client'
+import { toast } from 'sonner'
+import type { CreateProductData } from '@/lib/types/product'
+
+interface Category {
+  id: number
+  name: string
+}
+
+export default function NewProductPage() {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
+
+  // Form state
+  const [formData, setFormData] = useState({
+    sku: '',
+    name: '',
+    description: '',
+    categoryId: '',
+    barcode: '',
+    unit: 'pieza',
+    imageUrl: '',
+    costPrice: '',
+    salePrice: '',
+    isActive: true,
+    initialStock: '0',
+    minStockLevel: '0',
+    reorderPoint: '5'
+  })
+
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Load categories
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('categories')
+          .select('id, name')
+          .order('name')
+
+        if (error) throw error
+        setCategories(data || [])
+      } catch (error) {
+        console.error('Error loading categories:', error)
+      }
+    }
+
+    loadCategories()
+  }, [])
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.sku.trim()) {
+      newErrors.sku = 'El SKU es requerido'
+    }
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'El nombre es requerido'
+    }
+
+    if (!formData.categoryId) {
+      newErrors.categoryId = 'La categoria es requerida'
+    }
+
+    if (!formData.costPrice || parseFloat(formData.costPrice) < 0) {
+      newErrors.costPrice = 'El costo debe ser un numero valido'
+    }
+
+    if (!formData.salePrice || parseFloat(formData.salePrice) <= 0) {
+      newErrors.salePrice = 'El precio de venta debe ser mayor a 0'
+    }
+
+    if (parseFloat(formData.salePrice) < parseFloat(formData.costPrice)) {
+      newErrors.salePrice = 'El precio de venta debe ser mayor o igual al costo'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateForm()) {
+      toast.error('Por favor corrige los errores en el formulario')
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      // Check if SKU already exists
+      const skuExists = await productService.checkSkuExists(formData.sku)
+      if (skuExists) {
+        setErrors({ ...errors, sku: 'Este SKU ya existe' })
+        toast.error('El SKU ya esta en uso')
+        setIsLoading(false)
+        return
+      }
+
+      // Create product
+      const productData: CreateProductData = {
+        sku: formData.sku.trim(),
+        name: formData.name.trim(),
+        description: formData.description.trim() || undefined,
+        categoryId: parseInt(formData.categoryId),
+        barcode: formData.barcode.trim() || undefined,
+        unit: formData.unit,
+        imageUrl: formData.imageUrl.trim() || undefined,
+        costPrice: parseFloat(formData.costPrice),
+        salePrice: parseFloat(formData.salePrice),
+        isActive: formData.isActive,
+        currency: 'MXN'
+      }
+
+      const product = await productService.createProduct(productData)
+
+      // Create initial inventory if stock > 0
+      const initialStock = parseInt(formData.initialStock) || 0
+      if (initialStock > 0) {
+        await inventoryService.adjustInventory({
+          productId: product.id,
+          locationId: 1, // Default location
+          quantity: initialStock,
+          movementType: 'entry',
+          notes: 'Stock inicial al crear producto'
+        })
+
+        // Update stock levels
+        const inventory = await inventoryService.getInventoryByProduct(product.id, 1)
+        if (inventory) {
+          await inventoryService.updateStockLevels(
+            inventory.id!,
+            parseInt(formData.minStockLevel) || 0,
+            parseInt(formData.reorderPoint) || 5
+          )
+        }
+      }
+
+      toast.success('Producto creado exitosamente')
+      router.push('/dashboard/inventory')
+    } catch (error: any) {
+      console.error('Error creating product:', error)
+      toast.error(error.message || 'Error al crear el producto')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleChange = (field: string, value: string | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }))
+    }
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link href="/dashboard/inventory">
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold">Nuevo Producto</h1>
+          <p className="text-muted-foreground">
+            Agrega un nuevo producto al inventario
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Basic Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Informacion Basica</CardTitle>
+              <CardDescription>
+                Datos principales del producto
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="sku">SKU *</Label>
+                <Input
+                  id="sku"
+                  value={formData.sku}
+                  onChange={(e) => handleChange('sku', e.target.value)}
+                  placeholder="Ej: PROD-001"
+                  className={errors.sku ? 'border-red-500' : ''}
+                />
+                {errors.sku && (
+                  <p className="text-sm text-red-500">{errors.sku}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="name">Nombre *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  placeholder="Nombre del producto"
+                  className={errors.name ? 'border-red-500' : ''}
+                />
+                {errors.name && (
+                  <p className="text-sm text-red-500">{errors.name}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Descripcion</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => handleChange('description', e.target.value)}
+                  placeholder="Descripcion del producto..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="category">Categoria *</Label>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(value) => handleChange('categoryId', value)}
+                >
+                  <SelectTrigger className={errors.categoryId ? 'border-red-500' : ''}>
+                    <SelectValue placeholder="Selecciona una categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id.toString()}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.categoryId && (
+                  <p className="text-sm text-red-500">{errors.categoryId}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="barcode">Codigo de Barras</Label>
+                  <Input
+                    id="barcode"
+                    value={formData.barcode}
+                    onChange={(e) => handleChange('barcode', e.target.value)}
+                    placeholder="Ej: 7501234567890"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="unit">Unidad de Medida</Label>
+                  <Select
+                    value={formData.unit}
+                    onValueChange={(value) => handleChange('unit', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pieza">Pieza</SelectItem>
+                      <SelectItem value="kg">Kilogramo</SelectItem>
+                      <SelectItem value="litro">Litro</SelectItem>
+                      <SelectItem value="metro">Metro</SelectItem>
+                      <SelectItem value="caja">Caja</SelectItem>
+                      <SelectItem value="paquete">Paquete</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="imageUrl">URL de Imagen</Label>
+                <Input
+                  id="imageUrl"
+                  type="url"
+                  value={formData.imageUrl}
+                  onChange={(e) => handleChange('imageUrl', e.target.value)}
+                  placeholder="https://ejemplo.com/imagen.jpg"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Estado</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Producto disponible para ventas
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.isActive}
+                  onCheckedChange={(checked) => handleChange('isActive', checked)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pricing and Inventory */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Precios</CardTitle>
+                <CardDescription>
+                  Configura los precios del producto
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="costPrice">Precio de Costo *</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      $
+                    </span>
+                    <Input
+                      id="costPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.costPrice}
+                      onChange={(e) => handleChange('costPrice', e.target.value)}
+                      placeholder="0.00"
+                      className={`pl-7 ${errors.costPrice ? 'border-red-500' : ''}`}
+                    />
+                  </div>
+                  {errors.costPrice && (
+                    <p className="text-sm text-red-500">{errors.costPrice}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="salePrice">Precio de Venta *</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      $
+                    </span>
+                    <Input
+                      id="salePrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.salePrice}
+                      onChange={(e) => handleChange('salePrice', e.target.value)}
+                      placeholder="0.00"
+                      className={`pl-7 ${errors.salePrice ? 'border-red-500' : ''}`}
+                    />
+                  </div>
+                  {errors.salePrice && (
+                    <p className="text-sm text-red-500">{errors.salePrice}</p>
+                  )}
+                </div>
+
+                {formData.costPrice && formData.salePrice && parseFloat(formData.salePrice) > parseFloat(formData.costPrice) && (
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <p className="text-sm text-green-700">
+                      Margen de ganancia: {' '}
+                      <span className="font-semibold">
+                        {(((parseFloat(formData.salePrice) - parseFloat(formData.costPrice)) / parseFloat(formData.costPrice)) * 100).toFixed(1)}%
+                      </span>
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Inventario Inicial</CardTitle>
+                <CardDescription>
+                  Configura el stock inicial del producto
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="initialStock">Cantidad Inicial</Label>
+                  <Input
+                    id="initialStock"
+                    type="number"
+                    min="0"
+                    value={formData.initialStock}
+                    onChange={(e) => handleChange('initialStock', e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="minStockLevel">Stock Minimo</Label>
+                    <Input
+                      id="minStockLevel"
+                      type="number"
+                      min="0"
+                      value={formData.minStockLevel}
+                      onChange={(e) => handleChange('minStockLevel', e.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="reorderPoint">Punto de Reorden</Label>
+                    <Input
+                      id="reorderPoint"
+                      type="number"
+                      min="0"
+                      value={formData.reorderPoint}
+                      onChange={(e) => handleChange('reorderPoint', e.target.value)}
+                      placeholder="5"
+                    />
+                  </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground">
+                  Se generara una alerta cuando el stock sea menor o igual al punto de reorden.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-end gap-4">
+          <Link href="/dashboard/inventory">
+            <Button type="button" variant="outline">
+              Cancelar
+            </Button>
+          </Link>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Guardar Producto
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
+}

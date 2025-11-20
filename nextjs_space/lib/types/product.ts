@@ -12,7 +12,7 @@ export interface Product {
   isActive: boolean
   imageUrl?: string
   barcode?: string
-  unitOfMeasure?: string
+  unit?: string
   costPrice?: number
   sellingPrice?: number
   taxRate?: number
@@ -55,13 +55,11 @@ export interface InventoryItem {
   productId: number
   variantId?: number
   locationId: number
-  quantityAvailable: number
-  quantityReserved: number
+  quantity: number
   minStockLevel: number
   maxStockLevel?: number
   reorderPoint: number
-  lastRestockDate?: Date
-  lastRestockQuantity?: number
+  lastRestocked?: Date
   isTracked?: boolean
 }
 
@@ -81,18 +79,17 @@ export interface CreateProductData {
   isActive?: boolean
   imageUrl?: string
   barcode?: string
-  unitOfMeasure?: string
+  unit?: string
   costPrice: number
-  sellingPrice: number
+  salePrice: number
   taxRate?: number
   isTaxable?: boolean
   currency?: string
   variants?: {
-    variantName: string
+    name: string
     sku?: string
     barcode?: string
-    costPrice?: number
-    sellingPrice?: number
+    additionalPrice?: number
     isActive?: boolean
     attributes?: Record<string, any>
   }[]
@@ -106,9 +103,9 @@ export interface UpdateProductData {
   isActive?: boolean
   imageUrl?: string
   barcode?: string
-  unitOfMeasure?: string
+  unit?: string
   costPrice?: number
-  sellingPrice?: number
+  salePrice?: number
   taxRate?: number
   isTaxable?: boolean
   currency?: string

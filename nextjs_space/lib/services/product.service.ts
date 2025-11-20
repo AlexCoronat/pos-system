@@ -66,14 +66,6 @@ class ProductService {
         .from('products')
         .select(`
           *,
-          price:product_prices!inner(
-            id,
-            product_id,
-            cost_price,
-            sale_price,
-            currency,
-            is_active
-          ),
           category:categories(
             id,
             name
@@ -81,13 +73,13 @@ class ProductService {
           variants:product_variants(
             id,
             product_id,
-            name,
+            variant_name,
             sku,
-            additional_price,
+            cost_price,
+            selling_price,
             is_active
           )
         `, { count: 'exact' })
-        .eq('product_prices.is_active', true)
 
       // Apply filters
       if (filters.categoryId) {
@@ -103,11 +95,11 @@ class ProductService {
       }
 
       if (filters.minPrice) {
-        query = query.gte('product_prices.sale_price', filters.minPrice)
+        query = query.gte('selling_price', filters.minPrice)
       }
 
       if (filters.maxPrice) {
-        query = query.lte('product_prices.sale_price', filters.maxPrice)
+        query = query.lte('selling_price', filters.maxPrice)
       }
 
       // Pagination
@@ -133,14 +125,14 @@ class ProductService {
         isActive: item.is_active,
         imageUrl: item.image_url,
         barcode: item.barcode,
-        unit: item.unit,
+        unit: item.unit_of_measure,
         price: {
-          id: item.price[0].id,
-          productId: item.price[0].product_id,
-          costPrice: item.price[0].cost_price,
-          salePrice: item.price[0].sale_price,
-          currency: item.price[0].currency,
-          isActive: item.price[0].is_active
+          id: item.id,
+          productId: item.id,
+          costPrice: item.cost_price || 0,
+          salePrice: item.selling_price || 0,
+          currency: 'MXN',
+          isActive: true
         },
         variants: item.variants || [],
         createdAt: new Date(item.created_at),
@@ -169,14 +161,6 @@ class ProductService {
         .from('products')
         .select(`
           *,
-          price:product_prices!inner(
-            id,
-            product_id,
-            cost_price,
-            sale_price,
-            currency,
-            is_active
-          ),
           category:categories(
             id,
             name
@@ -184,14 +168,14 @@ class ProductService {
           variants:product_variants(
             id,
             product_id,
-            name,
+            variant_name,
             sku,
-            additional_price,
+            cost_price,
+            selling_price,
             is_active
           )
         `)
         .eq('id', productId)
-        .eq('product_prices.is_active', true)
         .single()
 
       if (error) throw error
@@ -207,14 +191,14 @@ class ProductService {
         isActive: data.is_active,
         imageUrl: data.image_url,
         barcode: data.barcode,
-        unit: data.unit,
+        unit: data.unit_of_measure,
         price: {
-          id: data.price[0].id,
-          productId: data.price[0].product_id,
-          costPrice: data.price[0].cost_price,
-          salePrice: data.price[0].sale_price,
-          currency: data.price[0].currency,
-          isActive: data.price[0].is_active
+          id: data.id,
+          productId: data.id,
+          costPrice: data.cost_price || 0,
+          salePrice: data.selling_price || 0,
+          currency: 'MXN',
+          isActive: true
         },
         variants: data.variants || [],
         createdAt: new Date(data.created_at),
@@ -231,7 +215,7 @@ class ProductService {
    */
   async createProduct(data: CreateProductData): Promise<ProductWithPrice> {
     try {
-      // Start a transaction by creating product first
+      // Create product with prices directly in the products table
       const { data: product, error: productError } = await supabase
         .from('products')
         .insert({
@@ -242,31 +226,16 @@ class ProductService {
           is_active: data.isActive ?? true,
           image_url: data.imageUrl,
           barcode: data.barcode,
-          unit: data.unit
+          unit_of_measure: data.unit,
+          cost_price: data.costPrice,
+          selling_price: data.salePrice,
+          tax_rate: data.taxRate || 16,
+          is_taxable: data.isTaxable ?? true
         })
         .select()
         .single()
 
       if (productError) throw productError
-
-      // Create price
-      const { data: price, error: priceError } = await supabase
-        .from('product_prices')
-        .insert({
-          product_id: product.id,
-          cost_price: data.costPrice,
-          sale_price: data.salePrice,
-          currency: data.currency || 'MXN',
-          is_active: true
-        })
-        .select()
-        .single()
-
-      if (priceError) {
-        // Rollback: delete product if price creation fails
-        await supabase.from('products').delete().eq('id', product.id)
-        throw priceError
-      }
 
       // Create variants if provided
       let variants: ProductVariant[] = []
@@ -276,9 +245,10 @@ class ProductService {
           .insert(
             data.variants.map(v => ({
               product_id: product.id,
-              name: v.name,
+              variant_name: v.name,
               sku: v.sku,
-              additional_price: v.additionalPrice || 0,
+              cost_price: v.additionalPrice || 0,
+              selling_price: v.additionalPrice || 0,
               is_active: v.isActive ?? true
             }))
           )
@@ -286,7 +256,6 @@ class ProductService {
 
         if (variantsError) {
           console.error('Error creating variants:', variantsError)
-          // Don't rollback the entire product, just log the error
         } else {
           variants = variantsData || []
         }
@@ -301,14 +270,14 @@ class ProductService {
         isActive: product.is_active,
         imageUrl: product.image_url,
         barcode: product.barcode,
-        unit: product.unit,
+        unit: product.unit_of_measure,
         price: {
-          id: price.id,
-          productId: price.product_id,
-          costPrice: price.cost_price,
-          salePrice: price.sale_price,
-          currency: price.currency,
-          isActive: price.is_active
+          id: product.id,
+          productId: product.id,
+          costPrice: product.cost_price || 0,
+          salePrice: product.selling_price || 0,
+          currency: 'MXN',
+          isActive: true
         },
         variants,
         createdAt: new Date(product.created_at),
@@ -328,51 +297,27 @@ class ProductService {
     data: UpdateProductData
   ): Promise<ProductWithPrice> {
     try {
-      // Update product
-      if (data.sku || data.name || data.description || data.categoryId !== undefined ||
-          data.isActive !== undefined || data.imageUrl !== undefined ||
-          data.barcode !== undefined || data.unit !== undefined) {
+      const updateData: any = {}
 
-        const updateData: any = {}
-        if (data.sku) updateData.sku = data.sku
-        if (data.name) updateData.name = data.name
-        if (data.description !== undefined) updateData.description = data.description
-        if (data.categoryId) updateData.category_id = data.categoryId
-        if (data.isActive !== undefined) updateData.is_active = data.isActive
-        if (data.imageUrl !== undefined) updateData.image_url = data.imageUrl
-        if (data.barcode !== undefined) updateData.barcode = data.barcode
-        if (data.unit !== undefined) updateData.unit = data.unit
+      if (data.sku) updateData.sku = data.sku
+      if (data.name) updateData.name = data.name
+      if (data.description !== undefined) updateData.description = data.description
+      if (data.categoryId) updateData.category_id = data.categoryId
+      if (data.isActive !== undefined) updateData.is_active = data.isActive
+      if (data.imageUrl !== undefined) updateData.image_url = data.imageUrl
+      if (data.barcode !== undefined) updateData.barcode = data.barcode
+      if (data.unit !== undefined) updateData.unit_of_measure = data.unit
+      if (data.costPrice !== undefined) updateData.cost_price = data.costPrice
+      if (data.salePrice !== undefined) updateData.selling_price = data.salePrice
+      if (data.taxRate !== undefined) updateData.tax_rate = data.taxRate
+      if (data.isTaxable !== undefined) updateData.is_taxable = data.isTaxable
 
-        const { error: productError } = await supabase
-          .from('products')
-          .update(updateData)
-          .eq('id', productId)
+      const { error: productError } = await supabase
+        .from('products')
+        .update(updateData)
+        .eq('id', productId)
 
-        if (productError) throw productError
-      }
-
-      // Update price if provided
-      if (data.costPrice !== undefined || data.salePrice !== undefined) {
-        // Deactivate old price
-        await supabase
-          .from('product_prices')
-          .update({ is_active: false })
-          .eq('product_id', productId)
-          .eq('is_active', true)
-
-        // Create new price
-        const { error: priceError } = await supabase
-          .from('product_prices')
-          .insert({
-            product_id: productId,
-            cost_price: data.costPrice,
-            sale_price: data.salePrice,
-            currency: data.currency || 'MXN',
-            is_active: true
-          })
-
-        if (priceError) throw priceError
-      }
+      if (productError) throw productError
 
       // Get updated product
       return await this.getProductById(productId)

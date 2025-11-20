@@ -66,9 +66,24 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    if (error) {
+      console.error('Error getting user in middleware:', error.message)
+      // On connection errors, allow the request to proceed
+      // The client-side will handle auth state
+      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+        return supabaseResponse
+      }
+    }
+    user = data.user
+  } catch (error: any) {
+    console.error('Middleware auth error:', error.message || error)
+    // On connection errors (ECONNRESET, etc), allow the request to proceed
+    // rather than redirecting to login
+    return supabaseResponse
+  }
 
   const pathname = request.nextUrl.pathname
 
@@ -147,17 +162,6 @@ export async function updateSession(request: NextRequest) {
         const userPermissions = typeof roleData?.permissions === 'string'
           ? JSON.parse(roleData.permissions)
           : roleData?.permissions || {}
-
-        // Debug logging
-        console.log('=== MIDDLEWARE DEBUG ===')
-        console.log('User ID:', user.id)
-        console.log('User Profile:', JSON.stringify(userProfile, null, 2))
-        console.log('Role Data:', roleData)
-        console.log('User Role:', userRole)
-        console.log('User Permissions:', userPermissions)
-        console.log('Required Roles:', config.roles)
-        console.log('Has Required Role:', hasRequiredRole(userRole, config.roles || []))
-        console.log('========================')
 
         // Check role access
         if (config.roles && !hasRequiredRole(userRole, config.roles)) {
