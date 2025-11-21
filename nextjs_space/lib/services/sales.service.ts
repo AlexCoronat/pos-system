@@ -6,6 +6,7 @@
 'use client'
 
 import { createClient } from '../supabase/client'
+import { getBusinessContext } from '../utils/business-context'
 import type {
   Sale,
   SaleWithItems,
@@ -29,6 +30,9 @@ class SalesService {
   async createSale(data: CreateSaleData): Promise<SaleWithItems> {
     try {
       logger.info('Creating new sale', { locationId: data.locationId })
+
+      // Get business context
+      const { businessId, userId } = await getBusinessContext()
 
       // Generate sale number (format: SALE-YYYYMMDD-XXXXX)
       const saleNumber = await this.generateSaleNumber()
@@ -58,15 +62,16 @@ class SalesService {
       const { data: sale, error: saleError } = await this.supabase
         .from('sales')
         .insert({
+          business_id: businessId,
           sale_number: saleNumber,
           location_id: data.locationId,
           customer_id: data.customerId,
-          sold_by: (await this.supabase.auth.getUser()).data.user?.id,
+          sold_by: userId,
           status: 'completed',
           subtotal: subtotal,
           discount_amount: totalDiscount,
           tax_amount: totalTax,
-          total: total,
+          total_amount: total,
           notes: data.notes
         })
         .select()
@@ -451,7 +456,7 @@ class SalesService {
       subtotal: data.subtotal,
       discountAmount: data.discount_amount,
       taxAmount: data.tax_amount,
-      total: data.total,
+      total: data.total_amount,
       notes: data.notes,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
@@ -475,7 +480,7 @@ class SalesService {
       subtotal: data.subtotal,
       discountAmount: data.discount_amount,
       taxAmount: data.tax_amount,
-      total: data.total,
+      total: data.total_amount,
       notes: data.notes,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
@@ -497,7 +502,7 @@ class SalesService {
       subtotal: data.subtotal,
       discountAmount: data.discount_amount,
       taxAmount: data.tax_amount,
-      total: data.total,
+      total: data.total_amount,
       notes: data.notes,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),

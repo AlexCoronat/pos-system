@@ -2,31 +2,49 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
-import { User, Phone, MapPin } from 'lucide-react'
+import {
+  User, Phone, Building2, MapPin,
+  ArrowRight, ArrowLeft, Check, Loader2
+} from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { authService } from '@/lib/services/auth.service'
 import { ROUTES, MESSAGES } from '@/lib/constants'
 import { getUserFriendlyMessage } from '@/lib/utils/error-handler'
 
+type Step = 1 | 2 | 3
+
 export default function CompleteProfilePage() {
+  const [currentStep, setCurrentStep] = useState<Step>(1)
   const [formData, setFormData] = useState({
+    // Personal data
     firstName: '',
     lastName: '',
     phone: '',
-    address: ''
+    // Business data
+    businessName: '',
+    businessTaxId: '',
+    businessType: '',
+    // Location data
+    locationName: '',
+    locationAddress: '',
+    locationCity: '',
+    locationState: '',
+    locationPostalCode: '',
+    locationPhone: ''
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [userEmail, setUserEmail] = useState('')
+  const [userId, setUserId] = useState('')
   const router = useRouter()
   const { toast } = useToast()
 
   useEffect(() => {
-    // Check if user is authenticated
     const checkAuth = async () => {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
@@ -37,51 +55,149 @@ export default function CompleteProfilePage() {
       }
 
       setUserEmail(session.user.email || '')
+      setUserId(session.user.id)
+      setIsCheckingAuth(false)
     }
 
     checkAuth()
   }, [router])
 
+  const validateStep1 = () => {
+    if (!formData.firstName || !formData.lastName) {
+      toast({
+        title: "Campos requeridos",
+        description: "Por favor ingresa tu nombre y apellido",
+        variant: "destructive",
+      })
+      return false
+    }
+    return true
+  }
+
+  const validateStep2 = () => {
+    if (!formData.businessName) {
+      toast({
+        title: "Campo requerido",
+        description: "El nombre del negocio es obligatorio",
+        variant: "destructive",
+      })
+      return false
+    }
+    return true
+  }
+
+  const validateStep3 = () => {
+    if (!formData.locationName) {
+      toast({
+        title: "Campo requerido",
+        description: "El nombre de la ubicación es obligatorio",
+        variant: "destructive",
+      })
+      return false
+    }
+    return true
+  }
+
+  const handleNext = () => {
+    if (currentStep === 1 && validateStep1()) {
+      setCurrentStep(2)
+    } else if (currentStep === 2 && validateStep2()) {
+      setCurrentStep(3)
+    }
+  }
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep((currentStep - 1) as Step)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.firstName || !formData.lastName) {
-      toast({
-        ...MESSAGES.AUTH.MISSING_FIELDS,
-        description: "Please fill in your first and last name",
-        variant: "destructive",
-      })
-      return
-    }
+    if (!validateStep3()) return
 
     setIsLoading(true)
 
     try {
       const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!session?.user) {
-        throw new Error('No active session')
-      }
-
-      // Complete the profile
-      await authService.completeOAuthProfile(session.user.id, {
+      // 1. Complete the basic profile
+      await authService.completeOAuthProfile(userId, {
         firstName: formData.firstName,
         lastName: formData.lastName,
         phone: formData.phone || undefined
       })
 
-      // If address is provided, you could save it to metadata or a separate table
-      if (formData.address) {
-        await supabase
-          .from('user_details')
-          .update({
-            metadata: { address: formData.address }
-          })
-          .eq('id', session.user.id)
-      }
+      // 2. Create the business for this user
+      // Get Admin role ID
+      const { data: adminRole } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'Admin')
+        .is('business_id', null)
+        .single()
 
-      toast(MESSAGES.AUTH.PROFILE_COMPLETE_SUCCESS)
+      // Create business
+      const { data: business, error: businessError } = await supabase
+        .from('businesses')
+        .insert({
+          name: formData.businessName,
+          tax_id: formData.businessTaxId || null,
+          business_type: formData.businessType || null,
+          owner_id: userId,
+          plan_id: 1,
+          is_active: true
+        })
+        .select()
+        .single()
+
+      if (businessError) throw businessError
+
+      // Create location
+      const { data: location, error: locationError } = await supabase
+        .from('locations')
+        .insert({
+          business_id: business.id,
+          code: `LOC-${business.id}-001`,
+          name: formData.locationName || 'Principal',
+          address: formData.locationAddress || null,
+          city: formData.locationCity || null,
+          state: formData.locationState || null,
+          postal_code: formData.locationPostalCode || null,
+          phone: formData.locationPhone || null,
+          is_active: true
+        })
+        .select()
+        .single()
+
+      if (locationError) throw locationError
+
+      // Update user with business and location
+      const { error: updateError } = await supabase
+        .from('user_details')
+        .update({
+          business_id: business.id,
+          role_id: adminRole?.id || null,
+          default_location_id: location.id
+        })
+        .eq('id', userId)
+
+      if (updateError) throw updateError
+
+      // Assign user to location
+      await supabase
+        .from('user_locations')
+        .insert({
+          user_id: userId,
+          location_id: location.id,
+          is_primary: true
+        })
+
+      toast({
+        title: "Perfil completado",
+        description: "Tu cuenta y negocio han sido configurados exitosamente",
+      })
 
       router.push(ROUTES.DASHBOARD)
     } catch (error: any) {
@@ -99,142 +215,310 @@ export default function CompleteProfilePage() {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
+  const steps = [
+    { number: 1, title: 'Datos personales', icon: User },
+    { number: 2, title: 'Tu negocio', icon: Building2 },
+    { number: 3, title: 'Primera ubicación', icon: MapPin },
+  ]
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
       <div className="max-w-md w-full">
         <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
           {/* Header */}
           <div className="text-center space-y-2">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center">
-                <Image
-                  src="https://cdn.abacus.ai/images/559a9b32-de85-4273-a1a0-d4349091d32d.jpg"
-                  alt="Complete Profile"
-                  width={32}
-                  height={32}
-                  className="rounded-lg"
-                />
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900">Complete your profile</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Completa tu perfil</h1>
             <p className="text-gray-600">
-              We need a bit more information to set up your account
+              Configura tu negocio para comenzar
             </p>
             {userEmail && (
               <p className="text-sm text-blue-600">
-                Signed in as: {userEmail}
+                {userEmail}
               </p>
             )}
           </div>
 
+          {/* Step Indicator */}
+          <div className="flex items-center justify-center space-x-2">
+            {steps.map((step, index) => (
+              <div key={step.number} className="flex items-center">
+                <div className={`
+                  flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all
+                  ${currentStep >= step.number
+                    ? 'bg-blue-600 border-blue-600 text-white'
+                    : 'border-gray-300 text-gray-400'}
+                `}>
+                  {currentStep > step.number ? (
+                    <Check className="h-5 w-5" />
+                  ) : (
+                    <step.icon className="h-5 w-5" />
+                  )}
+                </div>
+                {index < steps.length - 1 && (
+                  <div className={`w-8 h-1 mx-1 rounded ${
+                    currentStep > step.number ? 'bg-blue-600' : 'bg-gray-200'
+                  }`} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Step Title */}
+          <div className="text-center">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {steps[currentStep - 1].title}
+            </h2>
+          </div>
+
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              {/* Name Fields */}
-              <div className="grid grid-cols-2 gap-4">
+            {/* Step 1: Personal Data */}
+            {currentStep === 1 && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">Nombre *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <Input
+                        id="firstName"
+                        type="text"
+                        required
+                        className="pl-10 h-12"
+                        placeholder="Tu nombre"
+                        value={formData.firstName}
+                        onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Apellido *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <Input
+                        id="lastName"
+                        type="text"
+                        required
+                        className="pl-10 h-12"
+                        placeholder="Tu apellido"
+                        value={formData.lastName}
+                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
-                    First name *
-                  </Label>
+                  <Label htmlFor="phone">Teléfono (opcional)</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
-                      id="firstName"
-                      name="firstName"
+                      id="phone"
+                      type="tel"
+                      className="pl-10 h-12"
+                      placeholder="(555) 123-4567"
+                      value={formData.phone}
+                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Business Data */}
+            {currentStep === 2 && (
+              <div className="space-y-4">
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="pt-4">
+                    <p className="text-sm text-blue-800">
+                      Ingresa los datos de tu negocio. Serás el administrador principal.
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <div className="space-y-2">
+                  <Label htmlFor="businessName">Nombre del negocio *</Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                      id="businessName"
                       type="text"
-                      autoComplete="given-name"
                       required
-                      className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                      placeholder="First name"
-                      value={formData.firstName}
-                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      className="pl-10 h-12"
+                      placeholder="Mi Papelería"
+                      value={formData.businessName}
+                      onChange={(e) => handleInputChange('businessName', e.target.value)}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
-                    Last name *
-                  </Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      type="text"
-                      autoComplete="family-name"
-                      required
-                      className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                      placeholder="Last name"
-                      value={formData.lastName}
-                      onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Phone Field */}
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
-                  Phone number (optional)
-                </Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Label htmlFor="businessTaxId">RFC (opcional)</Label>
                   <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    autoComplete="tel"
-                    className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                    placeholder="Enter your phone number"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Address Field */}
-              <div className="space-y-2">
-                <Label htmlFor="address" className="text-sm font-medium text-gray-700">
-                  Address (optional)
-                </Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    id="address"
-                    name="address"
+                    id="businessTaxId"
                     type="text"
-                    autoComplete="street-address"
-                    className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                    placeholder="Enter your address"
-                    value={formData.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
+                    className="h-12"
+                    placeholder="XAXX010101000"
+                    value={formData.businessTaxId}
+                    onChange={(e) => handleInputChange('businessTaxId', e.target.value.toUpperCase())}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="businessType">Giro del negocio</Label>
+                  <Input
+                    id="businessType"
+                    type="text"
+                    className="h-12"
+                    placeholder="Papelería, Abarrotes, etc."
+                    value={formData.businessType}
+                    onChange={(e) => handleInputChange('businessType', e.target.value)}
                   />
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                  <span>Completing profile...</span>
+            {/* Step 3: Location Data */}
+            {currentStep === 3 && (
+              <div className="space-y-4">
+                <Card className="bg-green-50 border-green-200">
+                  <CardContent className="pt-4">
+                    <p className="text-sm text-green-800">
+                      Configura tu primera sucursal o punto de venta.
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <div className="space-y-2">
+                  <Label htmlFor="locationName">Nombre de la sucursal *</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                      id="locationName"
+                      type="text"
+                      required
+                      className="pl-10 h-12"
+                      placeholder="Sucursal Centro"
+                      value={formData.locationName}
+                      onChange={(e) => handleInputChange('locationName', e.target.value)}
+                    />
+                  </div>
                 </div>
-              ) : (
-                <span>Complete Profile</span>
-              )}
-            </Button>
-          </form>
 
-          {/* Required fields note */}
-          <p className="text-xs text-gray-500 text-center">
-            * Required fields
-          </p>
+                <div className="space-y-2">
+                  <Label htmlFor="locationAddress">Dirección</Label>
+                  <Input
+                    id="locationAddress"
+                    type="text"
+                    className="h-12"
+                    placeholder="Calle, número, colonia"
+                    value={formData.locationAddress}
+                    onChange={(e) => handleInputChange('locationAddress', e.target.value)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="locationCity">Ciudad</Label>
+                    <Input
+                      id="locationCity"
+                      type="text"
+                      className="h-12"
+                      placeholder="Ciudad"
+                      value={formData.locationCity}
+                      onChange={(e) => handleInputChange('locationCity', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="locationState">Estado</Label>
+                    <Input
+                      id="locationState"
+                      type="text"
+                      className="h-12"
+                      placeholder="Estado"
+                      value={formData.locationState}
+                      onChange={(e) => handleInputChange('locationState', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="locationPostalCode">CP</Label>
+                    <Input
+                      id="locationPostalCode"
+                      type="text"
+                      className="h-12"
+                      placeholder="12345"
+                      value={formData.locationPostalCode}
+                      onChange={(e) => handleInputChange('locationPostalCode', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="locationPhone">Teléfono</Label>
+                    <Input
+                      id="locationPhone"
+                      type="tel"
+                      className="h-12"
+                      placeholder="(555) 123-4567"
+                      value={formData.locationPhone}
+                      onChange={(e) => handleInputChange('locationPhone', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex gap-3">
+              {currentStep > 1 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 h-12"
+                  onClick={handleBack}
+                >
+                  <ArrowLeft className="h-5 w-5 mr-2" />
+                  Anterior
+                </Button>
+              )}
+
+              {currentStep < 3 ? (
+                <Button
+                  type="button"
+                  className="flex-1 h-12 bg-blue-600 hover:bg-blue-700"
+                  onClick={handleNext}
+                >
+                  Siguiente
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  className="flex-1 h-12 bg-green-600 hover:bg-green-700"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>Guardando...</span>
+                    </div>
+                  ) : (
+                    <span>Completar configuración</span>
+                  )}
+                </Button>
+              )}
+            </div>
+          </form>
         </div>
       </div>
     </div>

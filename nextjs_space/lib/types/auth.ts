@@ -13,6 +13,17 @@ export interface RegisterData {
   lastName: string
   phone?: string
   acceptTerms: boolean
+  // Business data (for new business registration)
+  businessName?: string
+  businessTaxId?: string
+  businessType?: string
+  // First location data
+  locationName?: string
+  locationAddress?: string
+  locationCity?: string
+  locationState?: string
+  locationPostalCode?: string
+  locationPhone?: string
 }
 
 export interface UpdateProfileData {
@@ -49,9 +60,17 @@ export interface AuthUser {
   firstName: string
   lastName: string
   phone?: string
-  roleId: number
+  roleId: number | null
   roleName: string
+  isSystemRole: boolean
   permissions: Record<string, string[]>
+  // Business info
+  businessId?: number
+  businessName?: string
+  planId?: number
+  planName?: string
+  isBusinessOwner?: boolean
+  // Location info
   defaultLocationId?: number
   locationName?: string
   isActive: boolean

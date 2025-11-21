@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { getBusinessContext } from '@/lib/utils/business-context'
 import type { InventoryItem } from '@/lib/types/product'
 
 export interface InventoryMovement {
@@ -153,6 +154,9 @@ class InventoryService {
    */
   async adjustInventory(adjustment: InventoryAdjustment): Promise<InventoryItem> {
     try {
+      // Get business context
+      const { businessId } = await getBusinessContext()
+
       // Get or create inventory record
       let inventory = await this.getInventoryByProduct(
         adjustment.productId,
@@ -194,6 +198,7 @@ class InventoryService {
         const { data, error } = await supabase
           .from('inventory')
           .insert({
+            business_id: businessId,
             product_id: adjustment.productId,
             variant_id: adjustment.variantId,
             location_id: adjustment.locationId,

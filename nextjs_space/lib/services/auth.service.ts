@@ -116,13 +116,13 @@ class AuthService {
 
   /**
    * Register new user with email and password
+   * Creates a new business if businessName is provided
    */
   async register(data: RegisterData): Promise<AuthUser> {
     try {
       this.setLoading(true)
 
       // Step 1: Create user in auth.users with metadata
-      // The trigger will read user_metadata and create user_details with all info
       const { data: authData, error } = await this.supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -139,6 +139,11 @@ class AuthService {
       if (error) throw error
       if (!authData.user) throw new AuthenticationError('No user returned from registration')
 
+      // Step 2: If business data provided, create business and location
+      if (data.businessName) {
+        await this.createBusinessForUser(authData.user.id, data)
+      }
+
       // Load the complete user profile
       const user = await this.loadUserProfile(authData.user.id)
 
@@ -148,6 +153,85 @@ class AuthService {
       throw this.handleAuthError(error as AuthError)
     } finally {
       this.setLoading(false)
+    }
+  }
+
+  /**
+   * Create business, location and assign user as admin
+   * @private
+   */
+  private async createBusinessForUser(userId: string, data: RegisterData): Promise<void> {
+    try {
+      // Get Admin role ID from roles (system role)
+      const { data: adminRole } = await this.supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'Admin')
+        .is('business_id', null)
+        .single()
+
+      // Create business
+      const { data: business, error: businessError } = await this.supabase
+        .from('businesses')
+        .insert({
+          name: data.businessName,
+          tax_id: data.businessTaxId || null,
+          business_type: data.businessType || null,
+          owner_id: userId,
+          plan_id: 1, // Free plan by default
+          is_active: true
+        })
+        .select()
+        .single()
+
+      if (businessError) throw businessError
+
+      // Create first location
+      const { data: location, error: locationError } = await this.supabase
+        .from('locations')
+        .insert({
+          business_id: business.id,
+          code: `LOC-${business.id}-001`,
+          name: data.locationName || 'Principal',
+          address: data.locationAddress || null,
+          city: data.locationCity || null,
+          state: data.locationState || null,
+          postal_code: data.locationPostalCode || null,
+          phone: data.locationPhone || null,
+          is_active: true
+        })
+        .select()
+        .single()
+
+      if (locationError) throw locationError
+
+      // Update user_details with business_id, admin role, and location
+      const { error: updateError } = await this.supabase
+        .from('user_details')
+        .update({
+          business_id: business.id,
+          role_id: adminRole?.id || null,
+          default_location_id: location.id
+        })
+        .eq('id', userId)
+
+      if (updateError) throw updateError
+
+      // Assign user to location
+      const { error: assignError } = await this.supabase
+        .from('user_locations')
+        .insert({
+          user_id: userId,
+          location_id: location.id,
+          is_primary: true
+        })
+
+      if (assignError) throw assignError
+
+      logger.info('Business created for user', { userId, businessId: business.id })
+    } catch (error) {
+      logger.error('Failed to create business for user', { error, userId })
+      throw error
     }
   }
 
@@ -356,7 +440,14 @@ class AuthService {
       .from('user_details')
       .select(`
         *,
-        role:roles!role_id(*),
+        role:roles!role_id(id, name, permissions, is_system),
+        business:businesses!business_id(
+          id,
+          name,
+          owner_id,
+          plan_id,
+          plan:subscription_plans!plan_id(id, name)
+        ),
         defaultLocation:locations!default_location_id(*),
         userLocations:user_locations!user_locations_user_id_fkey(
           id,
@@ -381,6 +472,9 @@ class AuthService {
     // Type assertion for data since we're using custom schemas
     const userData = data as any
 
+    // Get permissions from role
+    const permissions = this.parsePermissions(userData.role?.permissions)
+
     // Transform to AuthUser format
     const user: AuthUser = {
       id: userData.id,
@@ -388,9 +482,17 @@ class AuthService {
       firstName: userData.first_name || '',
       lastName: userData.last_name || '',
       phone: userData.phone || undefined,
-      roleId: userData.role_id || AUTH_CONSTANTS.ROLES.SELLER,
-      roleName: userData.role?.name || 'Seller',
-      permissions: this.parsePermissions(userData.role?.permissions),
+      roleId: userData.role_id || null,
+      roleName: userData.role?.name || 'Sin rol',
+      isSystemRole: userData.role?.is_system ?? false,
+      permissions: permissions,
+      // Business info
+      businessId: userData.business_id || undefined,
+      businessName: userData.business?.name || undefined,
+      planId: userData.business?.plan_id || undefined,
+      planName: userData.business?.plan?.name || undefined,
+      isBusinessOwner: userData.business?.owner_id === userId,
+      // Location info
       defaultLocationId: userData.default_location_id || undefined,
       locationName: userData.defaultLocation?.name || undefined,
       isActive: userData.is_active,

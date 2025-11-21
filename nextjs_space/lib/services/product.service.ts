@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { getBusinessContext } from '@/lib/utils/business-context'
 import type {
   Product,
   ProductWithPrice,
@@ -215,10 +216,14 @@ class ProductService {
    */
   async createProduct(data: CreateProductData): Promise<ProductWithPrice> {
     try {
+      // Get business context
+      const { businessId } = await getBusinessContext()
+
       // Create product with prices directly in the products table
       const { data: product, error: productError } = await supabase
         .from('products')
         .insert({
+          business_id: businessId,
           sku: data.sku,
           name: data.name,
           description: data.description,
