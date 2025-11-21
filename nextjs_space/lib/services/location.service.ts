@@ -190,14 +190,13 @@ class LocationService {
         .from('user_details')
         .select(`
           id,
-          user_id,
           first_name,
           last_name,
           email,
           is_active,
           default_location_id,
           role:roles!role_id(name),
-          user_locations(
+          user_locations!user_id(
             id,
             location_id,
             is_primary,
@@ -213,7 +212,7 @@ class LocationService {
         const role = Array.isArray(user.role) ? user.role[0] : user.role
 
         return {
-          id: user.user_id,
+          id: user.id,
           email: user.email || '',
           firstName: user.first_name || '',
           lastName: user.last_name || '',
@@ -222,7 +221,7 @@ class LocationService {
           defaultLocationId: user.default_location_id,
           assignedLocations: (user.user_locations || []).map((ul: any) => ({
             id: ul.id,
-            userId: user.user_id,
+            userId: user.id,
             locationId: ul.location_id,
             isPrimary: ul.is_primary,
             location: ul.location ? {

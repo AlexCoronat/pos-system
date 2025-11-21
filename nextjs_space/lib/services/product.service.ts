@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase/client'
 import { getBusinessContext } from '@/lib/utils/business-context'
+import { getCategoryPrefix, generateSKU, generateInternalBarcode } from '@/lib/utils/product-codes'
 import type {
   Product,
   ProductWithPrice,
@@ -47,7 +48,34 @@ class ProductService {
 
       if (error) throw error
 
-      return data || []
+      // Transform the flat RPC results into ProductSearchResult format
+      return (data || []).map((item: any) => ({
+        product: {
+          id: item.product_id,
+          sku: item.product_sku,
+          name: item.product_name,
+          description: item.product_description,
+          categoryId: item.category_id,
+          categoryName: item.category_name,
+          isActive: true,
+          imageUrl: item.image_url,
+          barcode: item.product_barcode,
+          unit: item.unit_of_measure,
+          sellingPrice: item.selling_price || 0,
+          costPrice: item.cost_price || 0,
+          taxRate: item.tax_rate || 16,
+          isTaxable: item.is_taxable ?? true
+        },
+        inventory: {
+          id: item.inventory_id,
+          productId: item.product_id,
+          locationId: locationId,
+          quantity: item.available_stock || 0,
+          minStockLevel: 0,
+          reorderPoint: 0
+        },
+        availableStock: item.available_stock || 0
+      }))
     } catch (error: any) {
       console.error('Error searching products:', error)
       throw new Error(error.message || 'Error al buscar productos')
@@ -70,15 +98,6 @@ class ProductService {
           category:categories(
             id,
             name
-          ),
-          variants:product_variants(
-            id,
-            product_id,
-            variant_name,
-            sku,
-            cost_price,
-            selling_price,
-            is_active
           )
         `, { count: 'exact' })
 
@@ -165,15 +184,6 @@ class ProductService {
           category:categories(
             id,
             name
-          ),
-          variants:product_variants(
-            id,
-            product_id,
-            variant_name,
-            sku,
-            cost_price,
-            selling_price,
-            is_active
           )
         `)
         .eq('id', productId)
@@ -384,9 +394,9 @@ class ProductService {
         query = query.neq('id', excludeProductId)
       }
 
-      const { data, error } = await query.single()
+      const { data, error } = await query.maybeSingle()
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      if (error) {
         throw error
       }
 
@@ -396,6 +406,249 @@ class ProductService {
       return false
     }
   }
+
+  /**
+   * Generate the next available SKU for a category
+   * @param categoryName - The category name to generate prefix from
+   * @param forceNew - If true, adds a random offset to generate a different SKU
+   */
+  async generateNextSKU(categoryName: string, forceNew: boolean = false): Promise<string> {
+    try {
+      const prefix = getCategoryPrefix(categoryName || 'General')
+
+      // Find the highest existing SKU with this prefix
+      const { data, error } = await supabase
+        .from('products')
+        .select('sku')
+        .like('sku', `${prefix}-%`)
+        .order('sku', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (error) {
+        console.error('Error finding last SKU:', error)
+      }
+
+      let nextNumber = 1
+
+      if (data?.sku) {
+        // Extract the number from the existing SKU (e.g., "BEB-042" -> 42)
+        const match = data.sku.match(/-(\d+)$/)
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1
+        }
+      }
+
+      // Add random offset when forcing a new value
+      if (forceNew) {
+        nextNumber += Math.floor(Math.random() * 10) + 1
+      }
+
+      return generateSKU(prefix, nextNumber)
+    } catch (error: any) {
+      console.error('Error generating SKU:', error)
+      // Fallback to a random SKU
+      const prefix = getCategoryPrefix(categoryName || 'General')
+      const random = Math.floor(Math.random() * 900) + 100
+      return generateSKU(prefix, random)
+    }
+  }
+
+  /**
+   * Generate a suggested internal barcode for a new product
+   * Uses the next available product ID estimation
+   * @param forceNew - If true, adds a random offset to generate a different barcode
+   */
+  async generateSuggestedBarcode(forceNew: boolean = false): Promise<string> {
+    try {
+      const { businessId } = await getBusinessContext()
+
+      // Get the highest product ID to estimate the next one
+      const { data, error } = await supabase
+        .from('products')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (error) {
+        console.error('Error finding last product ID:', error)
+      }
+
+      let nextProductId = (data?.id || 0) + 1
+
+      // Add random offset when forcing a new value
+      if (forceNew) {
+        nextProductId += Math.floor(Math.random() * 100) + 1
+      }
+
+      return generateInternalBarcode(businessId, nextProductId)
+    } catch (error: any) {
+      console.error('Error generating barcode:', error)
+      // Fallback to random barcode
+      const random = Math.floor(Math.random() * 9000000) + 1000000
+      return generateInternalBarcode(1, random)
+    }
+  }
+
+  // ============================================
+  // CATEGORY METHODS
+  // ============================================
+
+  /**
+   * Get all categories
+   */
+  async getCategories(): Promise<Category[]> {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .is('deleted_at', null)
+        .order('name', { ascending: true })
+
+      if (error) throw error
+
+      return (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        parentId: item.parent_id,
+        icon: item.icon,
+        displayOrder: item.display_order,
+        isActive: item.is_active,
+        createdAt: new Date(item.created_at)
+      }))
+    } catch (error: any) {
+      console.error('Error getting categories:', error)
+      throw new Error(error.message || 'Error al obtener categorías')
+    }
+  }
+
+  /**
+   * Create a new category
+   */
+  async createCategory(data: CreateCategoryData): Promise<Category> {
+    try {
+      const { businessId } = await getBusinessContext()
+
+      const { data: category, error } = await supabase
+        .from('categories')
+        .insert({
+          business_id: businessId,
+          name: data.name,
+          description: data.description,
+          parent_id: data.parentId,
+          icon: data.icon,
+          display_order: data.displayOrder || 0,
+          is_active: data.isActive ?? true
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return {
+        id: category.id,
+        name: category.name,
+        description: category.description,
+        parentId: category.parent_id,
+        icon: category.icon,
+        displayOrder: category.display_order,
+        isActive: category.is_active,
+        createdAt: new Date(category.created_at)
+      }
+    } catch (error: any) {
+      console.error('Error creating category:', error)
+      throw new Error(error.message || 'Error al crear categoría')
+    }
+  }
+
+  /**
+   * Update a category
+   */
+  async updateCategory(categoryId: number, data: Partial<CreateCategoryData>): Promise<Category> {
+    try {
+      const updateData: any = {}
+      if (data.name !== undefined) updateData.name = data.name
+      if (data.description !== undefined) updateData.description = data.description
+      if (data.parentId !== undefined) updateData.parent_id = data.parentId
+      if (data.icon !== undefined) updateData.icon = data.icon
+      if (data.displayOrder !== undefined) updateData.display_order = data.displayOrder
+      if (data.isActive !== undefined) updateData.is_active = data.isActive
+
+      const { data: category, error } = await supabase
+        .from('categories')
+        .update(updateData)
+        .eq('id', categoryId)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return {
+        id: category.id,
+        name: category.name,
+        description: category.description,
+        parentId: category.parent_id,
+        icon: category.icon,
+        displayOrder: category.display_order,
+        isActive: category.is_active,
+        createdAt: new Date(category.created_at)
+      }
+    } catch (error: any) {
+      console.error('Error updating category:', error)
+      throw new Error(error.message || 'Error al actualizar categoría')
+    }
+  }
+
+  /**
+   * Delete a category (soft delete)
+   */
+  async deleteCategory(categoryId: number): Promise<void> {
+    try {
+      // Check if category has products
+      const { count } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('category_id', categoryId)
+        .is('deleted_at', null)
+
+      if (count && count > 0) {
+        throw new Error('No se puede eliminar una categoría con productos asignados')
+      }
+
+      const { error } = await supabase
+        .from('categories')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', categoryId)
+
+      if (error) throw error
+    } catch (error: any) {
+      console.error('Error deleting category:', error)
+      throw new Error(error.message || 'Error al eliminar categoría')
+    }
+  }
+}
+
+// Types for categories
+export interface Category {
+  id: number
+  name: string
+  description?: string
+  parentId?: number
+  icon?: string
+  displayOrder: number
+  isActive: boolean
+  createdAt: Date
+}
+
+export interface CreateCategoryData {
+  name: string
+  description?: string
+  parentId?: number
+  icon?: string
+  displayOrder?: number
+  isActive?: boolean
 }
 
 export const productService = new ProductService()

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Download, Ban, RotateCcw, Eye, Package } from 'lucide-react'
+import { ArrowLeft, Download, Ban, RotateCcw, Eye, Package, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -29,6 +29,8 @@ import { salesService } from '@/lib/services/sales.service'
 import type { SaleWithItems } from '@/lib/types/sales'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { pdf } from '@react-pdf/renderer'
+import { SaleReceiptPDF } from '@/components/sales/SaleReceiptPDF'
 
 const STATUS_COLORS = {
   completed: 'bg-green-100 text-green-800',
@@ -59,6 +61,39 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [isCancelling, setIsCancelling] = useState(false)
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+
+  const handleDownloadPDF = async () => {
+    if (!sale) return
+
+    setIsGeneratingPDF(true)
+    try {
+      const blob = await pdf(
+        <SaleReceiptPDF
+          sale={sale}
+          businessName="Mi Negocio"
+          // TODO: Get business info from context
+        />
+      ).toBlob()
+
+      // Create download link
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Recibo-${sale.saleNumber}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success('PDF descargado exitosamente')
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      toast.error('Error al generar el PDF')
+    } finally {
+      setIsGeneratingPDF(false)
+    }
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-MX', {
@@ -160,9 +195,18 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Descargar PDF
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadPDF}
+            disabled={isGeneratingPDF}
+          >
+            {isGeneratingPDF ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            {isGeneratingPDF ? 'Generando...' : 'Descargar PDF'}
           </Button>
           {sale.status === 'completed' && (
             <>

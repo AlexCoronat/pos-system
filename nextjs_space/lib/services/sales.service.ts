@@ -91,7 +91,7 @@ class SalesService {
         unit_price: item.unitPrice,
         discount_amount: item.discountAmount || 0,
         tax_amount: item.taxAmount || 0,
-        total: (item.unitPrice * item.quantity) - (item.discountAmount || 0) + (item.taxAmount || 0),
+        line_total: (item.unitPrice * item.quantity) - (item.discountAmount || 0) + (item.taxAmount || 0),
         notes: item.notes
       }))
 
@@ -113,7 +113,7 @@ class SalesService {
         sale_id: sale.id,
         payment_method_id: payment.paymentMethodId,
         amount: payment.amount,
-        reference: payment.reference,
+        reference_number: payment.reference,
         status: 'completed'
       }))
 
@@ -156,8 +156,7 @@ class SalesService {
           soldBy:user_details!sold_by(id, first_name, last_name),
           items:sale_items(
             *,
-            product:products!product_id(id, name, sku),
-            variant:product_variants!variant_id(id, name)
+            product:products!product_id(id, name, sku)
           ),
           payments:payment_transactions(
             *,
@@ -384,16 +383,61 @@ class SalesService {
   }
 
   private async reduceInventory(locationId: number, items: CreateSaleData['items']) {
+    const { businessId } = await getBusinessContext()
+
     for (const item of items) {
+      // Get current inventory
+      const { data: inventory, error: fetchError } = await this.supabase
+        .from('inventory')
+        .select('id, quantity_available')
+        .eq('product_id', item.productId)
+        .eq('location_id', locationId)
+        .maybeSingle()
+
+      if (fetchError) {
+        logger.error('Error fetching inventory', { error: fetchError, item })
+        continue
+      }
+
+      let inventoryId: number
+      let currentQty: number = 0
+
+      if (!inventory) {
+        // Create inventory record if it doesn't exist
+        const { data: newInventory, error: createError } = await this.supabase
+          .from('inventory')
+          .insert({
+            business_id: businessId,
+            product_id: item.productId,
+            location_id: locationId,
+            quantity_available: 0,
+            min_stock_level: 0,
+            reorder_point: 0
+          })
+          .select('id')
+          .single()
+
+        if (createError) {
+          logger.error('Error creating inventory record', { error: createError, item })
+          continue
+        }
+
+        inventoryId = newInventory.id
+        logger.info('Created inventory record for product', { productId: item.productId, inventoryId })
+      } else {
+        inventoryId = inventory.id
+        currentQty = inventory.quantity_available || 0
+      }
+
+      const newQuantity = Math.max(0, currentQty - item.quantity)
+
       const { error } = await this.supabase
         .from('inventory')
         .update({
-          quantity: this.supabase.rpc('decrement', { x: item.quantity }),
+          quantity_available: newQuantity,
           updated_at: new Date().toISOString()
         })
-        .eq('product_id', item.productId)
-        .eq('location_id', locationId)
-        .is('variant_id', item.variantId || null)
+        .eq('id', inventoryId)
 
       if (error) {
         logger.error('Error reducing inventory', { error, item })
@@ -404,41 +448,58 @@ class SalesService {
       await this.supabase
         .from('inventory_movements')
         .insert({
-          product_id: item.productId,
-          variant_id: item.variantId,
-          location_id: locationId,
+          business_id: businessId,
+          inventory_id: inventoryId,
           movement_type: 'sale',
           quantity: -item.quantity,
+          quantity_before: currentQty,
+          quantity_after: newQuantity,
           reference_type: 'sale',
-          notes: 'Automatic reduction from sale'
+          notes: 'Reduccion automatica por venta',
+          performed_by: (await this.supabase.auth.getUser()).data.user?.id
         })
     }
   }
 
   private async restoreInventory(locationId: number, items: SaleItem[]) {
+    const { businessId } = await getBusinessContext()
+
     for (const item of items) {
-      await this.supabase
+      // Get current inventory
+      const { data: inventory } = await this.supabase
         .from('inventory')
-        .update({
-          quantity: this.supabase.rpc('increment', { x: item.quantity }),
-          updated_at: new Date().toISOString()
-        })
+        .select('id, quantity_available')
         .eq('product_id', item.productId)
         .eq('location_id', locationId)
-        .is('variant_id', item.variantId || null)
+        .maybeSingle()
 
-      // Create inventory movement record
-      await this.supabase
-        .from('inventory_movements')
-        .insert({
-          product_id: item.productId,
-          variant_id: item.variantId,
-          location_id: locationId,
-          movement_type: 'adjustment',
-          quantity: item.quantity,
-          reference_type: 'cancellation',
-          notes: 'Inventory restored from cancelled sale'
-        })
+      if (inventory) {
+        const currentQty = inventory.quantity_available || 0
+        const newQuantity = currentQty + item.quantity
+
+        await this.supabase
+          .from('inventory')
+          .update({
+            quantity_available: newQuantity,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', inventory.id)
+
+        // Create inventory movement record
+        await this.supabase
+          .from('inventory_movements')
+          .insert({
+            business_id: businessId,
+            inventory_id: inventory.id,
+            movement_type: 'adjustment',
+            quantity: item.quantity,
+            quantity_before: currentQty,
+            quantity_after: newQuantity,
+            reference_type: 'cancellation',
+            notes: 'Inventario restaurado por cancelacion de venta',
+            performed_by: (await this.supabase.auth.getUser()).data.user?.id
+          })
+      }
     }
   }
 
@@ -522,9 +583,9 @@ class SalesService {
       variantName: data.variant?.name,
       quantity: data.quantity,
       unitPrice: data.unit_price,
-      discountAmount: data.discount_amount,
-      taxAmount: data.tax_amount,
-      total: data.total,
+      discountAmount: data.discount_amount || 0,
+      taxAmount: data.tax_amount || 0,
+      total: data.line_total || data.total,
       notes: data.notes
     }
   }
@@ -536,7 +597,7 @@ class SalesService {
       paymentMethodId: data.payment_method_id,
       paymentMethodName: data.paymentMethod?.name,
       amount: data.amount,
-      reference: data.reference,
+      reference: data.reference_number || data.reference,
       status: data.status,
       mpPaymentId: data.mp_payment_id,
       mpStatus: data.mp_status,

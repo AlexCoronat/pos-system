@@ -61,7 +61,9 @@ export default function ProductDetailPage() {
     imageUrl: '',
     costPrice: '',
     salePrice: '',
-    isActive: true
+    isActive: true,
+    minStockLevel: '0',
+    reorderPoint: '5'
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -100,10 +102,19 @@ export default function ProductDetailPage() {
         const inventoryData = await inventoryService.getInventoryByProduct(productId, 1)
         setInventory(inventoryData)
 
-        // Load movements if inventory exists
-        if (inventoryData?.id) {
-          const movementsData = await inventoryService.getInventoryMovements(inventoryData.id)
-          setMovements(movementsData)
+        // Set inventory form data
+        if (inventoryData) {
+          setFormData(prev => ({
+            ...prev,
+            minStockLevel: inventoryData.minStockLevel?.toString() || '0',
+            reorderPoint: inventoryData.reorderPoint?.toString() || '5'
+          }))
+
+          // Load movements
+          if (inventoryData.id) {
+            const movementsData = await inventoryService.getInventoryMovements(inventoryData.id)
+            setMovements(movementsData)
+          }
         }
       } catch (error: any) {
         console.error('Error loading product:', error)
@@ -184,6 +195,16 @@ export default function ProductDetailPage() {
       }
 
       await productService.updateProduct(productId, updateData)
+
+      // Update stock levels if inventory exists
+      if (inventory?.id) {
+        await inventoryService.updateStockLevels(
+          inventory.id,
+          parseInt(formData.minStockLevel) || 0,
+          parseInt(formData.reorderPoint) || 5
+        )
+      }
+
       toast.success('Producto actualizado exitosamente')
       router.push('/dashboard/inventory')
     } catch (error: any) {
@@ -491,29 +512,47 @@ export default function ProductDetailPage() {
                   </CardHeader>
                   <CardContent>
                     {inventory ? (
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Cantidad disponible</span>
-                          <span className="font-semibold">{inventory.quantity}</span>
+                          <span className="font-semibold text-lg">{inventory.quantity}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Stock minimo</span>
-                          <span>{inventory.minStockLevel}</span>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="minStockLevel">Stock mínimo</Label>
+                            <Input
+                              id="minStockLevel"
+                              type="number"
+                              min="0"
+                              value={formData.minStockLevel}
+                              onChange={(e) => handleChange('minStockLevel', e.target.value)}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="reorderPoint">Punto de reorden</Label>
+                            <Input
+                              id="reorderPoint"
+                              type="number"
+                              min="0"
+                              value={formData.reorderPoint}
+                              onChange={(e) => handleChange('reorderPoint', e.target.value)}
+                            />
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Punto de reorden</span>
-                          <span>{inventory.reorderPoint}</span>
-                        </div>
+
                         {inventory.lastRestocked && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Ultimo reabastecimiento</span>
-                            <span className="text-sm">{formatDate(inventory.lastRestocked)}</span>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Último reabastecimiento</span>
+                            <span>{formatDate(inventory.lastRestocked)}</span>
                           </div>
                         )}
+
                         <div className="pt-2">
                           {inventory.quantity <= 0 ? (
                             <Badge variant="destructive">Sin Stock</Badge>
-                          ) : inventory.quantity <= inventory.reorderPoint ? (
+                          ) : inventory.quantity <= (parseInt(formData.reorderPoint) || 0) ? (
                             <Badge className="bg-yellow-100 text-yellow-800">Bajo Stock</Badge>
                           ) : (
                             <Badge className="bg-green-100 text-green-800">Stock Normal</Badge>

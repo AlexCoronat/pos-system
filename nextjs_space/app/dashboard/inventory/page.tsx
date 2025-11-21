@@ -14,7 +14,8 @@ import {
   Trash2,
   Eye,
   ArrowUpDown,
-  MoreHorizontal
+  MoreHorizontal,
+  FolderTree
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -55,6 +56,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { productService, ProductFilters } from '@/lib/services/product.service'
 import { inventoryService, InventoryWithProduct } from '@/lib/services/inventory.service'
 import { StockAdjustmentDialog } from '@/components/inventory/stock-adjustment-dialog'
+import { CategoryDialog } from '@/components/inventory/category-dialog'
 import type { ProductWithPrice } from '@/lib/types/product'
 import { toast } from 'sonner'
 
@@ -85,6 +87,9 @@ export default function InventoryPage() {
   // Stock adjustment dialog state
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false)
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryWithProduct | null>(null)
+
+  // Category dialog state
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-MX', {
@@ -193,12 +198,22 @@ export default function InventoryPage() {
             Gestiona productos y controla el stock de tu negocio
           </p>
         </div>
-        <Link href="/dashboard/inventory/products/new">
-          <Button size="lg">
-            <Plus className="h-5 w-5 mr-2" />
-            Nuevo Producto
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => setCategoryDialogOpen(true)}
+          >
+            <FolderTree className="h-5 w-5 mr-2" />
+            Categorías
           </Button>
-        </Link>
+          <Link href="/dashboard/inventory/products/new">
+            <Button size="lg">
+              <Plus className="h-5 w-5 mr-2" />
+              Nuevo Producto
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -396,14 +411,8 @@ export default function InventoryPage() {
                                 <DropdownMenuItem
                                   onClick={() => router.push(`/dashboard/inventory/products/${product.id}`)}
                                 >
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  Ver detalles
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => router.push(`/dashboard/inventory/products/${product.id}/edit`)}
-                                >
                                   <Edit className="h-4 w-4 mr-2" />
-                                  Editar
+                                  Ver / Editar
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-red-600"
@@ -629,6 +638,13 @@ export default function InventoryPage() {
         onOpenChange={setAdjustmentDialogOpen}
         inventoryItem={selectedInventoryItem}
         onSuccess={handleAdjustmentSuccess}
+      />
+
+      {/* Category Management Dialog */}
+      <CategoryDialog
+        open={categoryDialogOpen}
+        onOpenChange={setCategoryDialogOpen}
+        onCategoryCreated={loadProducts}
       />
     </div>
   )

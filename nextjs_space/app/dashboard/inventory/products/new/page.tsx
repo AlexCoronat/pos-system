@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Loader2 } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, RefreshCw, Wand2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,8 +17,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { productService } from '@/lib/services/product.service'
 import { inventoryService } from '@/lib/services/inventory.service'
+import { CategoryDialog } from '@/components/inventory/category-dialog'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { CreateProductData } from '@/lib/types/product'
@@ -32,6 +39,9 @@ export default function NewProductPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
+  const [isGeneratingSKU, setIsGeneratingSKU] = useState(false)
+  const [isGeneratingBarcode, setIsGeneratingBarcode] = useState(false)
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -53,23 +63,90 @@ export default function NewProductPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Load categories
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('categories')
-          .select('id, name')
-          .order('name')
+  const loadCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name')
+        .order('name')
 
-        if (error) throw error
-        setCategories(data || [])
+      if (error) throw error
+      setCategories(data || [])
+    } catch (error) {
+      console.error('Error loading categories:', error)
+    }
+  }
+
+  // Load categories and generate initial barcode
+  useEffect(() => {
+    const initialize = async () => {
+      await loadCategories()
+
+      // Generate initial barcode
+      try {
+        const barcode = await productService.generateSuggestedBarcode()
+        setFormData(prev => ({ ...prev, barcode }))
       } catch (error) {
-        console.error('Error loading categories:', error)
+        console.error('Error generating barcode:', error)
       }
     }
 
-    loadCategories()
+    initialize()
   }, [])
+
+  // Generate SKU when category changes
+  const handleCategoryChange = async (categoryId: string) => {
+    setFormData(prev => ({ ...prev, categoryId }))
+
+    if (errors.categoryId) {
+      setErrors(prev => ({ ...prev, categoryId: '' }))
+    }
+
+    if (categoryId) {
+      setIsGeneratingSKU(true)
+      try {
+        const category = categories.find(c => c.id.toString() === categoryId)
+        const sku = await productService.generateNextSKU(category?.name || '')
+        setFormData(prev => ({ ...prev, sku }))
+      } catch (error) {
+        console.error('Error generating SKU:', error)
+      } finally {
+        setIsGeneratingSKU(false)
+      }
+    }
+  }
+
+  // Regenerate SKU
+  const handleRegenerateSKU = async () => {
+    if (!formData.categoryId) {
+      toast.error('Selecciona una categoría primero')
+      return
+    }
+
+    setIsGeneratingSKU(true)
+    try {
+      const category = categories.find(c => c.id.toString() === formData.categoryId)
+      const sku = await productService.generateNextSKU(category?.name || '', true)
+      setFormData(prev => ({ ...prev, sku }))
+    } catch (error) {
+      console.error('Error regenerating SKU:', error)
+    } finally {
+      setIsGeneratingSKU(false)
+    }
+  }
+
+  // Regenerate barcode
+  const handleRegenerateBarcode = async () => {
+    setIsGeneratingBarcode(true)
+    try {
+      const barcode = await productService.generateSuggestedBarcode(true)
+      setFormData(prev => ({ ...prev, barcode }))
+    } catch (error) {
+      console.error('Error regenerating barcode:', error)
+    } finally {
+      setIsGeneratingBarcode(false)
+    }
+  }
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
@@ -139,26 +216,24 @@ export default function NewProductPage() {
 
       const product = await productService.createProduct(productData)
 
-      // Create initial inventory if stock > 0
+      // Always create inventory record for the product
       const initialStock = parseInt(formData.initialStock) || 0
-      if (initialStock > 0) {
-        await inventoryService.adjustInventory({
-          productId: product.id,
-          locationId: 1, // Default location
-          quantity: initialStock,
-          movementType: 'entry',
-          notes: 'Stock inicial al crear producto'
-        })
+      await inventoryService.adjustInventory({
+        productId: product.id,
+        locationId: 1, // Default location
+        quantity: initialStock,
+        movementType: initialStock > 0 ? 'entry' : 'adjustment',
+        notes: initialStock > 0 ? 'Stock inicial al crear producto' : 'Registro de inventario inicial'
+      })
 
-        // Update stock levels
-        const inventory = await inventoryService.getInventoryByProduct(product.id, 1)
-        if (inventory) {
-          await inventoryService.updateStockLevels(
-            inventory.id!,
-            parseInt(formData.minStockLevel) || 0,
-            parseInt(formData.reorderPoint) || 5
-          )
-        }
+      // Update stock levels
+      const inventory = await inventoryService.getInventoryByProduct(product.id, 1)
+      if (inventory) {
+        await inventoryService.updateStockLevels(
+          inventory.id!,
+          parseInt(formData.minStockLevel) || 0,
+          parseInt(formData.reorderPoint) || 5
+        )
       }
 
       toast.success('Producto creado exitosamente')
@@ -208,20 +283,6 @@ export default function NewProductPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="sku">SKU *</Label>
-                <Input
-                  id="sku"
-                  value={formData.sku}
-                  onChange={(e) => handleChange('sku', e.target.value)}
-                  placeholder="Ej: PROD-001"
-                  className={errors.sku ? 'border-red-500' : ''}
-                />
-                {errors.sku && (
-                  <p className="text-sm text-red-500">{errors.sku}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="name">Nombre *</Label>
                 <Input
                   id="name"
@@ -248,56 +309,157 @@ export default function NewProductPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="category">Categoria *</Label>
-                <Select
-                  value={formData.categoryId}
-                  onValueChange={(value) => handleChange('categoryId', value)}
-                >
-                  <SelectTrigger className={errors.categoryId ? 'border-red-500' : ''}>
-                    <SelectValue placeholder="Selecciona una categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id.toString()}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select
+                    value={formData.categoryId}
+                    onValueChange={handleCategoryChange}
+                  >
+                    <SelectTrigger className={errors.categoryId ? 'border-red-500' : ''}>
+                      <SelectValue placeholder="Selecciona una categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id.toString()}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setCategoryDialogOpen(true)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Crear nueva categoría si no existe en la lista</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 {errors.categoryId && (
                   <p className="text-sm text-red-500">{errors.categoryId}</p>
                 )}
+                {isGeneratingSKU && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Generando SKU...
+                  </p>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="barcode">Codigo de Barras</Label>
+              <div className="space-y-2">
+                <Label htmlFor="sku">SKU *</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="sku"
+                    value={formData.sku}
+                    onChange={(e) => handleChange('sku', e.target.value)}
+                    placeholder="Se genera al seleccionar categoría"
+                    className={errors.sku ? 'border-red-500' : ''}
+                  />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={handleRegenerateSKU}
+                          disabled={isGeneratingSKU || !formData.categoryId}
+                        >
+                          {isGeneratingSKU ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          {!formData.categoryId
+                            ? 'Selecciona una categoría primero'
+                            : 'Generar nuevo código SKU basado en la categoría'}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                {formData.sku && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Wand2 className="h-3 w-3" />
+                    Auto-generado (editable)
+                  </p>
+                )}
+                {errors.sku && (
+                  <p className="text-sm text-red-500">{errors.sku}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="barcode">Codigo de Barras</Label>
+                <div className="flex gap-2">
                   <Input
                     id="barcode"
                     value={formData.barcode}
                     onChange={(e) => handleChange('barcode', e.target.value)}
-                    placeholder="Ej: 7501234567890"
+                    placeholder="EAN-13"
                   />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={handleRegenerateBarcode}
+                          disabled={isGeneratingBarcode}
+                        >
+                          {isGeneratingBarcode ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Generar nuevo código de barras interno</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
+                {formData.barcode && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Wand2 className="h-3 w-3" />
+                    Auto-generado (editable)
+                  </p>
+                )}
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="unit">Unidad de Medida</Label>
-                  <Select
-                    value={formData.unit}
-                    onValueChange={(value) => handleChange('unit', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pieza">Pieza</SelectItem>
-                      <SelectItem value="kg">Kilogramo</SelectItem>
-                      <SelectItem value="litro">Litro</SelectItem>
-                      <SelectItem value="metro">Metro</SelectItem>
-                      <SelectItem value="caja">Caja</SelectItem>
-                      <SelectItem value="paquete">Paquete</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="unit">Unidad de Medida</Label>
+                <Select
+                  value={formData.unit}
+                  onValueChange={(value) => handleChange('unit', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pieza">Pieza</SelectItem>
+                    <SelectItem value="kg">Kilogramo</SelectItem>
+                    <SelectItem value="litro">Litro</SelectItem>
+                    <SelectItem value="metro">Metro</SelectItem>
+                    <SelectItem value="caja">Caja</SelectItem>
+                    <SelectItem value="paquete">Paquete</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -469,6 +631,13 @@ export default function NewProductPage() {
           </Button>
         </div>
       </form>
+
+      {/* Category Dialog */}
+      <CategoryDialog
+        open={categoryDialogOpen}
+        onOpenChange={setCategoryDialogOpen}
+        onCategoryCreated={loadCategories}
+      />
     </div>
   )
 }

@@ -16,7 +16,6 @@ export interface InventoryMovement {
 
 export interface InventoryAdjustment {
   productId: number
-  variantId?: number
   locationId: number
   quantity: number
   movementType: 'entry' | 'exit' | 'adjustment'
@@ -25,7 +24,6 @@ export interface InventoryAdjustment {
 
 export interface InventoryTransfer {
   productId: number
-  variantId?: number
   fromLocationId: number
   toLocationId: number
   quantity: number
@@ -58,10 +56,6 @@ class InventoryService {
             id,
             name,
             sku
-          ),
-          variant:product_variants(
-            id,
-            name
           )
         `)
 
@@ -82,13 +76,13 @@ class InventoryService {
         productId: item.product_id,
         variantId: item.variant_id,
         locationId: item.location_id,
-        quantity: item.quantity,
+        quantity: item.quantity_available || item.quantity || 0,
         minStockLevel: item.min_stock_level,
         reorderPoint: item.reorder_point,
-        lastRestocked: item.last_restocked ? new Date(item.last_restocked) : undefined,
+        lastRestocked: item.last_restock_date ? new Date(item.last_restock_date) : undefined,
         productName: item.product.name,
         productSku: item.product.sku,
-        variantName: item.variant?.name
+        variantName: undefined
       }))
 
       // Apply low stock filter if requested
@@ -108,40 +102,33 @@ class InventoryService {
    */
   async getInventoryByProduct(
     productId: number,
-    locationId: number,
-    variantId?: number
+    locationId: number
   ): Promise<InventoryItem | null> {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('inventory')
         .select('*')
         .eq('product_id', productId)
         .eq('location_id', locationId)
-
-      if (variantId) {
-        query = query.eq('variant_id', variantId)
-      } else {
-        query = query.is('variant_id', null)
-      }
-
-      const { data, error } = await query.single()
+        .maybeSingle()
 
       if (error) {
-        if (error.code === 'PGRST116') { // No rows returned
-          return null
-        }
         throw error
+      }
+
+      if (!data) {
+        return null
       }
 
       return {
         id: data.id,
         productId: data.product_id,
-        variantId: data.variant_id,
+        variantId: undefined,
         locationId: data.location_id,
-        quantity: data.quantity,
+        quantity: data.quantity_available || data.quantity || 0,
         minStockLevel: data.min_stock_level,
         reorderPoint: data.reorder_point,
-        lastRestocked: data.last_restocked ? new Date(data.last_restocked) : undefined
+        lastRestocked: data.last_restock_date ? new Date(data.last_restock_date) : undefined
       }
     } catch (error: any) {
       console.error('Error getting inventory:', error)
@@ -160,16 +147,16 @@ class InventoryService {
       // Get or create inventory record
       let inventory = await this.getInventoryByProduct(
         adjustment.productId,
-        adjustment.locationId,
-        adjustment.variantId
+        adjustment.locationId
       )
 
+      const quantityBefore = inventory?.quantity || 0
       let newQuantity: number
 
       if (adjustment.movementType === 'entry') {
-        newQuantity = (inventory?.quantity || 0) + adjustment.quantity
+        newQuantity = quantityBefore + adjustment.quantity
       } else if (adjustment.movementType === 'exit') {
-        newQuantity = (inventory?.quantity || 0) - adjustment.quantity
+        newQuantity = quantityBefore - adjustment.quantity
         if (newQuantity < 0) {
           throw new Error('Stock insuficiente para realizar la salida')
         }
@@ -184,8 +171,8 @@ class InventoryService {
         const { data, error } = await supabase
           .from('inventory')
           .update({
-            quantity: newQuantity,
-            last_restocked: adjustment.movementType === 'entry' ? new Date().toISOString() : inventory.lastRestocked
+            quantity_available: newQuantity,
+            last_restock_date: adjustment.movementType === 'entry' ? new Date().toISOString() : inventory.lastRestocked
           })
           .eq('id', inventory.id)
           .select()
@@ -200,12 +187,11 @@ class InventoryService {
           .insert({
             business_id: businessId,
             product_id: adjustment.productId,
-            variant_id: adjustment.variantId,
             location_id: adjustment.locationId,
-            quantity: newQuantity,
+            quantity_available: newQuantity,
             min_stock_level: 0,
             reorder_point: 0,
-            last_restocked: adjustment.movementType === 'entry' ? new Date().toISOString() : null
+            last_restock_date: adjustment.movementType === 'entry' ? new Date().toISOString() : null
           })
           .select()
           .single()
@@ -219,18 +205,20 @@ class InventoryService {
         inventoryId: updatedInventory.id,
         movementType: adjustment.movementType,
         quantity: adjustment.quantity,
+        quantityBefore: quantityBefore,
+        quantityAfter: newQuantity,
         notes: adjustment.notes
       })
 
       return {
         id: updatedInventory.id,
         productId: updatedInventory.product_id,
-        variantId: updatedInventory.variant_id,
+        variantId: undefined,
         locationId: updatedInventory.location_id,
-        quantity: updatedInventory.quantity,
+        quantity: updatedInventory.quantity_available || updatedInventory.quantity || 0,
         minStockLevel: updatedInventory.min_stock_level,
         reorderPoint: updatedInventory.reorder_point,
-        lastRestocked: updatedInventory.last_restocked ? new Date(updatedInventory.last_restocked) : undefined
+        lastRestocked: updatedInventory.last_restock_date ? new Date(updatedInventory.last_restock_date) : undefined
       }
     } catch (error: any) {
       console.error('Error adjusting inventory:', error)
@@ -254,7 +242,6 @@ class InventoryService {
       // Remove from source location
       await this.adjustInventory({
         productId: transfer.productId,
-        variantId: transfer.variantId,
         locationId: transfer.fromLocationId,
         quantity: transfer.quantity,
         movementType: 'exit',
@@ -264,7 +251,6 @@ class InventoryService {
       // Add to destination location
       await this.adjustInventory({
         productId: transfer.productId,
-        variantId: transfer.variantId,
         locationId: transfer.toLocationId,
         quantity: transfer.quantity,
         movementType: 'entry',
@@ -283,21 +269,28 @@ class InventoryService {
     inventoryId: number
     movementType: 'entry' | 'exit' | 'adjustment' | 'transfer'
     quantity: number
+    quantityBefore: number
+    quantityAfter: number
     referenceType?: string
     referenceId?: number
     notes?: string
   }): Promise<void> {
     try {
+      const { businessId } = await getBusinessContext()
+
       const { error } = await supabase
         .from('inventory_movements')
         .insert({
+          business_id: businessId,
           inventory_id: movement.inventoryId,
           movement_type: movement.movementType,
           quantity: movement.quantity,
+          quantity_before: movement.quantityBefore,
+          quantity_after: movement.quantityAfter,
           reference_type: movement.referenceType,
           reference_id: movement.referenceId,
           notes: movement.notes,
-          created_by: (await supabase.auth.getUser()).data.user?.id || 'system'
+          performed_by: (await supabase.auth.getUser()).data.user?.id
         })
 
       if (error) throw error
@@ -328,7 +321,7 @@ class InventoryService {
         referenceType: item.reference_type,
         referenceId: item.reference_id,
         notes: item.notes,
-        createdBy: item.created_by,
+        createdBy: item.performed_by,
         createdAt: new Date(item.created_at)
       }))
     } catch (error: any) {
@@ -361,12 +354,12 @@ class InventoryService {
       return {
         id: data.id,
         productId: data.product_id,
-        variantId: data.variant_id,
+        variantId: undefined,
         locationId: data.location_id,
-        quantity: data.quantity,
+        quantity: data.quantity_available || data.quantity || 0,
         minStockLevel: data.min_stock_level,
         reorderPoint: data.reorder_point,
-        lastRestocked: data.last_restocked ? new Date(data.last_restocked) : undefined
+        lastRestocked: data.last_restock_date ? new Date(data.last_restock_date) : undefined
       }
     } catch (error: any) {
       console.error('Error updating stock levels:', error)
@@ -387,11 +380,10 @@ class InventoryService {
   async checkStockAvailability(
     productId: number,
     locationId: number,
-    quantity: number,
-    variantId?: number
+    quantity: number
   ): Promise<boolean> {
     try {
-      const inventory = await this.getInventoryByProduct(productId, locationId, variantId)
+      const inventory = await this.getInventoryByProduct(productId, locationId)
       return inventory ? inventory.quantity >= quantity : false
     } catch (error) {
       return false

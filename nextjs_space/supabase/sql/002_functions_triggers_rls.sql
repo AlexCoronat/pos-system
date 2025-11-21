@@ -77,6 +77,80 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =====================================================
+-- SECTION 1.5: SEARCH FUNCTIONS
+-- =====================================================
+
+-- Function to search products with inventory for POS
+-- Returns products filtered by current user's business
+DROP FUNCTION IF EXISTS search_products_with_inventory(text, integer);
+CREATE OR REPLACE FUNCTION search_products_with_inventory(
+    p_search_term TEXT,
+    p_location_id INTEGER
+)
+RETURNS TABLE (
+    product_id INTEGER,
+    product_name VARCHAR(200),
+    product_sku VARCHAR(50),
+    product_barcode VARCHAR(50),
+    product_description TEXT,
+    category_id INTEGER,
+    category_name VARCHAR(100),
+    selling_price NUMERIC(10, 2),
+    cost_price NUMERIC(10, 2),
+    tax_rate NUMERIC(5, 2),
+    is_taxable BOOLEAN,
+    image_url TEXT,
+    unit_of_measure VARCHAR(20),
+    available_stock NUMERIC(10, 2),
+    inventory_id INTEGER
+) AS $$
+DECLARE
+    v_business_id INTEGER;
+BEGIN
+    -- Get current user's business_id
+    v_business_id := get_user_business_id();
+
+    RETURN QUERY
+    SELECT
+        p.id AS product_id,
+        p.name AS product_name,
+        p.sku AS product_sku,
+        p.barcode AS product_barcode,
+        p.description AS product_description,
+        p.category_id,
+        c.name AS category_name,
+        p.selling_price,
+        p.cost_price,
+        p.tax_rate,
+        p.is_taxable,
+        p.image_url,
+        p.unit_of_measure,
+        COALESCE(i.quantity_available, 0) AS available_stock,
+        i.id AS inventory_id
+    FROM products p
+    LEFT JOIN categories c ON c.id = p.category_id
+    LEFT JOIN inventory i ON i.product_id = p.id AND i.location_id = p_location_id
+    WHERE p.business_id = v_business_id
+      AND p.is_active = true
+      AND p.deleted_at IS NULL
+      AND (
+          p.name ILIKE '%' || p_search_term || '%'
+          OR p.sku ILIKE '%' || p_search_term || '%'
+          OR p.barcode ILIKE '%' || p_search_term || '%'
+      )
+    ORDER BY
+        CASE
+            WHEN p.sku ILIKE p_search_term THEN 1
+            WHEN p.barcode ILIKE p_search_term THEN 2
+            WHEN p.name ILIKE p_search_term || '%' THEN 3
+            ELSE 4
+        END,
+        p.name
+    LIMIT 20;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =====================================================
 -- SECTION 2: TRIGGERS FOR UPDATED_AT
 -- =====================================================
 
@@ -230,14 +304,33 @@ CREATE POLICY "Users can insert own profile" ON user_details
 
 -- ============ USER LOCATIONS ============
 CREATE POLICY "Users can view own location assignments" ON user_locations
-    FOR SELECT USING (user_id = auth.uid() OR user_id IN (
-        SELECT id FROM user_details WHERE business_id = get_user_business_id()
-    ));
+    FOR SELECT USING (
+        user_id = auth.uid()
+        OR user_id IN (
+            SELECT id FROM user_details WHERE business_id = get_user_business_id()
+        )
+    );
 
-CREATE POLICY "Users can manage location assignments" ON user_locations
-    FOR ALL USING (user_id = auth.uid() OR user_id IN (
-        SELECT id FROM user_details WHERE business_id = get_user_business_id()
-    ));
+CREATE POLICY "Users can insert location assignments" ON user_locations
+    FOR INSERT WITH CHECK (
+        user_id IN (
+            SELECT id FROM user_details WHERE business_id = get_user_business_id()
+        )
+    );
+
+CREATE POLICY "Users can update location assignments" ON user_locations
+    FOR UPDATE USING (
+        user_id IN (
+            SELECT id FROM user_details WHERE business_id = get_user_business_id()
+        )
+    );
+
+CREATE POLICY "Users can delete location assignments" ON user_locations
+    FOR DELETE USING (
+        user_id IN (
+            SELECT id FROM user_details WHERE business_id = get_user_business_id()
+        )
+    );
 
 -- ============ USER SESSIONS ============
 CREATE POLICY "Users can manage own sessions" ON user_sessions

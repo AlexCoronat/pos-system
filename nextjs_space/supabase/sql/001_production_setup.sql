@@ -228,6 +228,10 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE UNIQUE INDEX IF NOT EXISTS products_business_sku_unique
 ON products (business_id, sku) WHERE deleted_at IS NULL;
 
+-- Unique constraint for barcode per business (allows same barcode in different businesses)
+CREATE UNIQUE INDEX IF NOT EXISTS products_business_barcode_unique
+ON products (business_id, barcode) WHERE deleted_at IS NULL AND barcode IS NOT NULL;
+
 COMMENT ON TABLE products IS 'Productos por negocio';
 
 -- =====================================================
@@ -239,17 +243,16 @@ CREATE TABLE IF NOT EXISTS inventory (
     business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
     product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     location_id INTEGER NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
-    variant_id INTEGER,
-    quantity NUMERIC(10, 2) DEFAULT 0,
+    quantity_available NUMERIC(10, 2) DEFAULT 0,
     min_stock_level NUMERIC(10, 2) DEFAULT 0,
     max_stock_level NUMERIC(10, 2),
     reorder_point NUMERIC(10, 2),
-    last_restocked TIMESTAMP WITH TIME ZONE,
+    last_restock_date TIMESTAMP WITH TIME ZONE,
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(product_id, location_id, variant_id),
-    CONSTRAINT positive_quantities CHECK (quantity >= 0 AND min_stock_level >= 0)
+    UNIQUE(product_id, location_id),
+    CONSTRAINT positive_quantities CHECK (quantity_available >= 0 AND min_stock_level >= 0)
 );
 
 COMMENT ON TABLE inventory IS 'Inventario por producto y ubicación';
@@ -264,8 +267,8 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
     inventory_id INTEGER NOT NULL REFERENCES inventory(id) ON DELETE CASCADE,
     movement_type VARCHAR(30) NOT NULL,
     quantity NUMERIC(10, 2) NOT NULL,
-    quantity_before NUMERIC(10, 2) NOT NULL,
-    quantity_after NUMERIC(10, 2) NOT NULL,
+    quantity_before NUMERIC(10, 2),
+    quantity_after NUMERIC(10, 2),
     reference_type VARCHAR(50),
     reference_id INTEGER,
     notes TEXT,
