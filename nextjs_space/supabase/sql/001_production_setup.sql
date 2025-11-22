@@ -420,3 +420,126 @@ CREATE TABLE IF NOT EXISTS payment_transactions (
 );
 
 COMMENT ON TABLE payment_transactions IS 'Transacciones de pago';
+
+-- =====================================================
+-- SECTION 17: SUPPLIERS
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS suppliers (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
+    code VARCHAR(50),
+    name VARCHAR(200) NOT NULL,
+    legal_name VARCHAR(200),
+    tax_id VARCHAR(50),
+    contact_person VARCHAR(100),
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    mobile VARCHAR(20),
+    website VARCHAR(200),
+    address TEXT,
+    city VARCHAR(100),
+    state VARCHAR(100),
+    postal_code VARCHAR(20),
+    country VARCHAR(50) DEFAULT 'México',
+    payment_terms VARCHAR(100),
+    credit_limit NUMERIC(12, 2) DEFAULT 0,
+    rating INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    notes TEXT,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS suppliers_business_code_unique
+ON suppliers (business_id, code) WHERE deleted_at IS NULL;
+
+COMMENT ON TABLE suppliers IS 'Proveedores por negocio';
+
+-- =====================================================
+-- SECTION 18: PURCHASE ORDERS
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS purchase_orders (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
+    order_number VARCHAR(50) NOT NULL,
+    supplier_id INTEGER REFERENCES suppliers(id) ON DELETE RESTRICT,
+    location_id INTEGER REFERENCES locations(id) ON DELETE RESTRICT,
+    order_date DATE DEFAULT CURRENT_DATE,
+    expected_delivery_date DATE,
+    actual_delivery_date DATE,
+    status VARCHAR(30) DEFAULT 'draft',
+    subtotal NUMERIC(12, 2) DEFAULT 0,
+    tax_amount NUMERIC(12, 2) DEFAULT 0,
+    shipping_cost NUMERIC(12, 2) DEFAULT 0,
+    total_amount NUMERIC(12, 2) DEFAULT 0,
+    currency VARCHAR(3) DEFAULT 'MXN',
+    payment_status VARCHAR(30) DEFAULT 'pending',
+    payment_terms VARCHAR(100),
+    notes TEXT,
+    created_by UUID REFERENCES user_details(id) ON DELETE SET NULL,
+    approved_by UUID REFERENCES user_details(id) ON DELETE SET NULL,
+    approved_at TIMESTAMP WITH TIME ZONE,
+    received_by UUID REFERENCES user_details(id) ON DELETE SET NULL,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS purchase_orders_business_number_unique
+ON purchase_orders (business_id, order_number) WHERE deleted_at IS NULL;
+
+COMMENT ON TABLE purchase_orders IS 'Órdenes de compra a proveedores';
+
+-- =====================================================
+-- SECTION 19: MATERIALIZED VIEWS
+-- =====================================================
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_daily_sales_by_location AS
+SELECT
+  location_id,
+  date(created_at) as sale_date,
+  count(distinct id) as total_transactions,
+  COALESCE(sum(total_amount), 0::numeric) as total_sales,
+  COALESCE(sum(subtotal), 0::numeric) as total_subtotal,
+  COALESCE(sum(tax_amount), 0::numeric) as total_tax,
+  COALESCE(sum(discount_amount), 0::numeric) as total_discount
+FROM
+  sales s
+WHERE
+  status::text = 'completed'::text
+  AND deleted_at IS NULL
+GROUP BY
+  location_id,
+  date(created_at);
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_top_selling_products AS
+SELECT
+  si.product_id,
+  p.name as product_name,
+  p.sku as product_sku,
+  s.location_id,
+  sum(si.quantity) as total_quantity_sold,
+  COALESCE(sum(si.line_total), 0::numeric) as total_revenue,
+  count(distinct s.id) as transaction_count,
+  max(s.created_at) as last_sold_at
+FROM
+  sale_items si
+  JOIN sales s ON s.id = si.sale_id
+  JOIN products p ON p.id = si.product_id
+WHERE
+  s.status::text = 'completed'::text
+  AND s.deleted_at IS NULL
+  AND s.created_at >= (CURRENT_DATE - '30 days'::interval)
+GROUP BY
+  si.product_id,
+  p.name,
+  p.sku,
+  s.location_id;
+
+COMMENT ON MATERIALIZED VIEW mv_daily_sales_by_location IS 'Ventas diarias agrupadas por ubicación';
+COMMENT ON MATERIALIZED VIEW mv_top_selling_products IS 'Productos más vendidos en los últimos 30 días';

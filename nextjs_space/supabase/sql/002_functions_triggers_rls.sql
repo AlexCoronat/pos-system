@@ -181,6 +181,12 @@ CREATE TRIGGER tr_customers_updated_at BEFORE UPDATE ON customers
 CREATE TRIGGER tr_sales_updated_at BEFORE UPDATE ON sales
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER tr_suppliers_updated_at BEFORE UPDATE ON suppliers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER tr_purchase_orders_updated_at BEFORE UPDATE ON purchase_orders
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- =====================================================
 -- SECTION 3: TRIGGER FOR AUTO-ASSIGNING BUSINESS_ID
 -- =====================================================
@@ -212,6 +218,12 @@ CREATE TRIGGER tr_inventory_movements_auto_business BEFORE INSERT ON inventory_m
     FOR EACH ROW EXECUTE FUNCTION auto_assign_business_id();
 
 CREATE TRIGGER tr_sales_auto_business BEFORE INSERT ON sales
+    FOR EACH ROW EXECUTE FUNCTION auto_assign_business_id();
+
+CREATE TRIGGER tr_suppliers_auto_business BEFORE INSERT ON suppliers
+    FOR EACH ROW EXECUTE FUNCTION auto_assign_business_id();
+
+CREATE TRIGGER tr_purchase_orders_auto_business BEFORE INSERT ON purchase_orders
     FOR EACH ROW EXECUTE FUNCTION auto_assign_business_id();
 
 -- =====================================================
@@ -256,6 +268,8 @@ ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sale_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE purchase_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscription_plans ENABLE ROW LEVEL SECURITY;
 
 -- ============ SUBSCRIPTION PLANS ============
@@ -399,6 +413,20 @@ CREATE POLICY "Users can create payment transactions" ON payment_transactions
     FOR INSERT WITH CHECK (
         sale_id IN (SELECT id FROM sales WHERE business_id = get_user_business_id())
     );
+
+-- ============ SUPPLIERS ============
+CREATE POLICY "Users can view own business suppliers" ON suppliers
+    FOR SELECT USING (business_id = get_user_business_id());
+
+CREATE POLICY "Users can manage own business suppliers" ON suppliers
+    FOR ALL USING (business_id = get_user_business_id());
+
+-- ============ PURCHASE ORDERS ============
+CREATE POLICY "Users can view own business purchase orders" ON purchase_orders
+    FOR SELECT USING (business_id = get_user_business_id());
+
+CREATE POLICY "Users can manage own business purchase orders" ON purchase_orders
+    FOR ALL USING (business_id = get_user_business_id());
 
 -- =====================================================
 -- SECTION 6: GRANTS

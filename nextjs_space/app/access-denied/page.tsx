@@ -7,10 +7,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/lib/hooks/use-auth'
 
 export default function AccessDeniedPage() {
-  const { signOut } = useAuth()
+  const { logout } = useAuth()
 
   const handleSignOut = async () => {
-    await signOut()
+    await logout()
   }
 
   return (
