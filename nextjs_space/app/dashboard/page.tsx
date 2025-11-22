@@ -71,29 +71,35 @@ export default function DashboardPage() {
         return
       }
 
-      // Fetch today's sales from materialized view
+      // Fetch today's sales
       const { data: todaySalesData, error: salesError } = await supabase
-        .from('mv_daily_sales_by_location')
-        .select('total_sales, total_transactions')
-        .eq('sale_date', today)
+        .from('sales')
+        .select('total_amount, id')
         .eq('location_id', locationId)
-        .single()
+        .gte('created_at', `${today}T00:00:00`)
+        .lte('created_at', `${today}T23:59:59`)
+        .is('deleted_at', null)
 
       if (salesError && salesError.code !== 'PGRST116') {
         console.error('Error fetching sales:', salesError)
       }
 
-      // Fetch low stock products
+      const todayTotal = todaySalesData?.reduce((sum, sale) => sum + (sale.total_amount || 0), 0) || 0
+      const todayCount = todaySalesData?.length || 0
+
+      // Fetch low stock products from inventory table
       const { data: lowStockData, error: stockError } = await supabase
-        .from('products')
-        .select('id')
+        .from('inventory')
+        .select('id, quantity_available, reorder_point')
         .eq('location_id', locationId)
-        .eq('deleted_at', null)
-        .filter('stock_quantity', 'lte', 'reorder_level')
 
       if (stockError) {
         console.error('Error fetching low stock:', stockError)
       }
+
+      const lowStockCount = lowStockData?.filter(item =>
+        item.quantity_available <= (item.reorder_point || 0)
+      ).length || 0
 
       // Fetch pending quotes count
       const { count: quotesCount, error: quotesError } = await supabase
@@ -111,34 +117,72 @@ export default function DashboardPage() {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
       const { data: weekSalesData, error: weekError } = await supabase
-        .from('mv_daily_sales_by_location')
-        .select('sale_date, total_sales, total_transactions')
+        .from('sales')
+        .select('created_at, total_amount')
         .eq('location_id', locationId)
-        .gte('sale_date', sevenDaysAgo.toISOString().split('T')[0])
-        .order('sale_date', { ascending: true })
+        .gte('created_at', sevenDaysAgo.toISOString())
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true })
 
       if (weekError) {
         console.error('Error fetching week sales:', weekError)
       }
 
-      // Fetch top selling products
-      const { data: topProductsData, error: topProductsError } = await supabase
-        .from('mv_top_selling_products')
-        .select('product_name, total_quantity_sold, total_revenue')
-        .eq('location_id', locationId)
-        .order('total_quantity_sold', { ascending: false })
-        .limit(5)
+      // Aggregate sales by day
+      const salesByDay = new Map<string, { sales: number, count: number }>()
+      weekSalesData?.forEach(sale => {
+        const date = new Date(sale.created_at).toISOString().split('T')[0]
+        const current = salesByDay.get(date) || { sales: 0, count: 0 }
+        salesByDay.set(date, {
+          sales: current.sales + (sale.total_amount || 0),
+          count: current.count + 1
+        })
+      })
 
-      if (topProductsError) {
-        console.error('Error fetching top products:', topProductsError)
+      const aggregatedSales = Array.from(salesByDay.entries()).map(([date, data]) => ({
+        sale_date: date,
+        total_sales: data.sales,
+        total_transactions: data.count
+      }))
+
+      // Fetch top selling products from last 30 days
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+      const { data: recentSales } = await supabase
+        .from('sales')
+        .select('id')
+        .eq('location_id', locationId)
+        .gte('created_at', thirtyDaysAgo.toISOString())
+        .is('deleted_at', null)
+
+      const saleIds = recentSales?.map(s => s.id) || []
+
+      let topProductsData: any[] = []
+      if (saleIds.length > 0) {
+        const { data, error: topProductsError } = await supabase
+          .from('sale_items')
+          .select(`
+            product_id,
+            quantity,
+            line_total,
+            product:products!product_id(name)
+          `)
+          .in('sale_id', saleIds)
+
+        if (topProductsError) {
+          console.error('Error fetching top products:', topProductsError)
+        } else {
+          topProductsData = data || []
+        }
       }
 
       // Calculate percentage changes (compare with yesterday)
       let salesChange = 0
       let transactionsChange = 0
-      if (weekSalesData && weekSalesData.length >= 2) {
-        const todayData = weekSalesData[weekSalesData.length - 1]
-        const yesterdayData = weekSalesData[weekSalesData.length - 2]
+      if (aggregatedSales && aggregatedSales.length >= 2) {
+        const todayData = aggregatedSales[aggregatedSales.length - 1]
+        const yesterdayData = aggregatedSales[aggregatedSales.length - 2]
 
         if (yesterdayData.total_sales > 0) {
           salesChange = ((todayData.total_sales - yesterdayData.total_sales) / yesterdayData.total_sales) * 100
@@ -149,9 +193,9 @@ export default function DashboardPage() {
       }
 
       setStats({
-        todaySales: todaySalesData?.total_sales || 0,
-        todayTransactions: todaySalesData?.total_transactions || 0,
-        lowStockCount: lowStockData?.length || 0,
+        todaySales: todayTotal,
+        todayTransactions: todayCount,
+        lowStockCount: lowStockCount,
         pendingQuotes: quotesCount || 0,
         percentageChange: {
           sales: Math.round(salesChange * 10) / 10,
@@ -160,21 +204,32 @@ export default function DashboardPage() {
       })
 
       // Format chart data
-      if (weekSalesData) {
-        setSalesChartData(weekSalesData.map(item => ({
+      if (aggregatedSales) {
+        setSalesChartData(aggregatedSales.map(item => ({
           date: new Date(item.sale_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           sales: item.total_sales,
           transactions: item.total_transactions
         })))
       }
 
-      // Format top products
+      // Aggregate top products
       if (topProductsData) {
-        setTopProducts(topProductsData.map(item => ({
-          name: item.product_name,
-          quantity: item.total_quantity_sold,
-          revenue: item.total_revenue
-        })))
+        const productMap = new Map<number, { name: string, quantity: number, revenue: number }>()
+        topProductsData.forEach((item: any) => {
+          const productName = item.product?.[0]?.name || 'Unknown'
+          const current = productMap.get(item.product_id) || { name: productName, quantity: 0, revenue: 0 }
+          productMap.set(item.product_id, {
+            name: productName,
+            quantity: current.quantity + (item.quantity || 0),
+            revenue: current.revenue + (item.line_total || 0)
+          })
+        })
+
+        const aggregatedProducts = Array.from(productMap.values())
+          .sort((a, b) => b.quantity - a.quantity)
+          .slice(0, 5)
+
+        setTopProducts(aggregatedProducts)
       }
 
     } catch (error) {
@@ -241,155 +296,155 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6 space-y-6">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {user?.firstName}!
-          </h2>
-          <p className="text-gray-600">
-            Here's what's happening with your store today.
-          </p>
-        </div>
+      {/* Welcome Section */}
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {user?.firstName}!
+        </h2>
+        <p className="text-gray-600">
+          Here's what's happening with your store today.
+        </p>
+      </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {dashboardStats.map((stat, index) => {
-            const Icon = stat.icon
-            const TrendIcon = stat.trending ? ArrowUpRight : ArrowDownRight
-            return (
-              <Card key={index} className="hover:shadow-lg transition-shadow duration-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-600 mb-1">
-                        {stat.title}
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {dashboardStats.map((stat, index) => {
+          const Icon = stat.icon
+          const TrendIcon = stat.trending ? ArrowUpRight : ArrowDownRight
+          return (
+            <Card key={index} className="hover:shadow-lg transition-shadow duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-600 mb-1">
+                      {stat.title}
+                    </p>
+                    <p className="text-3xl font-bold text-gray-900 mb-2">
+                      {stat.value}
+                    </p>
+                    <div className="flex items-center">
+                      {index < 2 && (
+                        <TrendIcon className={`h-4 w-4 mr-1 ${stat.color}`} />
+                      )}
+                      <p className={`text-sm font-medium ${stat.color}`}>
+                        {stat.change}
                       </p>
-                      <p className="text-3xl font-bold text-gray-900 mb-2">
-                        {stat.value}
-                      </p>
-                      <div className="flex items-center">
-                        {index < 2 && (
-                          <TrendIcon className={`h-4 w-4 mr-1 ${stat.color}`} />
-                        )}
-                        <p className={`text-sm font-medium ${stat.color}`}>
-                          {stat.change}
-                        </p>
-                      </div>
-                    </div>
-                    <div className={`p-4 rounded-2xl ${stat.bgColor}`}>
-                      <Icon className={`h-8 w-8 ${stat.color}`} />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Sales Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
-                Sales Overview (Last 7 Days)
-              </CardTitle>
-              <CardDescription>
-                Daily sales performance
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={salesChartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb' }}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="sales"
-                    stroke="#2563eb"
-                    strokeWidth={2}
-                    name="Sales"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Top Products Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Package className="h-5 w-5 mr-2 text-purple-600" />
-                Top Selling Products
-              </CardTitle>
-              <CardDescription>
-                Best performers this period
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={topProducts}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="name"
-                    angle={-45}
-                    textAnchor="end"
-                    height={100}
-                    interval={0}
-                  />
-                  <YAxis />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb' }}
-                  />
-                  <Legend />
-                  <Bar dataKey="quantity" fill="#8b5cf6" name="Quantity Sold" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Alerts Section */}
-        {stats.lowStockCount > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <AlertTriangle className="h-5 w-5 mr-2 text-yellow-600" />
-                Inventory Alerts
-              </CardTitle>
-              <CardDescription>
-                Items requiring your attention
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                  <div className={`p-4 rounded-2xl ${stat.bgColor}`}>
+                    <Icon className={`h-8 w-8 ${stat.color}`} />
                   </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-yellow-800">
-                      Low Stock Alert
-                    </h3>
-                    <div className="mt-2 text-sm text-yellow-700">
-                      <p>
-                        You have {stats.lowStockCount} product(s) with stock below reorder level.
-                        Please review your inventory and place orders to avoid stockouts.
-                      </p>
-                    </div>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Sales Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
+              Sales Overview (Last 7 Days)
+            </CardTitle>
+            <CardDescription>
+              Daily sales performance
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={salesChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip
+                  formatter={(value: number) => formatCurrency(value)}
+                  contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb' }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="sales"
+                  stroke="#2563eb"
+                  strokeWidth={2}
+                  name="Sales"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Top Products Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Package className="h-5 w-5 mr-2 text-purple-600" />
+              Top Selling Products
+            </CardTitle>
+            <CardDescription>
+              Best performers this period
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={topProducts}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  angle={-45}
+                  textAnchor="end"
+                  height={100}
+                  interval={0}
+                />
+                <YAxis />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb' }}
+                />
+                <Legend />
+                <Bar dataKey="quantity" fill="#8b5cf6" name="Quantity Sold" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Alerts Section */}
+      {stats.lowStockCount > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <AlertTriangle className="h-5 w-5 mr-2 text-yellow-600" />
+              Inventory Alerts
+            </CardTitle>
+            <CardDescription>
+              Items requiring your attention
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-yellow-800">
+                    Low Stock Alert
+                  </h3>
+                  <div className="mt-2 text-sm text-yellow-700">
+                    <p>
+                      You have {stats.lowStockCount} product(s) with stock below reorder level.
+                      Please review your inventory and place orders to avoid stockouts.
+                    </p>
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   )
 }
