@@ -12,16 +12,20 @@ import type {
 
 class LocationService {
   /**
-   * Get all locations
+   * Get all locations for the current user's business
    */
   async getLocations(): Promise<LocationListItem[]> {
     try {
+      // Get business context to filter by business_id
+      const { businessId } = await getBusinessContext()
+
       const { data, error } = await supabase
         .from('locations')
         .select(`
           *,
           user_locations(id)
         `)
+        .eq('business_id', businessId)
         .is('deleted_at', null)
         .order('name', { ascending: true })
 
@@ -182,10 +186,13 @@ class LocationService {
   }
 
   /**
-   * Get users with their assigned locations
+   * Get users with their assigned locations (filtered by business)
    */
   async getUsersWithLocations(): Promise<UserWithLocations[]> {
     try {
+      // Get business context to filter by business_id
+      const { businessId } = await getBusinessContext()
+
       const { data, error } = await supabase
         .from('user_details')
         .select(`
@@ -203,6 +210,7 @@ class LocationService {
             location:locations(id, name, code, city)
           )
         `)
+        .eq('business_id', businessId)
         .order('first_name', { ascending: true })
 
       if (error) throw error
@@ -366,9 +374,13 @@ class LocationService {
    */
   async getFirstLocation(): Promise<Location | null> {
     try {
+      // Get business context to filter by business_id
+      const { businessId } = await getBusinessContext()
+
       const { data, error } = await supabase
         .from('locations')
         .select('*')
+        .eq('business_id', businessId)
         .is('deleted_at', null)
         .eq('is_active', true)
         .order('created_at', { ascending: true })

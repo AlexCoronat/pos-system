@@ -16,7 +16,9 @@ import {
   Phone,
   Eye,
   EyeOff,
-  Lock
+  Lock,
+  Pencil,
+  Trash2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,6 +48,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -66,12 +78,24 @@ export default function TeamPage() {
   const [locations, setLocations] = useState<LocationListItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    firstName: '',
+    lastName: '',
+    phone: '',
+    roleId: '',
+    locationIds: [] as number[],
+    primaryLocationId: ''
+  })
+
+  const [editFormData, setEditFormData] = useState({
     firstName: '',
     lastName: '',
     phone: '',
@@ -184,6 +208,107 @@ export default function TeamPage() {
     } catch (error: any) {
       toast.error(error.message || 'Error al cambiar estado')
     }
+  }
+
+  const handleOpenEditDialog = (member: TeamMember) => {
+    setSelectedMember(member)
+    setEditFormData({
+      firstName: member.firstName,
+      lastName: member.lastName,
+      phone: member.phone || '',
+      roleId: member.roleId.toString(),
+      locationIds: member.assignedLocations.map(l => l.locationId),
+      primaryLocationId: member.assignedLocations.find(l => l.isPrimary)?.locationId.toString() ||
+                        (member.assignedLocations[0]?.locationId.toString() || '')
+    })
+    setEditDialogOpen(true)
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedMember) return
+
+    if (!editFormData.firstName || !editFormData.lastName) {
+      toast.error('Nombre y apellido son requeridos')
+      return
+    }
+
+    if (editFormData.locationIds.length === 0) {
+      toast.error('Debes seleccionar al menos una ubicación')
+      return
+    }
+
+    setIsSaving(true)
+
+    try {
+      // Update member details
+      await teamService.updateTeamMember(selectedMember.id, {
+        firstName: editFormData.firstName,
+        lastName: editFormData.lastName,
+        phone: editFormData.phone || undefined,
+        roleId: editFormData.roleId ? parseInt(editFormData.roleId) : undefined
+      })
+
+      // Update locations
+      await teamService.updateMemberLocations(
+        selectedMember.id,
+        editFormData.locationIds,
+        parseInt(editFormData.primaryLocationId)
+      )
+
+      toast.success('Usuario actualizado correctamente')
+      setEditDialogOpen(false)
+      loadData()
+    } catch (error: any) {
+      toast.error(error.message || 'Error al actualizar usuario')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleOpenDeleteDialog = (member: TeamMember) => {
+    if (member.isOwner) {
+      toast.error('No puedes eliminar al propietario del negocio')
+      return
+    }
+    setSelectedMember(member)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (!selectedMember) return
+
+    setIsSaving(true)
+    try {
+      await teamService.removeMember(selectedMember.id)
+      toast.success('Usuario eliminado correctamente')
+      setDeleteDialogOpen(false)
+      loadData()
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar usuario')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleEditLocationToggle = (locationId: number) => {
+    setEditFormData(prev => {
+      const newIds = prev.locationIds.includes(locationId)
+        ? prev.locationIds.filter(id => id !== locationId)
+        : [...prev.locationIds, locationId]
+
+      // If removing primary location, set new primary
+      let newPrimary = prev.primaryLocationId
+      if (prev.primaryLocationId === locationId.toString() && !newIds.includes(locationId)) {
+        newPrimary = newIds.length > 0 ? newIds[0].toString() : ''
+      }
+
+      return {
+        ...prev,
+        locationIds: newIds,
+        primaryLocationId: newPrimary
+      }
+    })
   }
 
   const handleLocationToggle = (locationId: number) => {
@@ -342,6 +467,13 @@ export default function TeamPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
+                            onClick={() => handleOpenEditDialog(member)}
+                            disabled={member.isOwner}
+                          >
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() => handleToggleStatus(member)}
                             disabled={member.isOwner}
                           >
@@ -356,6 +488,15 @@ export default function TeamPage() {
                                 Activar
                               </>
                             )}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleOpenDeleteDialog(member)}
+                            disabled={member.isOwner}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Eliminar
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -534,6 +675,159 @@ export default function TeamPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Member Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar Usuario</DialogTitle>
+            <DialogDescription>
+              Modifica la información de {selectedMember?.firstName} {selectedMember?.lastName}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            {/* Name */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-firstName">Nombre *</Label>
+                <Input
+                  id="edit-firstName"
+                  value={editFormData.firstName}
+                  onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
+                  placeholder="Nombre"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-lastName">Apellido *</Label>
+                <Input
+                  id="edit-lastName"
+                  value={editFormData.lastName}
+                  onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
+                  placeholder="Apellido"
+                />
+              </div>
+            </div>
+
+            {/* Phone */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-phone">Teléfono</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="edit-phone"
+                  type="tel"
+                  className="pl-10"
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+            </div>
+
+            {/* Role */}
+            <div className="space-y-2">
+              <Label>Rol</Label>
+              <Select
+                value={editFormData.roleId}
+                onValueChange={(value) => setEditFormData({ ...editFormData, roleId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un rol" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id.toString()}>
+                      {role.name}
+                      {role.isSystem && ' (Sistema)'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Locations */}
+            <div className="space-y-2">
+              <Label>Ubicaciones *</Label>
+              <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
+                {locations.map((location) => (
+                  <div key={location.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`edit-loc-${location.id}`}
+                        checked={editFormData.locationIds.includes(location.id)}
+                        onCheckedChange={() => handleEditLocationToggle(location.id)}
+                      />
+                      <Label htmlFor={`edit-loc-${location.id}`} className="text-sm font-normal">
+                        {location.name}
+                      </Label>
+                    </div>
+                    {editFormData.locationIds.includes(location.id) && (
+                      <Button
+                        type="button"
+                        variant={editFormData.primaryLocationId === location.id.toString() ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={() => setEditFormData({ ...editFormData, primaryLocationId: location.id.toString() })}
+                      >
+                        {editFormData.primaryLocationId === location.id.toString() ? 'Principal' : 'Hacer principal'}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Guardar Cambios
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar Usuario</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que deseas eliminar a {selectedMember?.firstName} {selectedMember?.lastName}?
+              Esta acción removerá al usuario de tu negocio y no podrá acceder más al sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Eliminando...
+                </>
+              ) : (
+                'Eliminar'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

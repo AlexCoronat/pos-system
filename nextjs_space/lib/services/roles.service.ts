@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '@/lib/supabase/client'
+import { PERMISSION_MODULES as MODULES_CONFIG } from '@/lib/types/roles'
 
 export interface Permission {
   module: string
@@ -35,93 +36,86 @@ export interface UpdateRoleData {
   isActive?: boolean
 }
 
-// Available modules and their actions
-export const PERMISSION_MODULES = [
-  {
-    id: 'dashboard',
-    name: 'Dashboard',
-    description: 'Panel principal con estadísticas',
-    actions: [
-      { id: 'view', name: 'Ver', description: 'Ver el dashboard' }
-    ]
-  },
-  {
-    id: 'products',
-    name: 'Productos',
-    description: 'Gestión de productos y catálogo',
-    actions: [
-      { id: 'view', name: 'Ver', description: 'Ver productos' },
-      { id: 'create', name: 'Crear', description: 'Crear productos' },
-      { id: 'edit', name: 'Editar', description: 'Editar productos' },
-      { id: 'delete', name: 'Eliminar', description: 'Eliminar productos' }
-    ]
-  },
-  {
-    id: 'inventory',
-    name: 'Inventario',
-    description: 'Control de stock y movimientos',
-    actions: [
-      { id: 'view', name: 'Ver', description: 'Ver inventario' },
-      { id: 'create', name: 'Crear', description: 'Registrar entradas' },
-      { id: 'edit', name: 'Editar', description: 'Ajustar stock' },
-      { id: 'delete', name: 'Eliminar', description: 'Eliminar movimientos' }
-    ]
-  },
-  {
-    id: 'sales',
-    name: 'Ventas',
-    description: 'Punto de venta y transacciones',
-    actions: [
-      { id: 'view', name: 'Ver', description: 'Ver ventas' },
-      { id: 'create', name: 'Crear', description: 'Realizar ventas' },
-      { id: 'edit', name: 'Editar', description: 'Editar ventas' },
-      { id: 'delete', name: 'Eliminar', description: 'Eliminar ventas' },
-      { id: 'cancel', name: 'Cancelar', description: 'Cancelar ventas' }
-    ]
-  },
-  {
-    id: 'customers',
-    name: 'Clientes',
-    description: 'Gestión de clientes',
-    actions: [
-      { id: 'view', name: 'Ver', description: 'Ver clientes' },
-      { id: 'create', name: 'Crear', description: 'Crear clientes' },
-      { id: 'edit', name: 'Editar', description: 'Editar clientes' },
-      { id: 'delete', name: 'Eliminar', description: 'Eliminar clientes' }
-    ]
-  },
-  {
-    id: 'reports',
-    name: 'Reportes',
-    description: 'Reportes y análisis',
-    actions: [
-      { id: 'view', name: 'Ver', description: 'Ver reportes' },
-      { id: 'export', name: 'Exportar', description: 'Exportar datos' }
-    ]
-  },
-  {
-    id: 'settings',
-    name: 'Configuración',
-    description: 'Configuración del sistema',
-    actions: [
-      { id: 'view', name: 'Ver', description: 'Ver configuración' },
-      { id: 'edit', name: 'Editar', description: 'Modificar configuración' }
-    ]
-  },
-  {
-    id: 'users',
-    name: 'Usuarios',
-    description: 'Gestión de equipo',
-    actions: [
-      { id: 'view', name: 'Ver', description: 'Ver usuarios' },
-      { id: 'create', name: 'Crear', description: 'Crear usuarios' },
-      { id: 'edit', name: 'Editar', description: 'Editar usuarios' },
-      { id: 'delete', name: 'Eliminar', description: 'Eliminar usuarios' }
-    ]
-  }
-]
+// Re-export PERMISSION_MODULES in the format expected by the UI
+export const PERMISSION_MODULES = MODULES_CONFIG.map(module => ({
+  id: module.key,
+  name: module.label,
+  description: module.description,
+  actions: module.actions.map(action => ({
+    id: action.key,
+    name: action.label,
+    description: action.description
+  }))
+}))
 
 class RolesService {
+  /**
+   * Get current user's business_id
+   */
+  private async getUserBusinessId(): Promise<number | null> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+
+    const { data: currentUser } = await supabase
+      .from('user_details')
+      .select('business_id')
+      .eq('id', user.id)
+      .single()
+
+    return currentUser?.business_id || null
+  }
+
+  /**
+   * Log audit entry for role changes
+   */
+  private async logAudit(
+    action: 'create' | 'update' | 'delete',
+    roleId: number,
+    roleName: string,
+    changes?: { before?: any; after?: any }
+  ): Promise<void> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: userDetails } = await supabase
+        .from('user_details')
+        .select('first_name, last_name, business_id')
+        .eq('id', user.id)
+        .single()
+
+      // Try to insert into audit_log table if it exists
+      const auditEntry = {
+        entity_type: 'role',
+        entity_id: roleId,
+        action,
+        user_id: user.id,
+        user_name: userDetails ? `${userDetails.first_name} ${userDetails.last_name}` : user.email,
+        business_id: userDetails?.business_id,
+        details: {
+          role_name: roleName,
+          ...changes
+        },
+        created_at: new Date().toISOString()
+      }
+
+      // Attempt to insert - will fail silently if table doesn't exist
+      const { error: auditError } = await supabase
+        .from('audit_log')
+        .insert(auditEntry)
+
+      if (auditError) {
+        // Table doesn't exist or other error, just log to console
+        console.log(`[AUDIT] ${action.toUpperCase()} role "${roleName}" (ID: ${roleId}) by ${auditEntry.user_name}`, changes || '')
+      } else {
+        console.log(`[AUDIT] ${action.toUpperCase()} role "${roleName}" (ID: ${roleId}) by ${auditEntry.user_name}`)
+      }
+    } catch (error) {
+      // Don't throw - audit should never break the main operation
+      console.error('Error logging audit:', error)
+    }
+  }
+
   /**
    * Get all roles for the current user's business
    */
@@ -250,6 +244,15 @@ class RolesService {
 
       if (error) throw error
 
+      // Log audit
+      await this.logAudit('create', role.id, role.name, {
+        after: {
+          name: role.name,
+          description: role.description,
+          permissions: data.permissions
+        }
+      })
+
       return {
         id: role.id,
         name: role.name,
@@ -272,15 +275,30 @@ class RolesService {
    */
   async updateRole(roleId: number, data: UpdateRoleData): Promise<void> {
     try {
-      // Check if it's a system role
+      // Get current user's business_id
+      const userBusinessId = await this.getUserBusinessId()
+      if (!userBusinessId) {
+        throw new Error('Usuario no autenticado')
+      }
+
+      // Check if it's a system role and validate ownership
       const { data: existingRole } = await supabase
         .from('roles')
-        .select('is_system')
+        .select('is_system, business_id, name, description, permissions')
         .eq('id', roleId)
         .single()
 
-      if (existingRole?.is_system) {
+      if (!existingRole) {
+        throw new Error('Rol no encontrado')
+      }
+
+      if (existingRole.is_system) {
         throw new Error('No se pueden modificar roles del sistema')
+      }
+
+      // Validate that the role belongs to the user's business
+      if (existingRole.business_id !== userBusinessId) {
+        throw new Error('No tienes permiso para modificar este rol')
       }
 
       const updateData: any = { updated_at: new Date().toISOString() }
@@ -296,6 +314,20 @@ class RolesService {
         .eq('id', roleId)
 
       if (error) throw error
+
+      // Log audit
+      await this.logAudit('update', roleId, data.name || existingRole.name, {
+        before: {
+          name: existingRole.name,
+          description: existingRole.description,
+          permissions: existingRole.permissions
+        },
+        after: {
+          name: data.name || existingRole.name,
+          description: data.description !== undefined ? data.description : existingRole.description,
+          permissions: data.permissions || existingRole.permissions
+        }
+      })
     } catch (error: any) {
       console.error('Error updating role:', error)
       throw new Error(error.message || 'Error al actualizar rol')
@@ -307,15 +339,30 @@ class RolesService {
    */
   async deleteRole(roleId: number): Promise<void> {
     try {
-      // Check if it's a system role
+      // Get current user's business_id
+      const userBusinessId = await this.getUserBusinessId()
+      if (!userBusinessId) {
+        throw new Error('Usuario no autenticado')
+      }
+
+      // Check if it's a system role and validate ownership
       const { data: existingRole } = await supabase
         .from('roles')
-        .select('is_system')
+        .select('is_system, business_id, name, description, permissions')
         .eq('id', roleId)
         .single()
 
-      if (existingRole?.is_system) {
+      if (!existingRole) {
+        throw new Error('Rol no encontrado')
+      }
+
+      if (existingRole.is_system) {
         throw new Error('No se pueden eliminar roles del sistema')
+      }
+
+      // Validate that the role belongs to the user's business
+      if (existingRole.business_id !== userBusinessId) {
+        throw new Error('No tienes permiso para eliminar este rol')
       }
 
       // Check if role is in use
@@ -334,6 +381,15 @@ class RolesService {
         .eq('id', roleId)
 
       if (error) throw error
+
+      // Log audit
+      await this.logAudit('delete', roleId, existingRole.name, {
+        before: {
+          name: existingRole.name,
+          description: existingRole.description,
+          permissions: existingRole.permissions
+        }
+      })
     } catch (error: any) {
       console.error('Error deleting role:', error)
       throw new Error(error.message || 'Error al eliminar rol')

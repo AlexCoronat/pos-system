@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ShieldX, Home, ArrowLeft, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { useAuth } from '@/lib/hooks/useAuth'
+import { useAuth } from '@/lib/hooks/use-auth'
 
 export default function AccessDeniedPage() {
   const { signOut } = useAuth()

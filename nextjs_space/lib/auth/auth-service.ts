@@ -22,10 +22,100 @@ class AuthService {
   private authListeners: ((state: AuthState) => void)[] = []
   private initialized = false
   private loading = false
+  private permissionRefreshInterval: NodeJS.Timeout | null = null
+  private realtimeSubscription: any = null
 
   constructor() {
     if (typeof window !== 'undefined') {
       this.initializeAuth()
+    }
+  }
+
+  // Refresh user permissions from the database
+  async refreshPermissions(): Promise<void> {
+    if (!this.currentUser) return
+
+    try {
+      const { data, error } = await this.supabase
+        .from('user_details')
+        .select(`
+          role:roles!role_id(permissions, name)
+        `)
+        .eq('id', this.currentUser.id)
+        .single()
+
+      if (error || !data) return
+
+      const roleData = Array.isArray(data.role) ? data.role[0] : data.role
+      const newPermissions = this.parsePermissions(roleData?.permissions)
+      const newRoleName = roleData?.name || this.currentUser.roleName
+
+      // Check if permissions have changed
+      const permissionsChanged =
+        JSON.stringify(this.currentUser.permissions) !== JSON.stringify(newPermissions) ||
+        this.currentUser.roleName !== newRoleName
+
+      if (permissionsChanged) {
+        console.log('[AUTH] Permissions updated from server')
+        this.currentUser = {
+          ...this.currentUser,
+          permissions: newPermissions,
+          roleName: newRoleName
+        }
+        this.saveUserToStorage(this.currentUser)
+        this.notifyListeners()
+      }
+    } catch (error) {
+      console.error('Error refreshing permissions:', error)
+    }
+  }
+
+  // Start periodic permission refresh
+  private startPermissionRefresh(): void {
+    // Refresh every 5 minutes
+    this.permissionRefreshInterval = setInterval(() => {
+      this.refreshPermissions()
+    }, 5 * 60 * 1000)
+
+    // Also listen for role changes in real-time
+    this.setupRealtimeSubscription()
+  }
+
+  // Stop periodic permission refresh
+  private stopPermissionRefresh(): void {
+    if (this.permissionRefreshInterval) {
+      clearInterval(this.permissionRefreshInterval)
+      this.permissionRefreshInterval = null
+    }
+    if (this.realtimeSubscription) {
+      this.supabase.removeChannel(this.realtimeSubscription)
+      this.realtimeSubscription = null
+    }
+  }
+
+  // Setup realtime subscription for role changes
+  private setupRealtimeSubscription(): void {
+    if (!this.currentUser) return
+
+    try {
+      this.realtimeSubscription = this.supabase
+        .channel('role-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'roles',
+            filter: `id=eq.${this.currentUser.roleId}`
+          },
+          () => {
+            console.log('[AUTH] Role updated, refreshing permissions')
+            this.refreshPermissions()
+          }
+        )
+        .subscribe()
+    } catch (error) {
+      console.error('Error setting up realtime subscription:', error)
     }
   }
 
@@ -342,6 +432,12 @@ class AuthService {
       .select(`
         *,
         role:roles!role_id(*),
+        business:businesses!business_id(
+          id,
+          name,
+          owner_id,
+          plan:subscription_plans!plan_id(id, name)
+        ),
         defaultLocation:locations!default_location_id(*),
         userLocations:user_locations!user_locations_user_id_fkey(
           id,
@@ -371,6 +467,9 @@ class AuthService {
     // Type assertion for data since we're using custom schemas
     const userData = data as any
 
+    // Supabase returns role as an array due to the foreign key relationship
+    const roleData = Array.isArray(userData.role) ? userData.role[0] : userData.role
+
     // Transform to AuthUser format
     const user: AuthUser = {
       id: userData.id,
@@ -379,8 +478,14 @@ class AuthService {
       lastName: userData.last_name || '',
       phone: userData.phone || undefined,
       roleId: userData.role_id || 3,
-      roleName: userData.role?.name || 'Seller',
-      permissions: this.parsePermissions(userData.role?.permissions),
+      roleName: roleData?.name || 'Seller',
+      isSystemRole: roleData?.is_system ?? false,
+      permissions: this.parsePermissions(roleData?.permissions),
+      businessId: userData.business_id || undefined,
+      businessName: userData.business?.name || undefined,
+      planId: userData.business?.plan?.id || undefined,
+      planName: userData.business?.plan?.name || undefined,
+      isBusinessOwner: userData.business?.owner_id === userData.id,
       defaultLocationId: userData.default_location_id || undefined,
       locationName: userData.defaultLocation?.name || undefined,
       isActive: userData.is_active,
@@ -400,6 +505,9 @@ class AuthService {
     this.currentUser = user
     this.saveUserToStorage(user)
     this.notifyListeners()
+
+    // Start permission refresh for this user
+    this.startPermissionRefresh()
 
     return user
   }
@@ -526,6 +634,7 @@ class AuthService {
   }
 
   private async handleSignOut(): Promise<void> {
+    this.stopPermissionRefresh()
     this.currentUser = null
     this.clearStorage()
     this.notifyListeners()

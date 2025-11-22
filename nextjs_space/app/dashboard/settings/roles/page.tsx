@@ -38,6 +38,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/lib/hooks/use-auth'
 import { rolesService, CustomRole, PERMISSION_MODULES } from '@/lib/services/roles.service'
 
 export default function RolesPage() {
@@ -61,10 +62,26 @@ export default function RolesPage() {
 
   const router = useRouter()
   const { toast } = useToast()
+  const { user, hasPermission, initialized, loading } = useAuth()
+
+  // Permission checks
+  const canRead = hasPermission('roles:read')
+  const canCreate = hasPermission('roles:create')
+  const canUpdate = hasPermission('roles:update')
+  const canDelete = hasPermission('roles:delete')
+
+  // Redirect if no permission
+  useEffect(() => {
+    if (initialized && !loading && !canRead) {
+      router.push('/access-denied')
+    }
+  }, [initialized, loading, canRead, router])
 
   useEffect(() => {
-    loadRoles()
-  }, [])
+    if (canRead) {
+      loadRoles()
+    }
+  }, [canRead])
 
   const loadRoles = async () => {
     try {
@@ -371,10 +388,12 @@ export default function RolesPage() {
             Administra los roles y permisos de tu equipo
           </p>
         </div>
-        <Button onClick={openCreateDialog}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo Rol
-        </Button>
+        {canCreate && (
+          <Button onClick={openCreateDialog}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Rol
+          </Button>
+        )}
       </div>
 
       {/* Roles Grid */}
@@ -399,34 +418,40 @@ export default function RolesPage() {
                 <div className="flex items-center gap-1">
                   {!role.isSystem && (
                     <>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => openEditDialog(role)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleDuplicate(role)}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => openDeleteDialog(role)}
-                        disabled={role.userCount > 0}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {canUpdate && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => openEditDialog(role)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canCreate && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleDuplicate(role)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => openDeleteDialog(role)}
+                          disabled={role.userCount > 0}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </>
                   )}
-                  {role.isSystem && (
+                  {role.isSystem && canCreate && (
                     <Button
                       variant="ghost"
                       size="icon"

@@ -4,7 +4,6 @@ import Link from 'next/link'
 import {
   Settings,
   MapPin,
-  Users,
   UserCog,
   Building2,
   CreditCard,
@@ -35,13 +34,6 @@ const settingsSections = [
     href: '/dashboard/settings/locations',
     icon: MapPin,
     color: 'text-blue-600 bg-blue-100'
-  },
-  {
-    title: 'Usuarios y Ubicaciones',
-    description: 'Asigna usuarios a ubicaciones',
-    href: '/dashboard/settings/users',
-    icon: Users,
-    color: 'text-green-600 bg-green-100'
   },
   {
     title: 'Datos de la Empresa',

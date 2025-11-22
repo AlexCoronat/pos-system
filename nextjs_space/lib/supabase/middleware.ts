@@ -10,13 +10,15 @@ const ROUTE_CONFIG = {
   auth: ['/auth/login', '/auth/register', '/auth/recover-password', '/auth/reset-password'],
   protected: {
     '/dashboard': { roles: ['Admin', 'Manager', 'Seller', 'Support', 'Inventory Manager'] },
-    '/sales': { roles: ['Admin', 'Manager', 'Seller'], permissions: ['sales:read'] },
-    '/inventory': { roles: ['Admin', 'Manager', 'Inventory Manager'], permissions: ['inventory:read'] },
-    '/customers': { roles: ['Admin', 'Manager', 'Seller'], permissions: ['customers:read'] },
-    '/suppliers': { roles: ['Admin', 'Manager', 'Inventory Manager'], permissions: ['suppliers:read'] },
-    '/reports': { roles: ['Admin', 'Manager'], permissions: ['reports:read'] },
-    '/users': { roles: ['Admin'], permissions: ['users:read'] },
-    '/settings': { roles: ['Admin', 'Manager'] },
+    '/dashboard/sales': { roles: ['Admin', 'Manager', 'Seller'], permissions: ['sales:read'] },
+    '/dashboard/inventory': { roles: ['Admin', 'Manager', 'Inventory Manager'], permissions: ['inventory:read'] },
+    '/dashboard/customers': { roles: ['Admin', 'Manager', 'Seller'], permissions: ['customers:read'] },
+    '/dashboard/suppliers': { roles: ['Admin', 'Manager', 'Inventory Manager'], permissions: ['inventory:read'] },
+    '/dashboard/reports': { roles: ['Admin', 'Manager'], permissions: ['reports:read'] },
+    '/dashboard/settings': { roles: ['Admin', 'Manager'], permissions: ['settings:read'] },
+    '/dashboard/settings/roles': { roles: ['Admin'], permissions: ['roles:read'] },
+    '/dashboard/settings/team': { roles: ['Admin'], permissions: ['users:read'] },
+    '/dashboard/settings/locations': { roles: ['Admin', 'Manager'], permissions: ['locations:read'] },
   }
 }
 

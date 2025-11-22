@@ -1,8 +1,8 @@
 # Sistema POS Multi-Tenant SaaS
 
-**Fecha de Actualizacion**: 20 de Noviembre de 2025
-**Version del Proyecto**: 2.4.0
-**Estado**: En Desarrollo Activo - 90% Completado
+**Fecha de Actualizacion**: 21 de Noviembre de 2025
+**Version del Proyecto**: 2.5.0
+**Estado**: En Desarrollo Activo - 92% Completado
 
 ---
 
@@ -22,7 +22,7 @@ Arquitectura: Multi-tenant con RLS (Row Level Security)
 ### Progreso del Proyecto
 
 ```
-██████████████████████████████ 90% COMPLETADO
+██████████████████████████████ 92% COMPLETADO
 
 ✅ Completado:   8 modulos principales + arquitectura multi-tenant
 🔄 En Progreso:  0 modulos
@@ -93,8 +93,7 @@ Arquitectura: Multi-tenant con RLS (Row Level Security)
 - Visualizacion del propietario del negocio
 
 **Paginas:**
-- `/dashboard/settings/team` - Lista del equipo
-- `/dashboard/settings/team/invite` - Invitar usuario
+- `/dashboard/settings/team` - Lista del equipo (incluye invitacion y asignacion de roles/ubicaciones)
 
 ### 3. Gestion de Roles (100%)
 
@@ -118,9 +117,7 @@ Arquitectura: Multi-tenant con RLS (Row Level Security)
 | Usuarios | ver, crear, editar, eliminar |
 
 **Paginas:**
-- `/dashboard/settings/roles` - Lista de roles
-- `/dashboard/settings/roles/new` - Crear rol
-- `/dashboard/settings/roles/[id]` - Editar rol
+- `/dashboard/settings/roles` - Lista de roles (incluye creacion y edicion mediante dialogos)
 
 ### 4. Ventas (95%)
 
@@ -232,9 +229,10 @@ nextjs_space/
 │       ├── inventory/           # Modulo de inventario
 │       ├── customers/           # Modulo de clientes
 │       ├── settings/
-│       │   ├── team/            # Gestion de equipo
+│       │   ├── team/            # Gestion de equipo y usuarios
 │       │   ├── roles/           # Gestion de roles
 │       │   └── locations/       # Gestion de ubicaciones
+│       ├── access-denied/       # Pagina de acceso denegado
 │       └── sessions/            # Gestion de sesiones
 ├── components/
 │   ├── layout/
@@ -449,6 +447,17 @@ A 8h/dia:         ~6-7 dias
 
 ## Historial de Cambios
 
+### v2.5.0 (21 Nov 2025)
+- **Consolidacion del modulo de Usuarios y Equipo**
+- Eliminada pagina separada de usuarios (`/settings/users`)
+- Mejorada pagina de equipo con funcionalidad completa de gestion de usuarios
+- Mejorado servicio de roles con mejor manejo de errores y validaciones
+- Mejorado servicio de ubicaciones
+- Actualizado middleware de autenticacion
+- Mejorado servicio de autenticacion con funcionalidades adicionales
+- Gestion de roles ahora mediante dialogos en la pagina principal
+- Pagina de acceso denegado actualizada
+
 ### v2.4.0 (20 Nov 2025)
 - **Arquitectura Multi-Tenant completada**
 - Consolidacion de tablas roles y custom_roles en tabla unificada
@@ -501,4 +510,4 @@ Para reportar issues o sugerencias, crear un issue en el repositorio.
 
 ---
 
-*Actualizado el 20 de Noviembre de 2025*
+*Actualizado el 21 de Noviembre de 2025*
