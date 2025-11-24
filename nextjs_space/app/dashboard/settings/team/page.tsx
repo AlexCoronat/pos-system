@@ -18,7 +18,8 @@ import {
   EyeOff,
   Lock,
   Pencil,
-  Trash2
+  Trash2,
+  Archive
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -219,7 +220,7 @@ export default function TeamPage() {
       roleId: member.roleId.toString(),
       locationIds: member.assignedLocations.map(l => l.locationId),
       primaryLocationId: member.assignedLocations.find(l => l.isPrimary)?.locationId.toString() ||
-                        (member.assignedLocations[0]?.locationId.toString() || '')
+        (member.assignedLocations[0]?.locationId.toString() || '')
     })
     setEditDialogOpen(true)
   }
@@ -348,10 +349,18 @@ export default function TeamPage() {
             </p>
           </div>
         </div>
-        <Button onClick={handleOpenDialog}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Agregar Usuario
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/settings/team/archived">
+            <Button variant="outline">
+              <Archive className="h-4 w-4 mr-2" />
+              Ver Archivados
+            </Button>
+          </Link>
+          <Button onClick={handleOpenDialog}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Agregar Usuario
+          </Button>
+        </div>
       </div>
 
       {/* Team Members Table */}
@@ -417,7 +426,7 @@ export default function TeamPage() {
                     <TableCell>
                       <Badge variant="outline" className="flex items-center gap-1 w-fit">
                         <Shield className="h-3 w-3" />
-                        {member.customRoleName || member.roleName}
+                        {member.roleName}
                       </Badge>
                     </TableCell>
                     <TableCell>

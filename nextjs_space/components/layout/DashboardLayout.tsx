@@ -228,13 +228,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Location selector */}
             <div className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-gray-400" />
-              <select className="text-sm font-medium text-gray-900 bg-transparent border-none focus:ring-0 cursor-pointer">
-                <option>{user?.locationName || 'Select Location'}</option>
-                {user?.assignedLocations?.map((loc) => (
-                  <option key={loc.locationId} value={loc.locationId}>
-                    {loc.location.name}
-                  </option>
-                ))}
+              <select
+                className="text-sm font-medium text-gray-900 bg-transparent border-none focus:ring-0 cursor-pointer"
+                defaultValue={user?.defaultLocationId}
+              >
+                {user?.assignedLocations && user.assignedLocations.length > 0 ? (
+                  user.assignedLocations.map((loc) => (
+                    <option key={loc.locationId} value={loc.locationId}>
+                      {loc.location.name}
+                    </option>
+                  ))
+                ) : (
+                  <option>{user?.locationName || 'Sin ubicación'}</option>
+                )}
               </select>
             </div>
 

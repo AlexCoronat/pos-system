@@ -59,8 +59,19 @@ class AuthService {
       // Check for existing session (on page load/refresh)
       const { data: { session } } = await this.supabase.auth.getSession()
       if (session?.user) {
-        await this.loadUserProfile(session.user.id)
-      } 
+        try {
+          await this.loadUserProfile(session.user.id)
+        } catch (profileError: any) {
+          // If user profile doesn't exist (orphaned session), sign out
+          if (profileError?.code === 'PGRST116') {
+            logger.warn('User profile not found, signing out orphaned session', { userId: session.user.id })
+            await this.supabase.auth.signOut()
+            this.clearStorage()
+          } else {
+            throw profileError
+          }
+        }
+      }
 
       this.initialized = true
     } catch (error) {
@@ -575,7 +586,7 @@ class AuthService {
           ended_at: new Date().toISOString(),
           is_active: false
         })
-        .eq('id', parseInt(sessionId))
+        .eq('id', sessionId)
     } catch (error) {
       logger.error('Error ending session', { error })
     }

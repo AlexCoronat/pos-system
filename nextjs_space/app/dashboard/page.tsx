@@ -65,20 +65,20 @@ export default function DashboardPage() {
       const today = new Date().toISOString().split('T')[0]
       const locationId = user?.defaultLocationId || user?.assignedLocations?.[0]?.locationId
 
-      if (!locationId) {
-        console.warn('No location assigned to user')
-        setLoading(false)
-        return
-      }
-
-      // Fetch today's sales
-      const { data: todaySalesData, error: salesError } = await supabase
+      // Build base query for today's sales - filter by location only if available
+      let salesQuery = supabase
         .from('sales')
         .select('total_amount, id')
-        .eq('location_id', locationId)
         .gte('created_at', `${today}T00:00:00`)
         .lte('created_at', `${today}T23:59:59`)
         .is('deleted_at', null)
+
+      if (locationId) {
+        salesQuery = salesQuery.eq('location_id', locationId)
+      }
+
+      // Fetch today's sales
+      const { data: todaySalesData, error: salesError } = await salesQuery
 
       if (salesError && salesError.code !== 'PGRST116') {
         console.error('Error fetching sales:', salesError)
@@ -88,10 +88,15 @@ export default function DashboardPage() {
       const todayCount = todaySalesData?.length || 0
 
       // Fetch low stock products from inventory table
-      const { data: lowStockData, error: stockError } = await supabase
+      let stockQuery = supabase
         .from('inventory')
         .select('id, quantity_available, reorder_point')
-        .eq('location_id', locationId)
+
+      if (locationId) {
+        stockQuery = stockQuery.eq('location_id', locationId)
+      }
+
+      const { data: lowStockData, error: stockError } = await stockQuery
 
       if (stockError) {
         console.error('Error fetching low stock:', stockError)
@@ -102,11 +107,16 @@ export default function DashboardPage() {
       ).length || 0
 
       // Fetch pending quotes count
-      const { count: quotesCount, error: quotesError } = await supabase
+      let quotesQuery = supabase
         .from('quotes')
         .select('*', { count: 'exact', head: true })
-        .eq('location_id', locationId)
         .eq('status', 'Pending')
+
+      if (locationId) {
+        quotesQuery = quotesQuery.eq('location_id', locationId)
+      }
+
+      const { count: quotesCount, error: quotesError } = await quotesQuery
 
       if (quotesError) {
         console.error('Error fetching quotes:', quotesError)
@@ -116,13 +126,18 @@ export default function DashboardPage() {
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-      const { data: weekSalesData, error: weekError } = await supabase
+      let weekQuery = supabase
         .from('sales')
         .select('created_at, total_amount')
-        .eq('location_id', locationId)
         .gte('created_at', sevenDaysAgo.toISOString())
         .is('deleted_at', null)
         .order('created_at', { ascending: true })
+
+      if (locationId) {
+        weekQuery = weekQuery.eq('location_id', locationId)
+      }
+
+      const { data: weekSalesData, error: weekError } = await weekQuery
 
       if (weekError) {
         console.error('Error fetching week sales:', weekError)
@@ -149,12 +164,17 @@ export default function DashboardPage() {
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-      const { data: recentSales } = await supabase
+      let recentSalesQuery = supabase
         .from('sales')
         .select('id')
-        .eq('location_id', locationId)
         .gte('created_at', thirtyDaysAgo.toISOString())
         .is('deleted_at', null)
+
+      if (locationId) {
+        recentSalesQuery = recentSalesQuery.eq('location_id', locationId)
+      }
+
+      const { data: recentSales } = await recentSalesQuery
 
       const saleIds = recentSales?.map(s => s.id) || []
 

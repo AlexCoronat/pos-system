@@ -104,6 +104,7 @@ class TeamService {
           )
         `)
         .eq('business_id', currentUser.business_id)
+        .eq('is_active', true)
         .order('first_name', { ascending: true })
 
       if (error) throw error
@@ -350,29 +351,39 @@ class TeamService {
 
   /**
    * Remove a team member from the business
-   * Note: This doesn't delete the user, just removes business association
+   * This archives the user and removes them from active tables
    */
-  async removeMember(memberId: string): Promise<void> {
+  async removeMember(memberId: string, reason?: string): Promise<void> {
     try {
-      // Remove from user_locations
-      await supabase
-        .from('user_locations')
-        .delete()
-        .eq('user_id', memberId)
-
-      // Clear business_id and deactivate
-      const { error } = await supabase
-        .from('user_details')
-        .update({
-          business_id: null,
-          is_active: false
+      const { data, error } = await supabase
+        .rpc('archive_and_remove_user', {
+          p_user_id: memberId,
+          p_removal_reason: reason || null
         })
-        .eq('id', memberId)
 
       if (error) throw error
+
+      return data
     } catch (error: any) {
       console.error('Error removing team member:', error)
       throw new Error(error.message || 'Error al remover miembro')
+    }
+  }
+
+  /**
+   * Get archived users for the business
+   */
+  async getArchivedUsers(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_archived_users')
+
+      if (error) throw error
+
+      return data || []
+    } catch (error: any) {
+      console.error('Error getting archived users:', error)
+      throw new Error(error.message || 'Error al obtener usuarios archivados')
     }
   }
 }

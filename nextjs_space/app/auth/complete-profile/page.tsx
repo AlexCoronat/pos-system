@@ -154,7 +154,18 @@ export default function CompleteProfilePage() {
 
       if (businessError) throw businessError
 
-      // Create location
+      // IMPORTANT: First update user_details with business_id so RLS policies work
+      const { error: updateBusinessError } = await supabase
+        .from('user_details')
+        .update({
+          business_id: business.id,
+          role_id: adminRole?.id || null
+        })
+        .eq('id', userId)
+
+      if (updateBusinessError) throw updateBusinessError
+
+      // Now create location (RLS will allow it because user has business_id)
       const { data: location, error: locationError } = await supabase
         .from('locations')
         .insert({
@@ -173,17 +184,15 @@ export default function CompleteProfilePage() {
 
       if (locationError) throw locationError
 
-      // Update user with business and location
-      const { error: updateError } = await supabase
+      // Update user with default location
+      const { error: updateLocationError } = await supabase
         .from('user_details')
         .update({
-          business_id: business.id,
-          role_id: adminRole?.id || null,
           default_location_id: location.id
         })
         .eq('id', userId)
 
-      if (updateError) throw updateError
+      if (updateLocationError) throw updateLocationError
 
       // Assign user to location
       await supabase
@@ -193,6 +202,13 @@ export default function CompleteProfilePage() {
           location_id: location.id,
           is_primary: true
         })
+
+      // Reload user profile to get updated role and permissions
+      await authService.completeOAuthProfile(userId, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone || undefined
+      })
 
       toast({
         title: "Perfil completado",
