@@ -11,7 +11,15 @@
       "WebFetch(domain:code.claude.com)",
       "Bash(psql:*)",
       "Bash(cat:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(taskkill /F /PID 38828)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "Bash(dir:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

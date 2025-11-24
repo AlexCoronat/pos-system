@@ -1,0 +1,303 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "filter": "Filter",
+    "actions": "Actions",
+    "close": "Close",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit",
+    "refresh": "Refresh",
+    "export": "Export",
+    "import": "Import",
+    "download": "Download",
+    "upload": "Upload",
+    "select": "Select",
+    "selectAll": "Select all",
+    "clear": "Clear",
+    "apply": "Apply",
+    "reset": "Reset",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Information"
+  },
+  "layout": {
+    "appName": "POS System",
+    "navigation": {
+      "dashboard": "Dashboard",
+      "sales": "Sales",
+      "inventory": "Inventory",
+      "customers": "Customers",
+      "quotes": "Quotes",
+      "reports": "Reports",
+      "settings": "Settings"
+    },
+    "userMenu": {
+      "profile": "Profile",
+      "activeSessions": "Active Sessions",
+      "adminSettings": "Admin Settings",
+      "signOut": "Sign out"
+    },
+    "topBar": {
+      "location": "Location",
+      "noLocation": "No location",
+      "notifications": "Notifications"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign In",
+      "subtitle": "Sign in to your account",
+      "email": "Email address",
+      "password": "Password",
+      "rememberMe": "Remember me",
+      "forgotPassword": "Forgot your password?",
+      "signIn": "Sign in",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up",
+      "orContinueWith": "Or continue with",
+      "googleSignIn": "Sign in with Google"
+    },
+    "register": {
+      "title": "Create Account",
+      "subtitle": "Sign up to get started",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email address",
+      "password": "Password",
+      "confirmPassword": "Confirm password",
+      "phone": "Phone",
+      "signUp": "Sign up",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "terms": "By signing up, you agree to our",
+      "termsLink": "Terms and Conditions",
+      "and": "and",
+      "privacyLink": "Privacy Policy"
+    },
+    "recoverPassword": {
+      "title": "Recover Password",
+      "subtitle": "We'll send you a link to reset your password",
+      "email": "Email address",
+      "sendLink": "Send link",
+      "backToLogin": "Back to sign in"
+    },
+    "resetPassword": {
+      "title": "Reset Password",
+      "subtitle": "Enter your new password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password",
+      "resetPassword": "Reset password"
+    },
+    "errors": {
+      "invalidCredentials": "Invalid credentials",
+      "emailAlreadyExists": "This email is already registered",
+      "passwordMismatch": "Passwords don't match",
+      "weakPassword": "Password is too weak",
+      "invalidEmail": "Invalid email address",
+      "required": "This field is required",
+      "minLength": "Minimum {min} characters",
+      "maxLength": "Maximum {max} characters"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Manage your personal information and preferences",
+    "overview": {
+      "title": "Overview"
+    },
+    "personalInfo": {
+      "title": "Personal Information",
+      "subtitle": "Update your personal details",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "emailNote": "Email cannot be changed",
+      "phone": "Phone",
+      "edit": "Edit",
+      "saveChanges": "Save Changes",
+      "saving": "Saving...",
+      "cancel": "Cancel"
+    },
+    "businessInfo": {
+      "title": "Business Information",
+      "subtitle": "Your business details",
+      "businessName": "Business Name",
+      "plan": "Plan",
+      "role": "Role",
+      "status": "Status",
+      "owner": "Owner",
+      "teamMember": "Team Member"
+    },
+    "security": {
+      "title": "Security",
+      "subtitle": "Manage your account security",
+      "password": "Password",
+      "changePassword": "Change Password",
+      "changePasswordSubtitle": "Change your password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "activeSessions": "Active Sessions",
+      "activeSessionsSubtitle": "Manage your active sessions",
+      "viewSessions": "View Sessions",
+      "oauthAccount": "OAuth Account",
+      "oauthNote": "You're signed in with Google. Password changes are managed through your Google account."
+    },
+    "preferences": {
+      "title": "Preferences",
+      "subtitle": "Customize your experience",
+      "language": "Language",
+      "languageSubtitle": "Select your preferred language",
+      "spanish": "Español",
+      "english": "English",
+      "theme": "Theme",
+      "themeSubtitle": "Choose your app theme",
+      "light": "Light",
+      "dark": "Dark",
+      "emailNotifications": "Email Notifications",
+      "emailNotificationsSubtitle": "Receive notifications via email"
+    },
+    "accountDetails": {
+      "title": "Account Details",
+      "lastLogin": "Last Login",
+      "accountStatus": "Account Status",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "notifications": {
+      "profileUpdated": "Profile updated",
+      "profileUpdatedDesc": "Your profile has been updated successfully",
+      "passwordChanged": "Password changed",
+      "passwordChangedDesc": "Your password has been changed successfully",
+      "languageUpdated": "Language updated",
+      "languageUpdatedDesc": "Language set to {language}",
+      "themeUpdated": "Theme updated",
+      "themeUpdatedDesc": "Theme set to {theme}",
+      "notificationsUpdated": "Notifications updated",
+      "notificationsEnabled": "Email notifications enabled",
+      "notificationsDisabled": "Email notifications disabled"
+    },
+    "errors": {
+      "loadProfileFailed": "Failed to load profile data",
+      "updateProfileFailed": "Failed to update profile",
+      "passwordMismatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "changePasswordFailed": "Failed to change password"
+    }
+  },
+  "sessions": {
+    "title": "Active Sessions",
+    "subtitle": "Manage active sessions and monitor security",
+    "tabs": {
+      "mySessions": "My Sessions",
+      "teamSessions": "Team Sessions"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "terminateAll": "Terminate All Sessions",
+      "terminateAllMine": "Terminate All My Sessions",
+      "terminateAllTeam": "Terminate All Team Sessions",
+      "terminate": "Terminate",
+      "terminating": "Terminating..."
+    },
+    "session": {
+      "currentSession": "Current Session",
+      "active": "Active",
+      "inactive": "Inactive",
+      "browser": "Browser",
+      "device": "Device",
+      "location": "Location",
+      "ipAddress": "IP Address",
+      "startedAt": "Started",
+      "endedAt": "Ended",
+      "duration": "Duration"
+    },
+    "securityNotice": {
+      "title": "Security Notice",
+      "point1": "If you see any sessions you don't recognize, terminate them immediately",
+      "point2": "Always log out when using shared or public computers",
+      "point3": "Sessions expire automatically after a period of inactivity",
+      "point4": "Terminating a session will immediately log out that device",
+      "point5": "As an admin, you can terminate sessions for any team member"
+    },
+    "confirmations": {
+      "terminateAll": "Are you sure you want to terminate all your other sessions? You will remain logged in on this device.",
+      "terminateAllTeam": "Are you sure you want to terminate all active sessions for all team members? This is a critical action."
+    },
+    "notifications": {
+      "sessionTerminated": "Session terminated",
+      "sessionTerminatedDesc": "The session has been successfully terminated",
+      "allSessionsTerminated": "Sessions terminated",
+      "mySessionsTerminatedDesc": "All your other sessions have been successfully terminated",
+      "teamSessionsTerminatedDesc": "All team sessions have been successfully terminated"
+    },
+    "empty": {
+      "noSessions": "No sessions found"
+    },
+    "errors": {
+      "loadFailed": "Failed to load sessions",
+      "terminateFailed": "Failed to terminate session",
+      "terminateAllFailed": "Failed to terminate sessions"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage system settings",
+    "sections": {
+      "team": {
+        "title": "Team",
+        "description": "Add users and assign roles to your team"
+      },
+      "roles": {
+        "title": "Roles & Permissions",
+        "description": "Create custom roles with permissions"
+      },
+      "locations": {
+        "title": "Locations",
+        "description": "Manage branches and points of sale"
+      },
+      "company": {
+        "title": "Company Data",
+        "description": "Tax and contact information",
+        "comingSoon": "Coming soon"
+      },
+      "payments": {
+        "title": "Payment Methods",
+        "description": "Configure accepted payment methods",
+        "comingSoon": "Coming soon"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Stock alerts, sales and more",
+        "comingSoon": "Coming soon"
+      },
+      "security": {
+        "title": "Security",
+        "description": "Security and session settings",
+        "comingSoon": "Coming soon"
+      }
+    }
+  },
+  "errors": {
+    "generic": "An error occurred",
+    "notFound": "Not found",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Access denied",
+    "serverError": "Server error",
+    "networkError": "Network error",
+    "timeoutError": "Timeout error",
+    "tryAgain": "Try again"
+  }
+}

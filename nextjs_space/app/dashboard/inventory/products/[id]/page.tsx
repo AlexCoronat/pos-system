@@ -95,7 +95,9 @@ export default function ProductDetailPage() {
           imageUrl: productData.imageUrl || '',
           costPrice: productData.price.costPrice.toString(),
           salePrice: productData.price.salePrice.toString(),
-          isActive: productData.isActive
+          isActive: productData.isActive,
+          minStockLevel: '0',
+          reorderPoint: '0'
         })
 
         // Load inventory

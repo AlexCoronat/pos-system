@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/lib/supabase/client'
-import { Laptop, Smartphone, Tablet, Globe, Clock, MapPin, XCircle, CheckCircle, RefreshCw } from 'lucide-react'
+import { Laptop, Smartphone, Tablet, Globe, Clock, MapPin, XCircle, CheckCircle, RefreshCw, Users, User } from 'lucide-react'
 
 interface Session {
   id: number
@@ -18,54 +20,77 @@ interface Session {
   is_active: boolean
   started_at: string
   ended_at: string | null
+  user_details?: {
+    first_name: string
+    last_name: string
+    email: string
+  }
 }
 
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [terminatingSession, setTerminatingSession] = useState<number | null>(null)
+  const [activeTab, setActiveTab] = useState<'my-sessions' | 'team-sessions'>('my-sessions')
 
-  const { user } = useAuth()
+  const { user, loading, initialized } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
+  const t = useTranslations('sessions')
+  const tCommon = useTranslations('common')
+
+  const canViewTeamSessions = user?.roleName === 'Admin' || user?.roleName === 'Manager'
 
   useEffect(() => {
-    if (!user) {
-      router.push('/auth/login')
-      return
+    // Wait for auth to initialize before redirecting
+    if (initialized && !loading) {
+      if (!user) {
+        router.push('/auth/login')
+        return
+      }
+      loadSessions(activeTab)
     }
-    loadSessions()
-  }, [user, router])
+  }, [user, loading, initialized, router, activeTab])
 
-  const loadSessions = async () => {
+  const loadSessions = async (tab: 'my-sessions' | 'team-sessions') => {
     setIsLoading(true)
     try {
       const supabase = createClient()
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('user_sessions')
         .select(`
           *,
-          location:locations(name)
+          location:locations(name),
+          user_details:user_details(first_name, last_name, email)
         `)
-        .eq('user_id', user?.id)
         .order('started_at', { ascending: false })
-        .limit(20)
+        .limit(50)
+
+      // Filter by user or business
+      if (tab === 'my-sessions') {
+        query = query.eq('user_id', user?.id)
+      } else {
+        query = query.eq('business_id', user?.businessId)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
 
       // Transform the data
       const transformedSessions = data.map((session: any) => ({
         ...session,
-        location_name: session.location?.name
+        location_name: session.location?.name,
+        user_details: session.user_details
       }))
 
       setSessions(transformedSessions)
     } catch (error: any) {
       console.error('Error loading sessions:', error)
       toast({
-        title: "Error",
-        description: "Failed to load sessions",
+        title: tCommon('error'),
+        description: t('errors.loadFailed'),
         variant: "destructive",
       })
     } finally {
@@ -89,17 +114,17 @@ export default function SessionsPage() {
       if (error) throw error
 
       toast({
-        title: "Session terminated",
-        description: "The session has been successfully terminated",
+        title: t('notifications.sessionTerminated'),
+        description: t('notifications.sessionTerminatedDesc'),
       })
 
       // Reload sessions
-      await loadSessions()
+      await loadSessions(activeTab)
     } catch (error: any) {
       console.error('Error terminating session:', error)
       toast({
-        title: "Error",
-        description: "Failed to terminate session",
+        title: tCommon('error'),
+        description: t('errors.terminateFailed'),
         variant: "destructive",
       })
     } finally {
@@ -108,7 +133,11 @@ export default function SessionsPage() {
   }
 
   const terminateAllSessions = async () => {
-    if (!confirm('Are you sure you want to terminate all other sessions? You will remain logged in on this device.')) {
+    const message = activeTab === 'my-sessions'
+      ? t('confirmations.terminateAll')
+      : t('confirmations.terminateAllTeam')
+
+    if (!confirm(message)) {
       return
     }
 
@@ -116,30 +145,40 @@ export default function SessionsPage() {
       const supabase = createClient()
       const currentSessionId = localStorage.getItem('session_id')
 
-      const { error } = await supabase
+      let query = supabase
         .from('user_sessions')
         .update({
           ended_at: new Date().toISOString(),
           is_active: false
         })
-        .eq('user_id', user?.id)
         .eq('is_active', true)
         .neq('id', currentSessionId ? parseInt(currentSessionId) : 0)
+
+      // Filter by user or business
+      if (activeTab === 'my-sessions') {
+        query = query.eq('user_id', user?.id)
+      } else {
+        query = query.eq('business_id', user?.businessId)
+      }
+
+      const { error } = await query
 
       if (error) throw error
 
       toast({
-        title: "All sessions terminated",
-        description: "All other sessions have been successfully terminated",
+        title: t('notifications.allSessionsTerminated'),
+        description: activeTab === 'my-sessions'
+          ? t('notifications.mySessionsTerminatedDesc')
+          : t('notifications.teamSessionsTerminatedDesc'),
       })
 
       // Reload sessions
-      await loadSessions()
+      await loadSessions(activeTab)
     } catch (error: any) {
       console.error('Error terminating sessions:', error)
       toast({
-        title: "Error",
-        description: "Failed to terminate sessions",
+        title: tCommon('error'),
+        description: t('errors.terminateAllFailed'),
         variant: "destructive",
       })
     }
@@ -209,47 +248,38 @@ export default function SessionsPage() {
 
   const currentSessionId = typeof window !== 'undefined' ? localStorage.getItem('session_id') : null
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Active Sessions</h1>
-          <p className="mt-2 text-gray-600">
-            Manage your active sessions and see where you're logged in
-          </p>
-        </div>
+  const renderSessionsList = () => (
+    <>
+      {/* Actions */}
+      <div className="mb-6 flex justify-between items-center">
+        <Button
+          onClick={() => loadSessions(activeTab)}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className="w-4 h-4" />
+          {t('actions.refresh')}
+        </Button>
 
-        {/* Actions */}
-        <div className="mb-6 flex justify-between items-center">
-          <Button
-            onClick={loadSessions}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </Button>
+        <Button
+          onClick={terminateAllSessions}
+          variant="destructive"
+          className="flex items-center gap-2"
+        >
+          <XCircle className="w-4 h-4" />
+          {activeTab === 'my-sessions' ? t('actions.terminateAllMine') : t('actions.terminateAllTeam')}
+        </Button>
+      </div>
 
-          <Button
-            onClick={terminateAllSessions}
-            variant="destructive"
-            className="flex items-center gap-2"
-          >
-            <XCircle className="w-4 h-4" />
-            Terminate All Other Sessions
-          </Button>
-        </div>
-
-        {/* Sessions List */}
+      {/* Sessions List */}
         {isLoading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading sessions...</p>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">{tCommon('loading')}</p>
           </div>
         ) : sessions.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <p className="text-gray-600">No sessions found</p>
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <p className="text-gray-600 dark:text-gray-400">{t('empty.noSessions')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -259,65 +289,76 @@ export default function SessionsPage() {
               return (
                 <div
                   key={session.id}
-                  className={`bg-white rounded-lg shadow-md p-6 ${
-                    isCurrentSession ? 'border-2 border-blue-500' : ''
+                  className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 ${
+                    isCurrentSession ? 'border-2 border-blue-500 dark:border-blue-400' : ''
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4 flex-1">
                       {/* Device Icon */}
-                      <div className="mt-1 text-gray-600">
+                      <div className="mt-1 text-gray-600 dark:text-gray-400">
                         {getDeviceIcon(session.user_agent)}
                       </div>
 
                       {/* Session Info */}
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold text-gray-900">
+                          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                             {getBrowserName(session.user_agent)} on {getOSName(session.user_agent)}
                           </h3>
                           {isCurrentSession && (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                              Current Session
+                            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium rounded-full">
+                              {t('session.currentSession')}
                             </span>
                           )}
                           {session.is_active && !isCurrentSession && (
-                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
                           )}
                         </div>
 
-                        <div className="space-y-1 text-sm text-gray-600">
+                        {/* User info for team view */}
+                        {activeTab === 'team-sessions' && session.user_details && (
+                          <div className="mb-2 flex items-center gap-2 text-sm">
+                            <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            <span className="font-medium text-blue-600 dark:text-blue-400">
+                              {session.user_details.first_name} {session.user_details.last_name}
+                            </span>
+                            <span className="text-gray-500 dark:text-gray-400">({session.user_details.email})</span>
+                          </div>
+                        )}
+
+                        <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                           {session.ip_address && (
                             <div className="flex items-center gap-2">
                               <Globe className="w-4 h-4" />
-                              <span>IP: {session.ip_address}</span>
+                              <span>{t('session.ipAddress')}: {session.ip_address}</span>
                             </div>
                           )}
 
                           {session.location_name && (
                             <div className="flex items-center gap-2">
                               <MapPin className="w-4 h-4" />
-                              <span>Location: {session.location_name}</span>
+                              <span>{t('session.location')}: {session.location_name}</span>
                             </div>
                           )}
 
                           <div className="flex items-center gap-2">
                             <Clock className="w-4 h-4" />
                             <span>
-                              Started: {formatDate(session.started_at)}
+                              {t('session.startedAt')}: {formatDate(session.started_at)}
                             </span>
                           </div>
 
                           {session.ended_at && (
                             <div className="flex items-center gap-2">
                               <Clock className="w-4 h-4" />
-                              <span>Ended: {formatDate(session.ended_at)}</span>
+                              <span>{t('session.endedAt')}: {formatDate(session.ended_at)}</span>
                             </div>
                           )}
 
                           <div className="flex items-center gap-2">
                             <span className="font-medium">
-                              Duration: {getSessionDuration(session.started_at, session.ended_at)}
+                              {t('session.duration')}: {getSessionDuration(session.started_at, session.ended_at)}
                             </span>
                           </div>
                         </div>
@@ -326,27 +367,35 @@ export default function SessionsPage() {
 
                     {/* Actions */}
                     <div className="flex flex-col gap-2">
-                      {session.is_active && !isCurrentSession && (
-                        <Button
-                          onClick={() => terminateSession(session.id)}
-                          disabled={terminatingSession === session.id}
-                          variant="destructive"
-                          size="sm"
-                        >
-                          {terminatingSession === session.id ? (
-                            <div className="flex items-center gap-2">
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                              <span>Terminating...</span>
-                            </div>
+                      {session.is_active && (
+                        <>
+                          {isCurrentSession ? (
+                            <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
+                              {t('session.active')}
+                            </span>
                           ) : (
-                            'Terminate'
+                            <Button
+                              onClick={() => terminateSession(session.id)}
+                              disabled={terminatingSession === session.id}
+                              variant="destructive"
+                              size="sm"
+                            >
+                              {terminatingSession === session.id ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                  <span>{t('actions.terminating')}</span>
+                                </div>
+                              ) : (
+                                t('actions.terminate')
+                              )}
+                            </Button>
                           )}
-                        </Button>
+                        </>
                       )}
 
                       {!session.is_active && (
-                        <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                          Inactive
+                        <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-medium rounded-full">
+                          {t('session.inactive')}
                         </span>
                       )}
                     </div>
@@ -358,15 +407,61 @@ export default function SessionsPage() {
         )}
 
         {/* Security Notice */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-medium text-blue-900 mb-2">Security Notice</h3>
-          <ul className="text-sm text-blue-700 space-y-1">
-            <li>• If you see any sessions you don't recognize, terminate them immediately</li>
-            <li>• Always log out when using shared or public computers</li>
-            <li>• Sessions expire automatically after a period of inactivity</li>
-            <li>• Terminating a session will immediately log out that device</li>
+        <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <h3 className="font-medium text-blue-900 dark:text-blue-400 mb-2">{t('securityNotice.title')}</h3>
+          <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+            <li>• {t('securityNotice.point1')}</li>
+            <li>• {t('securityNotice.point2')}</li>
+            <li>• {t('securityNotice.point3')}</li>
+            <li>• {t('securityNotice.point4')}</li>
+            {activeTab === 'team-sessions' && (
+              <li className="font-medium">• {t('securityNotice.point5')}</li>
+            )}
           </ul>
         </div>
+      </>
+  )
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('title')}</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
+            {t('subtitle')}
+          </p>
+        </div>
+
+        {/* Tabs */}
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as 'my-sessions' | 'team-sessions')}
+          className="w-full"
+        >
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+            <TabsTrigger value="my-sessions" className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              {t('tabs.mySessions')}
+            </TabsTrigger>
+            {canViewTeamSessions && (
+              <TabsTrigger value="team-sessions" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                {t('tabs.teamSessions')}
+              </TabsTrigger>
+            )}
+          </TabsList>
+
+          <TabsContent value="my-sessions">
+            {renderSessionsList()}
+          </TabsContent>
+
+          {canViewTeamSessions && (
+            <TabsContent value="team-sessions">
+              {renderSessionsList()}
+            </TabsContent>
+          )}
+        </Tabs>
       </div>
     </div>
   )

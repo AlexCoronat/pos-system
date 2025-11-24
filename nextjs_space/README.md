@@ -504,10 +504,312 @@ A 8h/dia:         ~6-7 dias
 
 ---
 
+## Plan de Internacionalización (i18n)
+
+### Objetivo
+Implementar soporte completo de múltiples idiomas usando `next-intl`, con español como idioma por defecto y soporte para inglés. El cambio de idioma debe aplicarse globalmente al modificar la preferencia en la página de perfil.
+
+### Biblioteca Seleccionada
+**next-intl** - Optimizada para Next.js 14 App Router, con soporte para Server y Client Components.
+
+### Idiomas a Implementar
+- 🇪🇸 **Español** (es) - Por defecto
+- 🇺🇸 **Inglés** (en)
+
+---
+
+### Fase 1: Setup e Infraestructura ⚙️
+**Tiempo estimado:** 2-3 horas
+
+**Tareas:**
+- [*] Instalar `next-intl`
+- [*] Crear estructura de carpetas para traducciones
+  ```
+  messages/
+  ├── es.json          # Español (default)
+  └── en.json          # Inglés
+  ```
+- [*] Configurar `i18n.ts` (configuración base)
+- [*] Crear `middleware.ts` para detección de idioma
+- [*] Envolver app con `NextIntlClientProvider`
+- [*] Configurar español como idioma por defecto
+- [*] Crear hook personalizado `useTranslations`
+
+**Archivos a crear/modificar:**
+- `messages/es.json`
+- `messages/en.json`
+- `lib/i18n/config.ts`
+- `middleware.ts`
+- `app/layout.tsx`
+
+---
+
+### Fase 2: Componentes de Layout y Navegación 🎨
+**Tiempo estimado:** 3-4 horas
+
+**Componentes a traducir:**
+- [*] **DashboardLayout** (`components/layout/DashboardLayout.tsx`)
+  - Sidebar: Dashboard, Sales, Inventory, Customers, Quotes, Reports
+  - User menu: Profile, Active Sessions, Admin Settings, Sign out
+  - Logo y branding
+- [*] **Navegación mobile**
+- [*] **Top bar** (selector de ubicación, notificaciones)
+
+**Archivos de traducción:**
+```json
+{
+  "layout": {
+    "appName": "Sistema POS",
+    "navigation": {
+      "dashboard": "Dashboard / Panel",
+      "sales": "Ventas / Sales",
+      "inventory": "Inventario / Inventory",
+      ...
+    }
+  }
+}
+```
+
+---
+
+### Fase 3: Autenticación 🔐
+**Tiempo estimado:** 3-4 horas
+
+**Páginas a traducir:**
+- [ ] **Login** (`app/auth/login/page.tsx`)
+  - Formulario, mensajes de error, links
+- [ ] **Register** (`app/auth/register/page.tsx`)
+  - Formulario de registro, validaciones
+- [ ] **Complete Profile** (`app/auth/complete-profile/page.tsx`)
+  - Creación de negocio y ubicación
+- [ ] **Password Recovery** (`app/auth/recover-password/page.tsx`)
+- [ ] **Reset Password** (`app/auth/reset-password/page.tsx`)
+- [ ] **Email Verification** (`app/auth/verify-email/page.tsx`)
+
+**Archivos de traducción:**
+```json
+{
+  "auth": {
+    "login": {
+      "title": "Iniciar Sesión / Sign In",
+      "email": "Correo electrónico / Email",
+      ...
+    }
+  }
+}
+```
+
+---
+
+### Fase 4: Páginas de Perfil y Configuración 👤
+**Tiempo estimado:** 2-3 horas
+
+**Páginas a traducir:**
+- [*] **Profile** (`app/dashboard/profile/page.tsx`)
+  - Información personal
+  - Información del negocio (admin only)
+  - Seguridad
+  - Preferencias (con selector de idioma funcional)
+  - Detalles de cuenta
+- [*] **Active Sessions** (`app/dashboard/sessions/page.tsx`)
+  - Tabs: My Sessions / Team Sessions
+  - Lista de sesiones
+  - Botones de acción
+  - Security Notice
+- [*] **Settings** (`app/dashboard/settings/page.tsx`)
+  - Títulos de secciones
+  - Descripciones
+
+**Integración con selector de idioma:**
+- Conectar el selector de idioma en Profile con next-intl
+- Actualizar cookies/localStorage
+- Aplicar cambio globalmente
+
+---
+
+### Fase 5: Dashboard Principal 📊
+**Tiempo estimado:** 2-3 horas
+
+**Componentes a traducir:**
+- [ ] **Dashboard Home** (`app/dashboard/page.tsx`)
+  - Saludo por hora del día
+  - Cards de métricas (Ventas del día, Transacciones, etc.)
+  - Gráfico de ventas
+  - Productos más vendidos
+  - Alertas de bajo stock
+
+---
+
+### Fase 6: Módulo de Ventas 💰
+**Tiempo estimado:** 4-5 horas
+
+**Páginas a traducir:**
+- [ ] **Sales List** (`app/dashboard/sales/page.tsx`)
+  - Tabla, filtros, estados
+- [ ] **New Sale / POS** (`app/dashboard/sales/new/page.tsx`)
+  - Búsqueda de productos
+  - Carrito
+  - Checkout
+  - Métodos de pago
+- [ ] **Sale Detail** (`app/dashboard/sales/[id]/page.tsx`)
+  - Detalles de la venta
+  - Items, totales
+  - Acciones (cancelar, reembolsar)
+
+---
+
+### Fase 7: Módulo de Inventario 📦
+**Tiempo estimado:** 4-5 horas
+
+**Páginas a traducir:**
+- [ ] **Inventory List** (`app/dashboard/inventory/page.tsx`)
+  - Tabs: Productos, Stock, Alertas
+  - Tabla de productos
+  - Filtros y búsqueda
+- [ ] **Product Form** (`app/dashboard/inventory/products/new/page.tsx`)
+  - Formulario de producto
+  - Categorías, precios
+- [ ] **Product Detail** (`app/dashboard/inventory/products/[id]/page.tsx`)
+  - Información del producto
+  - Ajustes de inventario
+  - Historial de movimientos
+
+---
+
+### Fase 8: Módulo de Clientes 👥
+**Tiempo estimado:** 3-4 horas
+
+**Páginas a traducir:**
+- [ ] **Customers List** (`app/dashboard/customers/page.tsx`)
+  - Tabla, filtros
+- [ ] **Customer Form** (`app/dashboard/customers/new/page.tsx`)
+  - Formulario (individual/empresa)
+- [ ] **Customer Detail** (`app/dashboard/customers/[id]/page.tsx`)
+  - Información, historial, estadísticas
+  - Tabs
+
+---
+
+### Fase 9: Módulo de Configuración ⚙️
+**Tiempo estimado:** 4-5 horas
+
+**Páginas a traducir:**
+- [ ] **Team Management** (`app/dashboard/settings/team/page.tsx`)
+  - Lista de miembros
+  - Invitaciones
+  - Asignación de roles
+- [ ] **Roles & Permissions** (`app/dashboard/settings/roles/page.tsx`)
+  - Lista de roles
+  - Editor de permisos
+  - Matriz de permisos por módulo
+- [ ] **Locations** (`app/dashboard/settings/locations/page.tsx`)
+  - CRUD de ubicaciones
+
+---
+
+### Fase 10: Componentes Compartidos y Validaciones 🔧
+**Tiempo estimado:** 3-4 horas
+
+**Elementos a traducir:**
+- [ ] **Componentes UI reutilizables**
+  - Dialogs, Modals
+  - Botones comunes (Guardar, Cancelar, Eliminar, etc.)
+  - Confirmaciones
+  - Toasts / Notificaciones
+- [ ] **Mensajes de error y validación**
+  - Validaciones de formularios
+  - Errores de API
+  - Mensajes de éxito
+- [ ] **Tablas y paginación**
+  - Headers
+  - Empty states
+  - Loading states
+  - Paginación (Anterior, Siguiente, etc.)
+
+---
+
+### Fase 11: Formato de Fechas, Números y Moneda 💱
+**Tiempo estimado:** 2-3 horas
+
+**Tareas:**
+- [ ] Configurar formato de fechas según idioma
+  - `es`: DD/MM/YYYY
+  - `en`: MM/DD/YYYY
+- [ ] Configurar formato de números
+  - `es`: 1.234,56
+  - `en`: 1,234.56
+- [ ] Configurar formato de moneda
+  - Símbolo: $ (MXN)
+  - Separadores según idioma
+- [ ] Crear helpers de formateo
+  - `formatDate()`
+  - `formatCurrency()`
+  - `formatNumber()`
+
+---
+
+### Fase 12: Testing y Ajustes Finales ✅
+**Tiempo estimado:** 3-4 horas
+
+**Tareas:**
+- [ ] Probar cambio de idioma en todas las páginas
+- [ ] Verificar persistencia del idioma seleccionado
+- [ ] Revisar textos demasiado largos (overflow)
+- [ ] Ajustar espaciado y layout según idioma
+- [ ] Probar en mobile y desktop
+- [ ] Documentar cómo agregar nuevas traducciones
+- [ ] Crear guía para contribuidores
+
+---
+
+### Tiempo Total Estimado
+**35-45 horas** (~1-1.5 semanas a tiempo completo)
+
+### Priorización Recomendada
+1. ✅ **Fase 1** (Setup) - Crítico, base para todo
+2. ✅ **Fase 2** (Layout) - Alta, se ve en todas las páginas
+3. ✅ **Fase 4** (Profile) - Alta, incluye selector de idioma funcional
+4. ✅ **Fase 3** (Auth) - Media-Alta, primera impresión
+5. ⚡ Resto de fases según prioridad de negocio
+
+---
+
+### Estructura de Archivos de Traducción
+
+```json
+// messages/es.json
+{
+  "common": {
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "actions": "Acciones"
+  },
+  "layout": { /* ... */ },
+  "auth": { /* ... */ },
+  "dashboard": { /* ... */ },
+  "sales": { /* ... */ },
+  "inventory": { /* ... */ },
+  "customers": { /* ... */ },
+  "settings": { /* ... */ },
+  "errors": {
+    "required": "Este campo es requerido",
+    "invalidEmail": "Email inválido",
+    "generic": "Ocurrió un error"
+  }
+}
+```
+
+---
+
 ## Contacto y Soporte
 
 Para reportar issues o sugerencias, crear un issue en el repositorio.
 
 ---
 
-*Actualizado el 21 de Noviembre de 2025*
+*Actualizado el 24 de Noviembre de 2025*
