@@ -690,19 +690,19 @@ Implementar soporte completo de múltiples idiomas usando `next-intl`, con espa�
 
 ---
 
-### Fase 9: Módulo de Configuración ⚙️
+### Fase 9: Módulo de Configuración ⚙️ ✅
 **Tiempo estimado:** 4-5 horas
 
 **Páginas a traducir:**
-- [ ] **Team Management** (`app/dashboard/settings/team/page.tsx`)
+- [*] **Team Management** (`app/dashboard/settings/team/page.tsx`)
   - Lista de miembros
   - Invitaciones
   - Asignación de roles
-- [ ] **Roles & Permissions** (`app/dashboard/settings/roles/page.tsx`)
+- [*] **Roles & Permissions** (`app/dashboard/settings/roles/page.tsx`)
   - Lista de roles
   - Editor de permisos
   - Matriz de permisos por módulo
-- [ ] **Locations** (`app/dashboard/settings/locations/page.tsx`)
+- [*] **Locations** (`app/dashboard/settings/locations/page.tsx`)
   - CRUD de ubicaciones
 
 ---

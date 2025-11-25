@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import {
   Shield, Plus, Pencil, Trash2, Copy, Users,
   ChevronDown, ChevronRight, Check, X, Loader2, Lock, ArrowLeft
@@ -42,6 +43,7 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { rolesService, CustomRole, PERMISSION_MODULES } from '@/lib/services/roles.service'
 
 export default function RolesPage() {
+  const t = useTranslations('roles')
   const [roles, setRoles] = useState<CustomRole[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -91,7 +93,7 @@ export default function RolesPage() {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Error al cargar roles',
+        description: error.message || t('messages.loadError'),
         variant: 'destructive'
       })
     } finally {
@@ -134,14 +136,14 @@ export default function RolesPage() {
       setIsSaving(true)
       await rolesService.duplicateRole(role.id, `${role.name} (copia)`)
       toast({
-        title: 'Rol duplicado',
-        description: 'El rol ha sido duplicado exitosamente'
+        title: t('messages.roleDuplicated'),
+        description: t('messages.roleDuplicatedDesc')
       })
       await loadRoles()
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Error al duplicar rol',
+        description: error.message || t('messages.duplicateError'),
         variant: 'destructive'
       })
     } finally {
@@ -153,7 +155,7 @@ export default function RolesPage() {
     if (!formData.name.trim()) {
       toast({
         title: 'Error',
-        description: 'El nombre del rol es requerido',
+        description: t('messages.roleNameRequired'),
         variant: 'destructive'
       })
       return
@@ -167,15 +169,15 @@ export default function RolesPage() {
         permissions: formData.permissions
       })
       toast({
-        title: 'Rol creado',
-        description: 'El rol ha sido creado exitosamente'
+        title: t('messages.roleCreated'),
+        description: t('messages.roleCreatedDesc')
       })
       setIsCreateOpen(false)
       await loadRoles()
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Error al crear rol',
+        description: error.message || t('messages.createError'),
         variant: 'destructive'
       })
     } finally {
@@ -189,7 +191,7 @@ export default function RolesPage() {
     if (!formData.name.trim()) {
       toast({
         title: 'Error',
-        description: 'El nombre del rol es requerido',
+        description: t('messages.roleNameRequired'),
         variant: 'destructive'
       })
       return
@@ -203,15 +205,15 @@ export default function RolesPage() {
         permissions: formData.permissions
       })
       toast({
-        title: 'Rol actualizado',
-        description: 'El rol ha sido actualizado exitosamente'
+        title: t('messages.roleUpdated'),
+        description: t('messages.roleUpdatedDesc')
       })
       setIsEditOpen(false)
       await loadRoles()
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Error al actualizar rol',
+        description: error.message || t('messages.updateError'),
         variant: 'destructive'
       })
     } finally {
@@ -226,15 +228,15 @@ export default function RolesPage() {
       setIsSaving(true)
       await rolesService.deleteRole(selectedRole.id)
       toast({
-        title: 'Rol eliminado',
-        description: 'El rol ha sido eliminado exitosamente'
+        title: t('messages.roleDeleted'),
+        description: t('messages.roleDeletedDesc')
       })
       setIsDeleteOpen(false)
       await loadRoles()
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Error al eliminar rol',
+        description: error.message || t('messages.deleteError'),
         variant: 'destructive'
       })
     } finally {
@@ -381,17 +383,17 @@ export default function RolesPage() {
             </Link>
             <h1 className="text-3xl font-bold flex items-center gap-3">
               <Shield className="h-8 w-8" />
-              Roles y Permisos
+              {t('title')}
             </h1>
           </div>
           <p className="text-muted-foreground ml-12">
-            Administra los roles y permisos de tu equipo
+            {t('subtitle')}
           </p>
         </div>
         {canCreate && (
           <Button onClick={openCreateDialog}>
             <Plus className="h-4 w-4 mr-2" />
-            Nuevo Rol
+            {t('newRole')}
           </Button>
         )}
       </div>
@@ -468,14 +470,14 @@ export default function RolesPage() {
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Users className="h-4 w-4" />
-                  <span>{role.userCount} usuarios</span>
+                  <span>{role.userCount} {role.userCount === 1 ? t('stats.user') : t('stats.users')}</span>
                 </div>
                 <Badge variant={role.isSystem ? 'secondary' : 'outline'}>
-                  {role.isSystem ? 'Sistema' : 'Personalizado'}
+                  {role.isSystem ? t('badges.system') : t('badges.custom')}
                 </Badge>
               </div>
               <div className="mt-3 text-xs text-muted-foreground">
-                {getPermissionCount(role.permissions)} permisos asignados
+                {getPermissionCount(role.permissions)} {getPermissionCount(role.permissions) === 1 ? t('stats.permission') : t('stats.permissions')}
               </div>
             </CardContent>
           </Card>
@@ -485,13 +487,13 @@ export default function RolesPage() {
       {roles.length === 0 && (
         <Card className="p-12 text-center">
           <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No hay roles</h3>
+          <h3 className="text-lg font-semibold mb-2">{t('empty.title')}</h3>
           <p className="text-muted-foreground mb-4">
-            Crea tu primer rol personalizado para asignar permisos a tu equipo
+            {t('empty.description')}
           </p>
           <Button onClick={openCreateDialog}>
             <Plus className="h-4 w-4 mr-2" />
-            Crear Rol
+            {t('empty.createRole')}
           </Button>
         </Card>
       )}
@@ -500,28 +502,28 @@ export default function RolesPage() {
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Crear Nuevo Rol</DialogTitle>
+            <DialogTitle>{t('createDialog.title')}</DialogTitle>
             <DialogDescription>
-              Define un nuevo rol con permisos personalizados
+              {t('createDialog.description')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nombre del rol *</Label>
+              <Label htmlFor="name">{t('createDialog.roleName')}</Label>
               <Input
                 id="name"
-                placeholder="Ej: Supervisor de ventas"
+                placeholder={t('createDialog.roleNamePlaceholder')}
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Descripcion</Label>
+              <Label htmlFor="description">{t('createDialog.roleDescription')}</Label>
               <Textarea
                 id="description"
-                placeholder="Describe las responsabilidades de este rol..."
+                placeholder={t('createDialog.roleDescriptionPlaceholder')}
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               />
@@ -535,18 +537,18 @@ export default function RolesPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-              Cancelar
+              {t('createDialog.cancel')}
             </Button>
             <Button onClick={handleCreate} disabled={isSaving}>
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creando...
+                  {t('createDialog.creating')}
                 </>
               ) : (
                 <>
                   <Check className="h-4 w-4 mr-2" />
-                  Crear Rol
+                  {t('createDialog.create')}
                 </>
               )}
             </Button>
@@ -558,28 +560,28 @@ export default function RolesPage() {
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar Rol</DialogTitle>
+            <DialogTitle>{t('editDialog.title')}</DialogTitle>
             <DialogDescription>
-              Modifica los permisos de este rol
+              {t('editDialog.description')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Nombre del rol *</Label>
+              <Label htmlFor="edit-name">{t('createDialog.roleName')}</Label>
               <Input
                 id="edit-name"
-                placeholder="Ej: Supervisor de ventas"
+                placeholder={t('createDialog.roleNamePlaceholder')}
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-description">Descripcion</Label>
+              <Label htmlFor="edit-description">{t('createDialog.roleDescription')}</Label>
               <Textarea
                 id="edit-description"
-                placeholder="Describe las responsabilidades de este rol..."
+                placeholder={t('createDialog.roleDescriptionPlaceholder')}
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               />
@@ -593,18 +595,18 @@ export default function RolesPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>
-              Cancelar
+              {t('editDialog.cancel')}
             </Button>
             <Button onClick={handleUpdate} disabled={isSaving}>
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Guardando...
+                  {t('editDialog.saving')}
                 </>
               ) : (
                 <>
                   <Check className="h-4 w-4 mr-2" />
-                  Guardar Cambios
+                  {t('editDialog.save')}
                 </>
               )}
             </Button>
@@ -616,14 +618,13 @@ export default function RolesPage() {
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar Rol</AlertDialogTitle>
+            <AlertDialogTitle>{t('deleteDialog.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estas seguro de que deseas eliminar el rol "{selectedRole?.name}"?
-              Esta accion no se puede deshacer.
+              {t('deleteDialog.description', { name: selectedRole?.name || '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t('deleteDialog.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -631,10 +632,10 @@ export default function RolesPage() {
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Eliminando...
+                  {t('deleteDialog.deleting')}
                 </>
               ) : (
-                'Eliminar'
+                t('deleteDialog.delete')
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

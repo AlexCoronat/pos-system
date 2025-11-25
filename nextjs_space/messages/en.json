@@ -882,6 +882,240 @@
       "deleteError": "Error deleting customer"
     }
   },
+  "team": {
+    "title": "Team",
+    "subtitle": "Manage your business users",
+    "addUser": "Add User",
+    "viewArchived": "View Archived",
+    "stats": {
+      "members": "Team Members",
+      "users": "users",
+      "user": "user",
+      "inBusiness": "in your business"
+    },
+    "table": {
+      "user": "User",
+      "role": "Role",
+      "locations": "Locations",
+      "status": "Status",
+      "lastAccess": "Last access",
+      "actions": "Actions",
+      "noLocations": "No locations",
+      "never": "Never"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "actions": {
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "delete": "Delete"
+    },
+    "addDialog": {
+      "title": "Add User",
+      "description": "Create an account for a new team member",
+      "firstName": "First Name *",
+      "firstNamePlaceholder": "First name",
+      "lastName": "Last Name *",
+      "lastNamePlaceholder": "Last name",
+      "email": "Email address *",
+      "emailPlaceholder": "user@email.com",
+      "password": "Password *",
+      "passwordPlaceholder": "Minimum 8 characters",
+      "phone": "Phone",
+      "phonePlaceholder": "(555) 123-4567",
+      "role": "Role",
+      "rolePlaceholder": "Select a role",
+      "roleSystem": "(System)",
+      "locations": "Locations *",
+      "primary": "Primary",
+      "makePrimary": "Make primary",
+      "cancel": "Cancel",
+      "addUser": "Add User",
+      "adding": "Adding..."
+    },
+    "editDialog": {
+      "title": "Edit User",
+      "description": "Modify {name}'s information",
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes",
+      "saving": "Saving..."
+    },
+    "deleteDialog": {
+      "title": "Delete User",
+      "description": "Are you sure you want to delete this user? This action cannot be undone.",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleting": "Deleting..."
+    },
+    "validation": {
+      "requiredFields": "Please complete all required fields",
+      "passwordLength": "Password must be at least 8 characters",
+      "atLeastOneLocation": "You must select at least one location",
+      "nameRequired": "First and last names are required"
+    },
+    "messages": {
+      "loadError": "Error loading data",
+      "memberAdded": "Team member added successfully",
+      "addError": "Error adding member",
+      "userDeactivated": "User deactivated",
+      "userActivated": "User activated",
+      "statusError": "Error changing status",
+      "userUpdated": "User updated successfully",
+      "updateError": "Error updating user",
+      "userDeleted": "User deleted successfully",
+      "deleteError": "Error deleting user",
+      "cannotDeactivateOwner": "Cannot deactivate business owner",
+      "cannotDeleteOwner": "Cannot delete business owner"
+    },
+    "empty": {
+      "title": "No team members",
+      "addFirst": "Add First User"
+    },
+    "loading": "Loading..."
+  },
+  "roles": {
+    "title": "Roles & Permissions",
+    "subtitle": "Manage your team's roles and permissions",
+    "newRole": "New Role",
+    "stats": {
+      "users": "users",
+      "user": "user",
+      "permissions": "assigned permissions",
+      "permission": "assigned permission"
+    },
+    "badges": {
+      "system": "System",
+      "custom": "Custom"
+    },
+    "actions": {
+      "edit": "Edit",
+      "duplicate": "Duplicate",
+      "delete": "Delete"
+    },
+    "createDialog": {
+      "title": "Create New Role",
+      "description": "Define a new role with custom permissions",
+      "roleName": "Role name *",
+      "roleNamePlaceholder": "e.g., Sales Supervisor",
+      "roleDescription": "Description",
+      "roleDescriptionPlaceholder": "Describe this role's responsibilities...",
+      "permissions": "Permissions",
+      "cancel": "Cancel",
+      "create": "Create Role",
+      "creating": "Creating..."
+    },
+    "editDialog": {
+      "title": "Edit Role",
+      "description": "Modify this role's permissions",
+      "cancel": "Cancel",
+      "save": "Save Changes",
+      "saving": "Saving..."
+    },
+    "deleteDialog": {
+      "title": "Delete Role",
+      "description": "Are you sure you want to delete the \"{name}\" role? This action cannot be undone.",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleting": "Deleting..."
+    },
+    "messages": {
+      "loadError": "Error loading roles",
+      "roleDuplicated": "Role duplicated",
+      "roleDuplicatedDesc": "The role has been duplicated successfully",
+      "duplicateError": "Error duplicating role",
+      "roleNameRequired": "Role name is required",
+      "roleCreated": "Role created",
+      "roleCreatedDesc": "The role has been created successfully",
+      "createError": "Error creating role",
+      "roleUpdated": "Role updated",
+      "roleUpdatedDesc": "The role has been updated successfully",
+      "updateError": "Error updating role",
+      "roleDeleted": "Role deleted",
+      "roleDeletedDesc": "The role has been deleted successfully",
+      "deleteError": "Error deleting role"
+    },
+    "empty": {
+      "title": "No roles",
+      "description": "Create your first custom role to assign permissions to your team",
+      "createRole": "Create Role"
+    },
+    "loading": "Loading roles..."
+  },
+  "locations": {
+    "title": "Locations",
+    "subtitle": "Manage branches and points of sale",
+    "newLocation": "New Location",
+    "table": {
+      "name": "Name",
+      "code": "Code",
+      "city": "City",
+      "phone": "Phone",
+      "users": "Users",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "dialog": {
+      "createTitle": "New Location",
+      "editTitle": "Edit Location",
+      "createDescription": "Complete the data to create a new location",
+      "editDescription": "Modify the location details",
+      "name": "Name *",
+      "namePlaceholder": "Downtown Branch",
+      "code": "Code",
+      "codePlaceholder": "BRA-001",
+      "address": "Address",
+      "addressPlaceholder": "Street, number, neighborhood",
+      "city": "City",
+      "cityPlaceholder": "City",
+      "state": "State",
+      "statePlaceholder": "State",
+      "postalCode": "Postal Code",
+      "postalCodePlaceholder": "12345",
+      "country": "Country",
+      "phone": "Phone",
+      "phonePlaceholder": "(555) 123-4567",
+      "email": "Email",
+      "emailPlaceholder": "branch@company.com",
+      "status": "Status",
+      "statusHelp": "Location active in the system",
+      "cancel": "Cancel",
+      "create": "Create Location",
+      "save": "Save Changes",
+      "saving": "Saving..."
+    },
+    "deleteDialog": {
+      "title": "Delete Location",
+      "description": "Are you sure you want to delete the \"{name}\" location? This action cannot be undone.",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleting": "Deleting..."
+    },
+    "messages": {
+      "loadError": "Error loading locations",
+      "nameRequired": "Name is required",
+      "locationUpdated": "Location updated",
+      "locationCreated": "Location created",
+      "saveError": "Error saving location",
+      "locationDeleted": "Location deleted",
+      "deleteError": "Error deleting location"
+    },
+    "empty": {
+      "title": "No locations registered",
+      "create": "Create First Location"
+    },
+    "loading": "Loading locations..."
+  },
   "errors": {
     "generic": "An error occurred",
     "notFound": "Not found",

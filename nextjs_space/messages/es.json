@@ -882,6 +882,240 @@
       "deleteError": "Error al eliminar el cliente"
     }
   },
+  "team": {
+    "title": "Equipo",
+    "subtitle": "Gestiona los usuarios de tu negocio",
+    "addUser": "Agregar Usuario",
+    "viewArchived": "Ver Archivados",
+    "stats": {
+      "members": "Miembros del Equipo",
+      "users": "usuarios",
+      "user": "usuario",
+      "inBusiness": "en tu negocio"
+    },
+    "table": {
+      "user": "Usuario",
+      "role": "Rol",
+      "locations": "Ubicaciones",
+      "status": "Estado",
+      "lastAccess": "Ultimo acceso",
+      "actions": "Acciones",
+      "noLocations": "Sin ubicaciones",
+      "never": "Nunca"
+    },
+    "status": {
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "actions": {
+      "edit": "Editar",
+      "deactivate": "Desactivar",
+      "activate": "Activar",
+      "delete": "Eliminar"
+    },
+    "addDialog": {
+      "title": "Agregar Usuario",
+      "description": "Crea una cuenta para un nuevo miembro de tu equipo",
+      "firstName": "Nombre *",
+      "firstNamePlaceholder": "Nombre",
+      "lastName": "Apellido *",
+      "lastNamePlaceholder": "Apellido",
+      "email": "Correo electronico *",
+      "emailPlaceholder": "usuario@email.com",
+      "password": "Contraseña *",
+      "passwordPlaceholder": "Minimo 8 caracteres",
+      "phone": "Telefono",
+      "phonePlaceholder": "(555) 123-4567",
+      "role": "Rol",
+      "rolePlaceholder": "Selecciona un rol",
+      "roleSystem": "(Sistema)",
+      "locations": "Ubicaciones *",
+      "primary": "Principal",
+      "makePrimary": "Hacer principal",
+      "cancel": "Cancelar",
+      "addUser": "Agregar Usuario",
+      "adding": "Agregando..."
+    },
+    "editDialog": {
+      "title": "Editar Usuario",
+      "description": "Modifica la informacion de {name}",
+      "cancel": "Cancelar",
+      "saveChanges": "Guardar Cambios",
+      "saving": "Guardando..."
+    },
+    "deleteDialog": {
+      "title": "Eliminar Usuario",
+      "description": "¿Estas seguro de que deseas eliminar a este usuario? Esta accion no se puede deshacer.",
+      "cancel": "Cancelar",
+      "delete": "Eliminar",
+      "deleting": "Eliminando..."
+    },
+    "validation": {
+      "requiredFields": "Por favor completa todos los campos requeridos",
+      "passwordLength": "La contraseña debe tener al menos 8 caracteres",
+      "atLeastOneLocation": "Debes seleccionar al menos una ubicacion",
+      "nameRequired": "Nombre y apellido son requeridos"
+    },
+    "messages": {
+      "loadError": "Error al cargar datos",
+      "memberAdded": "Miembro agregado correctamente",
+      "addError": "Error al agregar miembro",
+      "userDeactivated": "Usuario desactivado",
+      "userActivated": "Usuario activado",
+      "statusError": "Error al cambiar estado",
+      "userUpdated": "Usuario actualizado correctamente",
+      "updateError": "Error al actualizar usuario",
+      "userDeleted": "Usuario eliminado correctamente",
+      "deleteError": "Error al eliminar usuario",
+      "cannotDeactivateOwner": "No puedes desactivar al propietario del negocio",
+      "cannotDeleteOwner": "No puedes eliminar al propietario del negocio"
+    },
+    "empty": {
+      "title": "No hay miembros en el equipo",
+      "addFirst": "Agregar Primer Usuario"
+    },
+    "loading": "Cargando..."
+  },
+  "roles": {
+    "title": "Roles y Permisos",
+    "subtitle": "Administra los roles y permisos de tu equipo",
+    "newRole": "Nuevo Rol",
+    "stats": {
+      "users": "usuarios",
+      "user": "usuario",
+      "permissions": "permisos asignados",
+      "permission": "permiso asignado"
+    },
+    "badges": {
+      "system": "Sistema",
+      "custom": "Personalizado"
+    },
+    "actions": {
+      "edit": "Editar",
+      "duplicate": "Duplicar",
+      "delete": "Eliminar"
+    },
+    "createDialog": {
+      "title": "Crear Nuevo Rol",
+      "description": "Define un nuevo rol con permisos personalizados",
+      "roleName": "Nombre del rol *",
+      "roleNamePlaceholder": "Ej: Supervisor de ventas",
+      "roleDescription": "Descripcion",
+      "roleDescriptionPlaceholder": "Describe las responsabilidades de este rol...",
+      "permissions": "Permisos",
+      "cancel": "Cancelar",
+      "create": "Crear Rol",
+      "creating": "Creando..."
+    },
+    "editDialog": {
+      "title": "Editar Rol",
+      "description": "Modifica los permisos de este rol",
+      "cancel": "Cancelar",
+      "save": "Guardar Cambios",
+      "saving": "Guardando..."
+    },
+    "deleteDialog": {
+      "title": "Eliminar Rol",
+      "description": "¿Estas seguro de que deseas eliminar el rol \"{name}\"? Esta accion no se puede deshacer.",
+      "cancel": "Cancelar",
+      "delete": "Eliminar",
+      "deleting": "Eliminando..."
+    },
+    "messages": {
+      "loadError": "Error al cargar roles",
+      "roleDuplicated": "Rol duplicado",
+      "roleDuplicatedDesc": "El rol ha sido duplicado exitosamente",
+      "duplicateError": "Error al duplicar rol",
+      "roleNameRequired": "El nombre del rol es requerido",
+      "roleCreated": "Rol creado",
+      "roleCreatedDesc": "El rol ha sido creado exitosamente",
+      "createError": "Error al crear rol",
+      "roleUpdated": "Rol actualizado",
+      "roleUpdatedDesc": "El rol ha sido actualizado exitosamente",
+      "updateError": "Error al actualizar rol",
+      "roleDeleted": "Rol eliminado",
+      "roleDeletedDesc": "El rol ha sido eliminado exitosamente",
+      "deleteError": "Error al eliminar rol"
+    },
+    "empty": {
+      "title": "No hay roles",
+      "description": "Crea tu primer rol personalizado para asignar permisos a tu equipo",
+      "createRole": "Crear Rol"
+    },
+    "loading": "Cargando roles..."
+  },
+  "locations": {
+    "title": "Ubicaciones",
+    "subtitle": "Gestiona las sucursales y puntos de venta",
+    "newLocation": "Nueva Ubicacion",
+    "table": {
+      "name": "Nombre",
+      "code": "Codigo",
+      "city": "Ciudad",
+      "phone": "Telefono",
+      "users": "Usuarios",
+      "status": "Estado",
+      "actions": "Acciones"
+    },
+    "status": {
+      "active": "Activa",
+      "inactive": "Inactiva"
+    },
+    "actions": {
+      "edit": "Editar",
+      "delete": "Eliminar"
+    },
+    "dialog": {
+      "createTitle": "Nueva Ubicacion",
+      "editTitle": "Editar Ubicacion",
+      "createDescription": "Completa los datos para crear una nueva ubicacion",
+      "editDescription": "Modifica los datos de la ubicacion",
+      "name": "Nombre *",
+      "namePlaceholder": "Sucursal Centro",
+      "code": "Codigo",
+      "codePlaceholder": "SUC-001",
+      "address": "Direccion",
+      "addressPlaceholder": "Calle, numero, colonia",
+      "city": "Ciudad",
+      "cityPlaceholder": "Ciudad",
+      "state": "Estado",
+      "statePlaceholder": "Estado",
+      "postalCode": "Codigo Postal",
+      "postalCodePlaceholder": "12345",
+      "country": "Pais",
+      "phone": "Telefono",
+      "phonePlaceholder": "(555) 123-4567",
+      "email": "Email",
+      "emailPlaceholder": "sucursal@empresa.com",
+      "status": "Estado",
+      "statusHelp": "Ubicacion activa en el sistema",
+      "cancel": "Cancelar",
+      "create": "Crear Ubicacion",
+      "save": "Guardar Cambios",
+      "saving": "Guardando..."
+    },
+    "deleteDialog": {
+      "title": "Eliminar Ubicacion",
+      "description": "¿Estas seguro de que deseas eliminar la ubicacion \"{name}\"? Esta accion no se puede deshacer.",
+      "cancel": "Cancelar",
+      "delete": "Eliminar",
+      "deleting": "Eliminando..."
+    },
+    "messages": {
+      "loadError": "Error al cargar ubicaciones",
+      "nameRequired": "El nombre es requerido",
+      "locationUpdated": "Ubicacion actualizada",
+      "locationCreated": "Ubicacion creada",
+      "saveError": "Error al guardar ubicacion",
+      "locationDeleted": "Ubicacion eliminada",
+      "deleteError": "Error al eliminar ubicacion"
+    },
+    "empty": {
+      "title": "No hay ubicaciones registradas",
+      "create": "Crear Primera Ubicacion"
+    },
+    "loading": "Cargando ubicaciones..."
+  },
   "errors": {
     "generic": "Ocurrió un error",
     "notFound": "No encontrado",

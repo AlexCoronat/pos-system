@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import {
   ArrowLeft,
   Users,
@@ -74,6 +75,7 @@ import type { LocationListItem } from '@/lib/types/settings'
 import { toast } from 'sonner'
 
 export default function TeamPage() {
+  const t = useTranslations('team')
   const [members, setMembers] = useState<TeamMember[]>([])
   const [roles, setRoles] = useState<RoleOption[]>([])
   const [locations, setLocations] = useState<LocationListItem[]>([])
@@ -117,7 +119,7 @@ export default function TeamPage() {
       setRoles(rolesData)
       setLocations(locationsData)
     } catch (error: any) {
-      toast.error(error.message || 'Error al cargar datos')
+      toast.error(error.message || t('messages.loadError'))
     } finally {
       setIsLoading(false)
     }
@@ -157,17 +159,17 @@ export default function TeamPage() {
     e.preventDefault()
 
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
-      toast.error('Por favor completa todos los campos requeridos')
+      toast.error(t('validation.requiredFields'))
       return
     }
 
     if (formData.password.length < 8) {
-      toast.error('La contraseña debe tener al menos 8 caracteres')
+      toast.error(t('validation.passwordLength'))
       return
     }
 
     if (formData.locationIds.length === 0) {
-      toast.error('Debes seleccionar al menos una ubicación')
+      toast.error(t('validation.atLeastOneLocation'))
       return
     }
 
@@ -186,11 +188,11 @@ export default function TeamPage() {
       }
 
       await teamService.addTeamMember(data)
-      toast.success('Miembro agregado correctamente')
+      toast.success(t('messages.memberAdded'))
       setDialogOpen(false)
       loadData()
     } catch (error: any) {
-      toast.error(error.message || 'Error al agregar miembro')
+      toast.error(error.message || t('messages.addError'))
     } finally {
       setIsSaving(false)
     }
@@ -198,16 +200,16 @@ export default function TeamPage() {
 
   const handleToggleStatus = async (member: TeamMember) => {
     if (member.isOwner) {
-      toast.error('No puedes desactivar al propietario del negocio')
+      toast.error(t('messages.cannotDeactivateOwner'))
       return
     }
 
     try {
       await teamService.toggleMemberStatus(member.id, !member.isActive)
-      toast.success(member.isActive ? 'Usuario desactivado' : 'Usuario activado')
+      toast.success(member.isActive ? t('messages.userDeactivated') : t('messages.userActivated'))
       loadData()
     } catch (error: any) {
-      toast.error(error.message || 'Error al cambiar estado')
+      toast.error(error.message || t('messages.statusError'))
     }
   }
 
@@ -230,12 +232,12 @@ export default function TeamPage() {
     if (!selectedMember) return
 
     if (!editFormData.firstName || !editFormData.lastName) {
-      toast.error('Nombre y apellido son requeridos')
+      toast.error(t('validation.nameRequired'))
       return
     }
 
     if (editFormData.locationIds.length === 0) {
-      toast.error('Debes seleccionar al menos una ubicación')
+      toast.error(t('validation.atLeastOneLocation'))
       return
     }
 
@@ -257,11 +259,11 @@ export default function TeamPage() {
         parseInt(editFormData.primaryLocationId)
       )
 
-      toast.success('Usuario actualizado correctamente')
+      toast.success(t('messages.userUpdated'))
       setEditDialogOpen(false)
       loadData()
     } catch (error: any) {
-      toast.error(error.message || 'Error al actualizar usuario')
+      toast.error(error.message || t('messages.updateError'))
     } finally {
       setIsSaving(false)
     }
@@ -269,7 +271,7 @@ export default function TeamPage() {
 
   const handleOpenDeleteDialog = (member: TeamMember) => {
     if (member.isOwner) {
-      toast.error('No puedes eliminar al propietario del negocio')
+      toast.error(t('messages.cannotDeleteOwner'))
       return
     }
     setSelectedMember(member)
@@ -282,11 +284,11 @@ export default function TeamPage() {
     setIsSaving(true)
     try {
       await teamService.removeMember(selectedMember.id)
-      toast.success('Usuario eliminado correctamente')
+      toast.success(t('messages.userDeleted'))
       setDeleteDialogOpen(false)
       loadData()
     } catch (error: any) {
-      toast.error(error.message || 'Error al eliminar usuario')
+      toast.error(error.message || t('messages.deleteError'))
     } finally {
       setIsSaving(false)
     }
@@ -343,9 +345,9 @@ export default function TeamPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold">Equipo</h1>
+            <h1 className="text-3xl font-bold">{t('title')}</h1>
             <p className="text-muted-foreground">
-              Gestiona los usuarios de tu negocio
+              {t('subtitle')}
             </p>
           </div>
         </div>
@@ -353,12 +355,12 @@ export default function TeamPage() {
           <Link href="/dashboard/settings/team/archived">
             <Button variant="outline">
               <Archive className="h-4 w-4 mr-2" />
-              Ver Archivados
+              {t('viewArchived')}
             </Button>
           </Link>
           <Button onClick={handleOpenDialog}>
             <UserPlus className="h-4 w-4 mr-2" />
-            Agregar Usuario
+            {t('addUser')}
           </Button>
         </div>
       </div>
@@ -368,10 +370,10 @@ export default function TeamPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Miembros del Equipo
+            {t('stats.members')}
           </CardTitle>
           <CardDescription>
-            {members.length} usuario{members.length !== 1 ? 's' : ''} en tu negocio
+            {members.length} {members.length !== 1 ? t('stats.users') : t('stats.user')} {t('stats.inBusiness')}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -382,22 +384,22 @@ export default function TeamPage() {
           ) : members.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No hay miembros en el equipo</p>
+              <p>{t('empty.title')}</p>
               <Button className="mt-4" onClick={handleOpenDialog}>
                 <UserPlus className="h-4 w-4 mr-2" />
-                Agregar Primer Usuario
+                {t('empty.addFirst')}
               </Button>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Usuario</TableHead>
-                  <TableHead>Rol</TableHead>
-                  <TableHead>Ubicaciones</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Último acceso</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <TableHead>{t('table.user')}</TableHead>
+                  <TableHead>{t('table.role')}</TableHead>
+                  <TableHead>{t('table.locations')}</TableHead>
+                  <TableHead>{t('table.status')}</TableHead>
+                  <TableHead>{t('table.lastAccess')}</TableHead>
+                  <TableHead className="text-right">{t('table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -443,7 +445,7 @@ export default function TeamPage() {
                         ))}
                         {member.assignedLocations.length === 0 && (
                           <span className="text-sm text-muted-foreground">
-                            Sin ubicaciones
+                            {t('table.noLocations')}
                           </span>
                         )}
                       </div>
@@ -453,7 +455,7 @@ export default function TeamPage() {
                         variant={member.isActive ? 'default' : 'secondary'}
                         className={member.isActive ? 'bg-green-100 text-green-800' : ''}
                       >
-                        {member.isActive ? 'Activo' : 'Inactivo'}
+                        {member.isActive ? t('status.active') : t('status.inactive')}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -463,7 +465,7 @@ export default function TeamPage() {
                         </span>
                       ) : (
                         <span className="text-sm text-muted-foreground">
-                          Nunca
+                          {t('table.never')}
                         </span>
                       )}
                     </TableCell>
@@ -480,7 +482,7 @@ export default function TeamPage() {
                             disabled={member.isOwner}
                           >
                             <Pencil className="h-4 w-4 mr-2" />
-                            Editar
+                            {t('actions.edit')}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleToggleStatus(member)}
@@ -489,12 +491,12 @@ export default function TeamPage() {
                             {member.isActive ? (
                               <>
                                 <EyeOff className="h-4 w-4 mr-2" />
-                                Desactivar
+                                {t('actions.deactivate')}
                               </>
                             ) : (
                               <>
                                 <Eye className="h-4 w-4 mr-2" />
-                                Activar
+                                {t('actions.activate')}
                               </>
                             )}
                           </DropdownMenuItem>
@@ -505,7 +507,7 @@ export default function TeamPage() {
                             className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Eliminar
+                            {t('actions.delete')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -522,9 +524,9 @@ export default function TeamPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Agregar Usuario</DialogTitle>
+            <DialogTitle>{t('addDialog.title')}</DialogTitle>
             <DialogDescription>
-              Crea una cuenta para un nuevo miembro de tu equipo
+              {t('addDialog.description')}
             </DialogDescription>
           </DialogHeader>
 
@@ -532,28 +534,28 @@ export default function TeamPage() {
             {/* Name */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName">Nombre *</Label>
+                <Label htmlFor="firstName">{t('addDialog.firstName')}</Label>
                 <Input
                   id="firstName"
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  placeholder="Nombre"
+                  placeholder={t('addDialog.firstNamePlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">Apellido *</Label>
+                <Label htmlFor="lastName">{t('addDialog.lastName')}</Label>
                 <Input
                   id="lastName"
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  placeholder="Apellido"
+                  placeholder={t('addDialog.lastNamePlaceholder')}
                 />
               </div>
             </div>
 
             {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="email">Correo electrónico *</Label>
+              <Label htmlFor="email">{t('addDialog.email')}</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -562,14 +564,14 @@ export default function TeamPage() {
                   className="pl-10"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="usuario@email.com"
+                  placeholder={t('addDialog.emailPlaceholder')}
                 />
               </div>
             </div>
 
             {/* Password */}
             <div className="space-y-2">
-              <Label htmlFor="password">Contraseña *</Label>
+              <Label htmlFor="password">{t('addDialog.password')}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -578,7 +580,7 @@ export default function TeamPage() {
                   className="pl-10 pr-10"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder={t('addDialog.passwordPlaceholder')}
                 />
                 <button
                   type="button"
@@ -596,7 +598,7 @@ export default function TeamPage() {
 
             {/* Phone */}
             <div className="space-y-2">
-              <Label htmlFor="phone">Teléfono</Label>
+              <Label htmlFor="phone">{t('addDialog.phone')}</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -605,20 +607,20 @@ export default function TeamPage() {
                   className="pl-10"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="(555) 123-4567"
+                  placeholder={t('addDialog.phonePlaceholder')}
                 />
               </div>
             </div>
 
             {/* Role */}
             <div className="space-y-2">
-              <Label>Rol</Label>
+              <Label>{t('addDialog.role')}</Label>
               <Select
                 value={formData.roleId}
                 onValueChange={(value) => setFormData({ ...formData, roleId: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un rol" />
+                  <SelectValue placeholder={t('addDialog.rolePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((role) => (
@@ -655,7 +657,7 @@ export default function TeamPage() {
                         className="h-6 text-xs"
                         onClick={() => setFormData({ ...formData, primaryLocationId: location.id.toString() })}
                       >
-                        {formData.primaryLocationId === location.id.toString() ? 'Principal' : 'Hacer principal'}
+                        {formData.primaryLocationId === location.id.toString() ? t('addDialog.primary') : t('addDialog.makePrimary')}
                       </Button>
                     )}
                   </div>
@@ -665,18 +667,18 @@ export default function TeamPage() {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancelar
+                {t('addDialog.cancel')}
               </Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Agregando...
+                    {t('addDialog.adding')}
                   </>
                 ) : (
                   <>
                     <UserPlus className="h-4 w-4 mr-2" />
-                    Agregar Usuario
+                    {t('addDialog.addUser')}
                   </>
                 )}
               </Button>
@@ -689,9 +691,9 @@ export default function TeamPage() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Editar Usuario</DialogTitle>
+            <DialogTitle>{t('editDialog.title')}</DialogTitle>
             <DialogDescription>
-              Modifica la información de {selectedMember?.firstName} {selectedMember?.lastName}
+              {t('editDialog.description', { name: `${selectedMember?.firstName} ${selectedMember?.lastName}` })}
             </DialogDescription>
           </DialogHeader>
 
@@ -699,28 +701,28 @@ export default function TeamPage() {
             {/* Name */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-firstName">Nombre *</Label>
+                <Label htmlFor="edit-firstName">{t('addDialog.firstName')}</Label>
                 <Input
                   id="edit-firstName"
                   value={editFormData.firstName}
                   onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
-                  placeholder="Nombre"
+                  placeholder={t('addDialog.firstNamePlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-lastName">Apellido *</Label>
+                <Label htmlFor="edit-lastName">{t('addDialog.lastName')}</Label>
                 <Input
                   id="edit-lastName"
                   value={editFormData.lastName}
                   onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
-                  placeholder="Apellido"
+                  placeholder={t('addDialog.lastNamePlaceholder')}
                 />
               </div>
             </div>
 
             {/* Phone */}
             <div className="space-y-2">
-              <Label htmlFor="edit-phone">Teléfono</Label>
+              <Label htmlFor="edit-phone">{t('addDialog.phone')}</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -729,20 +731,20 @@ export default function TeamPage() {
                   className="pl-10"
                   value={editFormData.phone}
                   onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                  placeholder="(555) 123-4567"
+                  placeholder={t('addDialog.phonePlaceholder')}
                 />
               </div>
             </div>
 
             {/* Role */}
             <div className="space-y-2">
-              <Label>Rol</Label>
+              <Label>{t('addDialog.role')}</Label>
               <Select
                 value={editFormData.roleId}
                 onValueChange={(value) => setEditFormData({ ...editFormData, roleId: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un rol" />
+                  <SelectValue placeholder={t('addDialog.rolePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((role) => (
@@ -779,7 +781,7 @@ export default function TeamPage() {
                         className="h-6 text-xs"
                         onClick={() => setEditFormData({ ...editFormData, primaryLocationId: location.id.toString() })}
                       >
-                        {editFormData.primaryLocationId === location.id.toString() ? 'Principal' : 'Hacer principal'}
+                        {editFormData.primaryLocationId === location.id.toString() ? t('addDialog.primary') : t('addDialog.makePrimary')}
                       </Button>
                     )}
                   </div>
@@ -789,18 +791,18 @@ export default function TeamPage() {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-                Cancelar
+                {t('editDialog.cancel')}
               </Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Guardando...
+                    {t('editDialog.saving')}
                   </>
                 ) : (
                   <>
                     <Pencil className="h-4 w-4 mr-2" />
-                    Guardar Cambios
+                    {t('editDialog.saveChanges')}
                   </>
                 )}
               </Button>
@@ -813,14 +815,13 @@ export default function TeamPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar Usuario</AlertDialogTitle>
+            <AlertDialogTitle>{t('deleteDialog.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estás seguro de que deseas eliminar a {selectedMember?.firstName} {selectedMember?.lastName}?
-              Esta acción removerá al usuario de tu negocio y no podrá acceder más al sistema.
+              {t('deleteDialog.description', { name: `${selectedMember?.firstName} ${selectedMember?.lastName}` })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t('deleteDialog.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -828,10 +829,10 @@ export default function TeamPage() {
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Eliminando...
+                  {t('deleteDialog.deleting')}
                 </>
               ) : (
-                'Eliminar'
+                t('deleteDialog.delete')
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

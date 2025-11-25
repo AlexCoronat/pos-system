@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import {
   ArrowLeft,
   Plus,
@@ -58,6 +59,7 @@ import type { LocationListItem, CreateLocationData, Location } from '@/lib/types
 import { toast } from 'sonner'
 
 export default function LocationsPage() {
+  const t = useTranslations('locations')
   const [locations, setLocations] = useState<LocationListItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -86,7 +88,7 @@ export default function LocationsPage() {
       const data = await locationService.getLocations()
       setLocations(data)
     } catch (error: any) {
-      toast.error('Error al cargar ubicaciones')
+      toast.error(t('messages.loadError'))
     } finally {
       setIsLoading(false)
     }
@@ -130,7 +132,7 @@ export default function LocationsPage() {
           isActive: fullLocation.isActive
         })
       } catch (error) {
-        toast.error('Error al cargar ubicación')
+        toast.error(t('messages.loadError'))
         return
       }
     } else {
@@ -143,7 +145,7 @@ export default function LocationsPage() {
     e.preventDefault()
 
     if (!formData.name.trim()) {
-      toast.error('El nombre es requerido')
+      toast.error(t('messages.nameRequired'))
       return
     }
 
@@ -163,7 +165,7 @@ export default function LocationsPage() {
           email: formData.email.trim() || undefined,
           isActive: formData.isActive
         })
-        toast.success('Ubicación actualizada')
+        toast.success(t('messages.locationUpdated'))
       } else {
         await locationService.createLocation({
           name: formData.name.trim(),
@@ -177,14 +179,14 @@ export default function LocationsPage() {
           email: formData.email.trim() || undefined,
           isActive: formData.isActive
         })
-        toast.success('Ubicación creada')
+        toast.success(t('messages.locationCreated'))
       }
 
       setDialogOpen(false)
       resetForm()
       loadLocations()
     } catch (error: any) {
-      toast.error(error.message || 'Error al guardar ubicación')
+      toast.error(error.message || t('messages.saveError'))
     } finally {
       setIsSaving(false)
     }
@@ -201,10 +203,10 @@ export default function LocationsPage() {
     setIsDeleting(true)
     try {
       await locationService.deleteLocation(locationToDelete.id)
-      toast.success('Ubicación eliminada')
+      toast.success(t('messages.locationDeleted'))
       loadLocations()
     } catch (error: any) {
-      toast.error(error.message || 'Error al eliminar ubicación')
+      toast.error(error.message || t('messages.deleteError'))
     } finally {
       setIsDeleting(false)
       setDeleteDialogOpen(false)
@@ -223,15 +225,15 @@ export default function LocationsPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold">Ubicaciones</h1>
+            <h1 className="text-3xl font-bold">{t('title')}</h1>
             <p className="text-muted-foreground">
-              Gestiona las sucursales y puntos de venta
+              {t('subtitle')}
             </p>
           </div>
         </div>
         <Button onClick={() => handleOpenDialog()}>
           <Plus className="h-4 w-4 mr-2" />
-          Nueva Ubicacion
+          {t('newLocation')}
         </Button>
       </div>
 
@@ -245,23 +247,23 @@ export default function LocationsPage() {
           ) : locations.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No hay ubicaciones registradas</p>
+              <p>{t('empty.title')}</p>
               <Button className="mt-4" onClick={() => handleOpenDialog()}>
                 <Plus className="h-4 w-4 mr-2" />
-                Crear Primera Ubicacion
+                {t('empty.create')}
               </Button>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Codigo</TableHead>
-                  <TableHead>Ciudad</TableHead>
-                  <TableHead>Telefono</TableHead>
-                  <TableHead className="text-center">Usuarios</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <TableHead>{t('table.name')}</TableHead>
+                  <TableHead>{t('table.code')}</TableHead>
+                  <TableHead>{t('table.city')}</TableHead>
+                  <TableHead>{t('table.phone')}</TableHead>
+                  <TableHead className="text-center">{t('table.users')}</TableHead>
+                  <TableHead>{t('table.status')}</TableHead>
+                  <TableHead className="text-right">{t('table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -300,7 +302,7 @@ export default function LocationsPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={location.isActive ? 'default' : 'secondary'}>
-                        {location.isActive ? 'Activa' : 'Inactiva'}
+                        {location.isActive ? t('status.active') : t('status.inactive')}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -313,14 +315,14 @@ export default function LocationsPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleOpenDialog(location)}>
                             <Edit className="h-4 w-4 mr-2" />
-                            Editar
+                            {t('actions.edit')}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-red-600"
                             onClick={() => handleDeleteClick(location)}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Eliminar
+                            {t('actions.delete')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -338,80 +340,80 @@ export default function LocationsPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {editingLocation ? 'Editar Ubicacion' : 'Nueva Ubicacion'}
+              {editingLocation ? t('dialog.editTitle') : t('dialog.createTitle')}
             </DialogTitle>
             <DialogDescription>
               {editingLocation
-                ? 'Modifica los datos de la ubicación'
-                : 'Completa los datos para crear una nueva ubicación'}
+                ? t('dialog.editDescription')
+                : t('dialog.createDescription')}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Nombre *</Label>
+                <Label htmlFor="name">{t('dialog.name')}</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Sucursal Centro"
+                  placeholder={t('dialog.namePlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="code">Codigo</Label>
+                <Label htmlFor="code">{t('dialog.code')}</Label>
                 <Input
                   id="code"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                  placeholder="SUC-001"
+                  placeholder={t('dialog.codePlaceholder')}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Direccion</Label>
+              <Label htmlFor="address">{t('dialog.address')}</Label>
               <Input
                 id="address"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="Calle, numero, colonia"
+                placeholder={t('dialog.addressPlaceholder')}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="city">Ciudad</Label>
+                <Label htmlFor="city">{t('dialog.city')}</Label>
                 <Input
                   id="city"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  placeholder="Ciudad"
+                  placeholder={t('dialog.cityPlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="state">Estado</Label>
+                <Label htmlFor="state">{t('dialog.state')}</Label>
                 <Input
                   id="state"
                   value={formData.state}
                   onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                  placeholder="Estado"
+                  placeholder={t('dialog.statePlaceholder')}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="postalCode">Codigo Postal</Label>
+                <Label htmlFor="postalCode">{t('dialog.postalCode')}</Label>
                 <Input
                   id="postalCode"
                   value={formData.postalCode}
                   onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                  placeholder="12345"
+                  placeholder={t('dialog.postalCodePlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="country">Pais</Label>
+                <Label htmlFor="country">{t('dialog.country')}</Label>
                 <Input
                   id="country"
                   value={formData.country}
@@ -422,31 +424,31 @@ export default function LocationsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefono</Label>
+                <Label htmlFor="phone">{t('dialog.phone')}</Label>
                 <Input
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="(555) 123-4567"
+                  placeholder={t('dialog.phonePlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('dialog.email')}</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="sucursal@empresa.com"
+                  placeholder={t('dialog.emailPlaceholder')}
                 />
               </div>
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t">
               <div className="space-y-0.5">
-                <Label>Estado</Label>
+                <Label>{t('dialog.status')}</Label>
                 <p className="text-sm text-muted-foreground">
-                  Ubicacion activa en el sistema
+                  {t('dialog.statusHelp')}
                 </p>
               </div>
               <Switch
@@ -457,18 +459,18 @@ export default function LocationsPage() {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancelar
+                {t('dialog.cancel')}
               </Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Guardando...
+                    {t('dialog.saving')}
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    {editingLocation ? 'Guardar Cambios' : 'Crear Ubicacion'}
+                    {editingLocation ? t('dialog.save') : t('dialog.create')}
                   </>
                 )}
               </Button>
@@ -481,20 +483,19 @@ export default function LocationsPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar Ubicacion</AlertDialogTitle>
+            <AlertDialogTitle>{t('deleteDialog.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estas seguro de que deseas eliminar la ubicación "{locationToDelete?.name}"?
-              Esta accion no se puede deshacer.
+              {t('deleteDialog.description', { name: locationToDelete?.name || '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t('deleteDialog.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700"
             >
-              {isDeleting ? 'Eliminando...' : 'Eliminar'}
+              {isDeleting ? t('deleteDialog.deleting') : t('deleteDialog.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
