@@ -691,6 +691,197 @@
       "deleteFailed": "Error al eliminar producto"
     }
   },
+  "customers": {
+    "title": "Clientes",
+    "subtitle": "Gestiona la informacion de tus clientes",
+    "newCustomer": "Nuevo Cliente",
+    "stats": {
+      "totalCustomers": "Total Clientes",
+      "activeCustomers": "Clientes Activos",
+      "businesses": "Empresas",
+      "withCredit": "Con Credito"
+    },
+    "filters": {
+      "title": "Filtros",
+      "search": "Buscar",
+      "searchPlaceholder": "Buscar por nombre, email, telefono...",
+      "type": "Tipo",
+      "allTypes": "Todos los tipos",
+      "individual": "Individual",
+      "business": "Empresa",
+      "status": "Estado",
+      "all": "Todos",
+      "active": "Activos",
+      "inactive": "Inactivos",
+      "refresh": "Actualizar"
+    },
+    "table": {
+      "customer": "Cliente",
+      "type": "Tipo",
+      "contact": "Contacto",
+      "city": "Ciudad",
+      "creditLimit": "Limite Credito",
+      "balance": "Saldo",
+      "points": "Puntos",
+      "status": "Estado",
+      "actions": "Acciones"
+    },
+    "types": {
+      "individual": "Individual",
+      "business": "Empresa"
+    },
+    "status": {
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "actions": {
+      "viewDetails": "Ver detalles",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "cancel": "Cancelar",
+      "save": "Guardar Cliente",
+      "saving": "Guardando...",
+      "saveChanges": "Guardar Cambios"
+    },
+    "loading": "Cargando clientes...",
+    "noCustomers": "No se encontraron clientes",
+    "customerNotFound": "Cliente no encontrado",
+    "pagination": {
+      "page": "Pagina",
+      "of": "de",
+      "customersTotal": "clientes en total",
+      "previous": "Anterior",
+      "next": "Siguiente"
+    },
+    "form": {
+      "title": "Nuevo Cliente",
+      "editTitle": "Editar Cliente",
+      "subtitle": "Registra un nuevo cliente en el sistema",
+      "basicInfo": {
+        "title": "Informacion Basica",
+        "subtitle": "Datos principales del cliente"
+      },
+      "contactInfo": {
+        "title": "Informacion de Contacto",
+        "subtitle": "Datos para comunicacion con el cliente"
+      },
+      "creditInfo": {
+        "title": "Credito y Notas",
+        "subtitle": "Configuracion de credito e informacion adicional"
+      },
+      "customerType": "Tipo de Cliente",
+      "firstName": "Nombre",
+      "firstNameRequired": "Nombre *",
+      "firstNamePlaceholder": "Nombre",
+      "lastName": "Apellido",
+      "lastNamePlaceholder": "Apellido",
+      "businessName": "Nombre de la Empresa",
+      "businessNameRequired": "Nombre de la Empresa *",
+      "businessNamePlaceholder": "Razon social",
+      "taxId": "RFC",
+      "taxIdPlaceholder": "RFC del cliente",
+      "birthDate": "Fecha de Nacimiento",
+      "email": "Email",
+      "emailPlaceholder": "correo@ejemplo.com",
+      "phone": "Telefono",
+      "phonePlaceholder": "(555) 123-4567",
+      "mobile": "Celular",
+      "mobilePlaceholder": "(555) 987-6543",
+      "address": "Direccion",
+      "addressPlaceholder": "Calle, numero, colonia...",
+      "city": "Ciudad",
+      "cityPlaceholder": "Ciudad",
+      "state": "Estado",
+      "statePlaceholder": "Estado",
+      "postalCode": "Codigo Postal",
+      "postalCodePlaceholder": "12345",
+      "country": "Pais",
+      "creditLimit": "Limite de Credito",
+      "creditLimitHelp": "Monto maximo de credito permitido. Dejar en 0 para no otorgar credito.",
+      "notes": "Notas",
+      "notesPlaceholder": "Notas adicionales sobre el cliente...",
+      "isActive": "Estado",
+      "isActiveHelp": "Cliente activo en el sistema"
+    },
+    "detail": {
+      "back": "Volver",
+      "edit": "Editar",
+      "tabs": {
+        "details": "Informacion",
+        "history": "Historial de Compras",
+        "stats": "Estadisticas"
+      },
+      "basicInfo": {
+        "title": "Informacion Basica",
+        "businessName": "Razon Social",
+        "firstName": "Nombre",
+        "lastName": "Apellido",
+        "taxId": "RFC",
+        "birthDate": "Fecha de Nacimiento",
+        "registered": "Registrado"
+      },
+      "contact": {
+        "title": "Contacto",
+        "email": "Email",
+        "phone": "Telefono",
+        "mobile": "Celular",
+        "address": "Direccion"
+      },
+      "credit": {
+        "title": "Credito",
+        "creditLimit": "Limite de Credito",
+        "currentBalance": "Saldo Actual",
+        "availableCredit": "Credito Disponible"
+      },
+      "notes": {
+        "title": "Notas",
+        "empty": "Sin notas adicionales"
+      },
+      "history": {
+        "title": "Historial de Compras",
+        "subtitle": "Ultimas compras realizadas por el cliente",
+        "empty": "Este cliente no tiene compras registradas",
+        "saleNumber": "No. Venta",
+        "date": "Fecha",
+        "items": "Articulos",
+        "total": "Total",
+        "status": "Estado"
+      },
+      "stats": {
+        "totalPurchases": "Total Compras",
+        "totalSpent": "Total Gastado",
+        "averageTicket": "Ticket Promedio",
+        "loyaltyPoints": "Puntos de Lealtad",
+        "lastPurchase": "Ultima compra"
+      }
+    },
+    "deleteDialog": {
+      "title": "Eliminar Cliente",
+      "description": "¿Estas seguro de que deseas eliminar al cliente \"{name}\"? Esta accion no se puede deshacer.",
+      "cancel": "Cancelar",
+      "confirm": "Eliminar",
+      "deleting": "Eliminando..."
+    },
+    "validation": {
+      "nameRequired": "El nombre es requerido",
+      "businessNameRequired": "El nombre de la empresa es requerido",
+      "emailInvalid": "Email invalido",
+      "creditLimitInvalid": "El limite de credito debe ser mayor o igual a 0",
+      "formErrors": "Por favor corrige los errores en el formulario",
+      "emailExists": "Este email ya esta registrado",
+      "emailInUse": "El email ya esta en uso"
+    },
+    "messages": {
+      "loadError": "Error al cargar los clientes",
+      "loadCustomerError": "Error al cargar el cliente",
+      "createSuccess": "Cliente creado exitosamente",
+      "createError": "Error al crear el cliente",
+      "updateSuccess": "Cliente actualizado exitosamente",
+      "updateError": "Error al actualizar el cliente",
+      "deleteSuccess": "Cliente eliminado correctamente",
+      "deleteError": "Error al eliminar el cliente"
+    }
+  },
   "errors": {
     "generic": "Ocurrió un error",
     "notFound": "No encontrado",

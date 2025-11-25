@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +24,7 @@ import type { CreateCustomerData } from '@/lib/types/customer'
 
 export default function NewCustomerPage() {
   const router = useRouter()
+  const t = useTranslations('customers')
   const [isLoading, setIsLoading] = useState(false)
 
   // Form state
@@ -53,20 +55,20 @@ export default function NewCustomerPage() {
 
     if (formData.type === 'individual') {
       if (!formData.firstName.trim()) {
-        newErrors.firstName = 'El nombre es requerido'
+        newErrors.firstName = t('validation.nameRequired')
       }
     } else {
       if (!formData.businessName.trim()) {
-        newErrors.businessName = 'El nombre de la empresa es requerido'
+        newErrors.businessName = t('validation.businessNameRequired')
       }
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email invalido'
+      newErrors.email = t('validation.emailInvalid')
     }
 
     if (formData.creditLimit && parseFloat(formData.creditLimit) < 0) {
-      newErrors.creditLimit = 'El limite de credito debe ser mayor o igual a 0'
+      newErrors.creditLimit = t('validation.creditLimitInvalid')
     }
 
     setErrors(newErrors)
@@ -77,7 +79,7 @@ export default function NewCustomerPage() {
     e.preventDefault()
 
     if (!validateForm()) {
-      toast.error('Por favor corrige los errores en el formulario')
+      toast.error(t('validation.formErrors'))
       return
     }
 
@@ -88,8 +90,8 @@ export default function NewCustomerPage() {
       if (formData.email) {
         const emailExists = await customerService.checkEmailExists(formData.email)
         if (emailExists) {
-          setErrors({ ...errors, email: 'Este email ya esta registrado' })
-          toast.error('El email ya esta en uso')
+          setErrors({ ...errors, email: t('validation.emailExists') })
+          toast.error(t('validation.emailInUse'))
           setIsLoading(false)
           return
         }
@@ -116,11 +118,11 @@ export default function NewCustomerPage() {
       }
 
       await customerService.createCustomer(customerData)
-      toast.success('Cliente creado exitosamente')
+      toast.success(t('messages.createSuccess'))
       router.push('/dashboard/customers')
     } catch (error: any) {
       console.error('Error creating customer:', error)
-      toast.error(error.message || 'Error al crear el cliente')
+      toast.error(error.message || t('messages.createError'))
     } finally {
       setIsLoading(false)
     }
@@ -143,9 +145,9 @@ export default function NewCustomerPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Nuevo Cliente</h1>
+          <h1 className="text-3xl font-bold">{t('form.title')}</h1>
           <p className="text-muted-foreground">
-            Registra un nuevo cliente en el sistema
+            {t('form.subtitle')}
           </p>
         </div>
       </div>
@@ -155,14 +157,14 @@ export default function NewCustomerPage() {
           {/* Basic Information */}
           <Card>
             <CardHeader>
-              <CardTitle>Informacion Basica</CardTitle>
+              <CardTitle>{t('form.basicInfo.title')}</CardTitle>
               <CardDescription>
-                Datos principales del cliente
+                {t('form.basicInfo.subtitle')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Tipo de Cliente</Label>
+                <Label>{t('form.customerType')}</Label>
                 <Select
                   value={formData.type}
                   onValueChange={(value) => handleChange('type', value)}
@@ -171,8 +173,8 @@ export default function NewCustomerPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="individual">Individual</SelectItem>
-                    <SelectItem value="business">Empresa</SelectItem>
+                    <SelectItem value="individual">{t('filters.individual')}</SelectItem>
+                    <SelectItem value="business">{t('filters.business')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -180,12 +182,12 @@ export default function NewCustomerPage() {
               {formData.type === 'individual' ? (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">Nombre *</Label>
+                    <Label htmlFor="firstName">{t('form.firstNameRequired')}</Label>
                     <Input
                       id="firstName"
                       value={formData.firstName}
                       onChange={(e) => handleChange('firstName', e.target.value)}
-                      placeholder="Nombre"
+                      placeholder={t('form.firstNamePlaceholder')}
                       className={errors.firstName ? 'border-red-500' : ''}
                     />
                     {errors.firstName && (
@@ -193,23 +195,23 @@ export default function NewCustomerPage() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Apellido</Label>
+                    <Label htmlFor="lastName">{t('form.lastName')}</Label>
                     <Input
                       id="lastName"
                       value={formData.lastName}
                       onChange={(e) => handleChange('lastName', e.target.value)}
-                      placeholder="Apellido"
+                      placeholder={t('form.lastNamePlaceholder')}
                     />
                   </div>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Label htmlFor="businessName">Nombre de la Empresa *</Label>
+                  <Label htmlFor="businessName">{t('form.businessNameRequired')}</Label>
                   <Input
                     id="businessName"
                     value={formData.businessName}
                     onChange={(e) => handleChange('businessName', e.target.value)}
-                    placeholder="Razon social"
+                    placeholder={t('form.businessNamePlaceholder')}
                     className={errors.businessName ? 'border-red-500' : ''}
                   />
                   {errors.businessName && (
@@ -219,19 +221,19 @@ export default function NewCustomerPage() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="taxId">RFC</Label>
+                <Label htmlFor="taxId">{t('form.taxId')}</Label>
                 <Input
                   id="taxId"
                   value={formData.taxId}
                   onChange={(e) => handleChange('taxId', e.target.value.toUpperCase())}
-                  placeholder="RFC del cliente"
+                  placeholder={t('form.taxIdPlaceholder')}
                   maxLength={13}
                 />
               </div>
 
               {formData.type === 'individual' && (
                 <div className="space-y-2">
-                  <Label htmlFor="birthDate">Fecha de Nacimiento</Label>
+                  <Label htmlFor="birthDate">{t('form.birthDate')}</Label>
                   <Input
                     id="birthDate"
                     type="date"
@@ -243,9 +245,9 @@ export default function NewCustomerPage() {
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Estado</Label>
+                  <Label>{t('form.isActive')}</Label>
                   <p className="text-sm text-muted-foreground">
-                    Cliente activo en el sistema
+                    {t('form.isActiveHelp')}
                   </p>
                 </div>
                 <Switch
@@ -259,20 +261,20 @@ export default function NewCustomerPage() {
           {/* Contact Information */}
           <Card>
             <CardHeader>
-              <CardTitle>Informacion de Contacto</CardTitle>
+              <CardTitle>{t('form.contactInfo.title')}</CardTitle>
               <CardDescription>
-                Datos para comunicacion con el cliente
+                {t('form.contactInfo.subtitle')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('form.email')}</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleChange('email', e.target.value)}
-                  placeholder="correo@ejemplo.com"
+                  placeholder={t('form.emailPlaceholder')}
                   className={errors.email ? 'border-red-500' : ''}
                 />
                 {errors.email && (
@@ -282,69 +284,69 @@ export default function NewCustomerPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Telefono</Label>
+                  <Label htmlFor="phone">{t('form.phone')}</Label>
                   <Input
                     id="phone"
                     value={formData.phone}
                     onChange={(e) => handleChange('phone', e.target.value)}
-                    placeholder="(555) 123-4567"
+                    placeholder={t('form.phonePlaceholder')}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="mobile">Celular</Label>
+                  <Label htmlFor="mobile">{t('form.mobile')}</Label>
                   <Input
                     id="mobile"
                     value={formData.mobile}
                     onChange={(e) => handleChange('mobile', e.target.value)}
-                    placeholder="(555) 987-6543"
+                    placeholder={t('form.mobilePlaceholder')}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address">Direccion</Label>
+                <Label htmlFor="address">{t('form.address')}</Label>
                 <Textarea
                   id="address"
                   value={formData.address}
                   onChange={(e) => handleChange('address', e.target.value)}
-                  placeholder="Calle, numero, colonia..."
+                  placeholder={t('form.addressPlaceholder')}
                   rows={2}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="city">Ciudad</Label>
+                  <Label htmlFor="city">{t('form.city')}</Label>
                   <Input
                     id="city"
                     value={formData.city}
                     onChange={(e) => handleChange('city', e.target.value)}
-                    placeholder="Ciudad"
+                    placeholder={t('form.cityPlaceholder')}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="state">Estado</Label>
+                  <Label htmlFor="state">{t('form.state')}</Label>
                   <Input
                     id="state"
                     value={formData.state}
                     onChange={(e) => handleChange('state', e.target.value)}
-                    placeholder="Estado"
+                    placeholder={t('form.statePlaceholder')}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="postalCode">Codigo Postal</Label>
+                  <Label htmlFor="postalCode">{t('form.postalCode')}</Label>
                   <Input
                     id="postalCode"
                     value={formData.postalCode}
                     onChange={(e) => handleChange('postalCode', e.target.value)}
-                    placeholder="12345"
+                    placeholder={t('form.postalCodePlaceholder')}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="country">Pais</Label>
+                  <Label htmlFor="country">{t('form.country')}</Label>
                   <Input
                     id="country"
                     value={formData.country}
@@ -358,15 +360,15 @@ export default function NewCustomerPage() {
           {/* Credit and Notes */}
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Credito y Notas</CardTitle>
+              <CardTitle>{t('form.creditInfo.title')}</CardTitle>
               <CardDescription>
-                Configuracion de credito e informacion adicional
+                {t('form.creditInfo.subtitle')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="creditLimit">Limite de Credito</Label>
+                  <Label htmlFor="creditLimit">{t('form.creditLimit')}</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                       $
@@ -385,17 +387,17 @@ export default function NewCustomerPage() {
                     <p className="text-sm text-red-500">{errors.creditLimit}</p>
                   )}
                   <p className="text-sm text-muted-foreground">
-                    Monto maximo de credito permitido. Dejar en 0 para no otorgar credito.
+                    {t('form.creditLimitHelp')}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="notes">Notas</Label>
+                  <Label htmlFor="notes">{t('form.notes')}</Label>
                   <Textarea
                     id="notes"
                     value={formData.notes}
                     onChange={(e) => handleChange('notes', e.target.value)}
-                    placeholder="Notas adicionales sobre el cliente..."
+                    placeholder={t('form.notesPlaceholder')}
                     rows={4}
                   />
                 </div>
@@ -408,19 +410,19 @@ export default function NewCustomerPage() {
         <div className="flex justify-end gap-4">
           <Link href="/dashboard/customers">
             <Button type="button" variant="outline">
-              Cancelar
+              {t('actions.cancel')}
             </Button>
           </Link>
           <Button type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Guardando...
+                {t('actions.saving')}
               </>
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Guardar Cliente
+                {t('actions.save')}
               </>
             )}
           </Button>

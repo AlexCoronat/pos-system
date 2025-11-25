@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import {
   ArrowLeft,
   Save,
@@ -733,9 +734,8 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Saldo Actual</p>
-                      <p className={`text-xl font-bold ${
-                        (customer.currentBalance || 0) > 0 ? 'text-red-600' : 'text-green-600'
-                      }`}>
+                      <p className={`text-xl font-bold ${(customer.currentBalance || 0) > 0 ? 'text-red-600' : 'text-green-600'
+                        }`}>
                         {formatCurrency(customer.currentBalance || 0)}
                       </p>
                     </div>
@@ -816,14 +816,14 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                           <Badge
                             variant={
                               purchase.status === 'completed' ? 'default' :
-                              purchase.status === 'cancelled' ? 'destructive' :
-                              'secondary'
+                                purchase.status === 'cancelled' ? 'destructive' :
+                                  'secondary'
                             }
                           >
                             {purchase.status === 'completed' ? 'Completada' :
-                             purchase.status === 'cancelled' ? 'Cancelada' :
-                             purchase.status === 'pending' ? 'Pendiente' :
-                             purchase.status}
+                              purchase.status === 'cancelled' ? 'Cancelada' :
+                                purchase.status === 'pending' ? 'Pendiente' :
+                                  purchase.status}
                           </Badge>
                         </TableCell>
                       </TableRow>

@@ -676,13 +676,13 @@ Implementar soporte completo de múltiples idiomas usando `next-intl`, con espa�
 
 ---
 
-### Fase 8: Módulo de Clientes 👥
+###  Fase 8: Módulo de Clientes 👥 ✅
 **Tiempo estimado:** 3-4 horas
 
 **Páginas a traducir:**
-- [ ] **Customers List** (`app/dashboard/customers/page.tsx`)
+- [*] **Customers List** (`app/dashboard/customers/page.tsx`)
   - Tabla, filtros
-- [ ] **Customer Form** (`app/dashboard/customers/new/page.tsx`)
+- [*] **Customer Form** (`app/dashboard/customers/new/page.tsx`)
   - Formulario (individual/empresa)
 - [ ] **Customer Detail** (`app/dashboard/customers/[id]/page.tsx`)
   - Información, historial, estadísticas

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import {
   Plus,
   Search,
@@ -58,6 +59,7 @@ import { toast } from 'sonner'
 
 export default function CustomersPage() {
   const router = useRouter()
+  const t = useTranslations('customers')
   const [customers, setCustomers] = useState<CustomerListItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -110,7 +112,7 @@ export default function CustomersPage() {
       setTotalCustomers(response.total)
     } catch (error: any) {
       console.error('Error loading customers:', error)
-      toast.error('Error al cargar los clientes')
+      toast.error(t('messages.loadError'))
     } finally {
       setIsLoading(false)
     }
@@ -137,10 +139,10 @@ export default function CustomersPage() {
     setIsDeleting(true)
     try {
       await customerService.deleteCustomer(customerToDelete.id)
-      toast.success('Cliente eliminado correctamente')
+      toast.success(t('messages.deleteSuccess'))
       loadCustomers()
     } catch (error: any) {
-      toast.error(error.message || 'Error al eliminar el cliente')
+      toast.error(error.message || t('messages.deleteError'))
     } finally {
       setIsDeleting(false)
       setDeleteDialogOpen(false)
@@ -158,15 +160,15 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Clientes</h1>
+          <h1 className="text-3xl font-bold">{t('title')}</h1>
           <p className="text-muted-foreground">
-            Gestiona la informacion de tus clientes
+            {t('subtitle')}
           </p>
         </div>
         <Link href="/dashboard/customers/new">
           <Button size="lg">
             <Plus className="h-5 w-5 mr-2" />
-            Nuevo Cliente
+            {t('newCustomer')}
           </Button>
         </Link>
       </div>
@@ -176,7 +178,7 @@ export default function CustomersPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Clientes
+              {t('stats.totalCustomers')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -187,7 +189,7 @@ export default function CustomersPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Clientes Activos
+              {t('stats.activeCustomers')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -200,7 +202,7 @@ export default function CustomersPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Empresas
+              {t('stats.businesses')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -213,7 +215,7 @@ export default function CustomersPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Con Credito
+              {t('stats.withCredit')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -229,7 +231,7 @@ export default function CustomersPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
-            Filtros
+            {t('filters.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -238,7 +240,7 @@ export default function CustomersPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Buscar por nombre, email, telefono..."
+                placeholder={t('filters.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -247,29 +249,29 @@ export default function CustomersPage() {
 
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Tipo" />
+                <SelectValue placeholder={t('filters.type')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los tipos</SelectItem>
-                <SelectItem value="individual">Individual</SelectItem>
-                <SelectItem value="business">Empresa</SelectItem>
+                <SelectItem value="all">{t('filters.allTypes')}</SelectItem>
+                <SelectItem value="individual">{t('filters.individual')}</SelectItem>
+                <SelectItem value="business">{t('filters.business')}</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Estado" />
+                <SelectValue placeholder={t('filters.status')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="active">Activos</SelectItem>
-                <SelectItem value="inactive">Inactivos</SelectItem>
+                <SelectItem value="all">{t('filters.all')}</SelectItem>
+                <SelectItem value="active">{t('filters.active')}</SelectItem>
+                <SelectItem value="inactive">{t('filters.inactive')}</SelectItem>
               </SelectContent>
             </Select>
 
             <Button type="submit">
               <Search className="h-4 w-4 mr-2" />
-              Buscar
+              {t('filters.search')}
             </Button>
 
             <Button
@@ -278,7 +280,7 @@ export default function CustomersPage() {
               onClick={loadCustomers}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
-              Actualizar
+              {t('filters.refresh')}
             </Button>
           </form>
         </CardContent>
@@ -289,26 +291,26 @@ export default function CustomersPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">
-              Cargando clientes...
+              {t('loading')}
             </div>
           ) : customers.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
-              No se encontraron clientes
+              {t('noCustomers')}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Contacto</TableHead>
-                    <TableHead>Ciudad</TableHead>
-                    <TableHead className="text-right">Limite Credito</TableHead>
-                    <TableHead className="text-right">Saldo</TableHead>
-                    <TableHead className="text-right">Puntos</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead>{t('table.customer')}</TableHead>
+                    <TableHead>{t('table.type')}</TableHead>
+                    <TableHead>{t('table.contact')}</TableHead>
+                    <TableHead>{t('table.city')}</TableHead>
+                    <TableHead className="text-right">{t('table.creditLimit')}</TableHead>
+                    <TableHead className="text-right">{t('table.balance')}</TableHead>
+                    <TableHead className="text-right">{t('table.points')}</TableHead>
+                    <TableHead>{t('table.status')}</TableHead>
+                    <TableHead className="text-right">{t('table.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -316,9 +318,8 @@ export default function CustomersPage() {
                     <TableRow key={customer.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            customer.type === 'business' ? 'bg-blue-100' : 'bg-gray-100'
-                          }`}>
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${customer.type === 'business' ? 'bg-blue-100' : 'bg-gray-100'
+                            }`}>
                             {customer.type === 'business' ? (
                               <Building2 className="h-5 w-5 text-blue-600" />
                             ) : (
@@ -337,7 +338,7 @@ export default function CustomersPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {customer.type === 'business' ? 'Empresa' : 'Individual'}
+                          {customer.type === 'business' ? t('types.business') : t('types.individual')}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -375,7 +376,7 @@ export default function CustomersPage() {
                           variant={customer.isActive ? 'default' : 'secondary'}
                           className={customer.isActive ? 'bg-green-100 text-green-800' : ''}
                         >
-                          {customer.isActive ? 'Activo' : 'Inactivo'}
+                          {customer.isActive ? t('status.active') : t('status.inactive')}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -390,20 +391,20 @@ export default function CustomersPage() {
                               onClick={() => router.push(`/dashboard/customers/${customer.id}`)}
                             >
                               <Eye className="h-4 w-4 mr-2" />
-                              Ver detalles
+                              {t('actions.viewDetails')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => router.push(`/dashboard/customers/${customer.id}?edit=true`)}
                             >
                               <Edit className="h-4 w-4 mr-2" />
-                              Editar
+                              {t('actions.edit')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-red-600"
                               onClick={() => handleDeleteClick(customer)}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
-                              Eliminar
+                              {t('actions.delete')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -419,7 +420,7 @@ export default function CustomersPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between p-4 border-t">
               <div className="text-sm text-muted-foreground">
-                Pagina {currentPage} de {totalPages} ({totalCustomers} clientes en total)
+                {t('pagination.page')} {currentPage} {t('pagination.of')} {totalPages} ({totalCustomers} {t('pagination.customersTotal')})
               </div>
               <div className="flex gap-2">
                 <Button
@@ -428,7 +429,7 @@ export default function CustomersPage() {
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                 >
-                  Anterior
+                  {t('pagination.previous')}
                 </Button>
                 <Button
                   variant="outline"
@@ -436,7 +437,7 @@ export default function CustomersPage() {
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                 >
-                  Siguiente
+                  {t('pagination.next')}
                 </Button>
               </div>
             </div>
@@ -448,20 +449,19 @@ export default function CustomersPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar Cliente</AlertDialogTitle>
+            <AlertDialogTitle>{t('deleteDialog.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estas seguro de que deseas eliminar al cliente "{customerToDelete ? getCustomerName(customerToDelete) : ''}"?
-              Esta accion no se puede deshacer.
+              {t('deleteDialog.description', { name: customerToDelete ? getCustomerName(customerToDelete) : '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t('deleteDialog.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700"
             >
-              {isDeleting ? 'Eliminando...' : 'Eliminar'}
+              {isDeleting ? t('deleteDialog.deleting') : t('deleteDialog.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
