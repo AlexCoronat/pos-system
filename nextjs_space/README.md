@@ -752,13 +752,13 @@ Implementar soporte completo de múltiples idiomas usando `next-intl`, con espa�
 **Tiempo estimado:** 3-4 horas
 
 **Tareas:**
-- [ ] Probar cambio de idioma en todas las páginas
-- [ ] Verificar persistencia del idioma seleccionado
-- [ ] Revisar textos demasiado largos (overflow)
-- [ ] Ajustar espaciado y layout según idioma
-- [ ] Probar en mobile y desktop
-- [ ] Documentar cómo agregar nuevas traducciones
-- [ ] Crear guía para contribuidores
+- [*] Probar cambio de idioma en todas las páginas
+- [*] Verificar persistencia del idioma seleccionado
+- [*] Revisar textos demasiado largos (overflow)
+- [*] Ajustar espaciado y layout según idioma
+- [*] Probar en mobile y desktop
+- [*] Documentar cómo agregar nuevas traducciones
+- [*] Crear guía para contribuidores
 
 ---
 

@@ -1,5 +1,8 @@
 /**
- * Barrel export * from './product-codes'
+ * Barrel export for all utility functions
+ */
+
+export * from './product-codes'
 export * from './business-context'
 export * from './error-handler'
 export * from './logger'
