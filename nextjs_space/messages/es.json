@@ -882,6 +882,65 @@
       "deleteError": "Error al eliminar el cliente"
     }
   },
+  "reports": {
+    "title": "Reportes",
+    "subtitle": "Análisis y estadísticas de tu negocio",
+    "filters": {
+      "dateRange": "Rango de fechas",
+      "location": "Ubicación",
+      "allLocations": "Todas las ubicaciones",
+      "reportType": "Tipo de reporte",
+      "apply": "Aplicar filtros",
+      "last7Days": "Últimos 7 días",
+      "last30Days": "Últimos 30 días",
+      "last90Days": "Últimos 90 días",
+      "customRange": "Rango personalizado"
+    },
+    "types": {
+      "sales": "Ventas",
+      "inventory": "Inventario",
+      "customers": "Clientes",
+      "financial": "Financiero"
+    },
+    "summary": {
+      "totalSales": "Ventas Totales",
+      "transactions": "Transacciones",
+      "avgTicket": "Ticket Promedio",
+      "grossProfit": "Ganancia Bruta",
+      "period": "Últimos {days} días",
+      "completedSales": "Ventas completadas",
+      "perTransaction": "Por transacción"
+    },
+    "charts": {
+      "salesTrend": "Tendencia de Ventas",
+      "topProducts": "Productos Más Vendidos",
+      "revenueByCategory": "Ventas por Categoría",
+      "salesByLocation": "Ventas por Ubicación",
+      "dailyRevenue": "Ingresos diarios de los últimos 30 días",
+      "topByRevenue": "Top 5 productos por ingresos",
+      "sales": "Ventas",
+      "revenue": "Ingresos",
+      "date": "Fecha"
+    },
+    "export": {
+      "pdf": "Descargar PDF",
+      "excel": "Descargar Excel",
+      "csv": "Descargar CSV",
+      "generating": "Generando...",
+      "success": "Reporte descargado exitosamente",
+      "error": "Error al generar el reporte"
+    },
+    "empty": {
+      "noData": "No hay datos para el período seleccionado",
+      "tryDifferentRange": "Intenta con un rango de fechas diferente",
+      "noSales": "No se encontraron ventas"
+    },
+    "messages": {
+      "loading": "Cargando reportes...",
+      "error": "No se pudieron cargar los reportes",
+      "retry": "Intentar nuevamente"
+    }
+  },
   "team": {
     "title": "Equipo",
     "subtitle": "Gestiona los usuarios de tu negocio",

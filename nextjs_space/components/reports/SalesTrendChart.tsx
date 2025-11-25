@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from 'next-intl'
 import { DailySalesData } from "@/lib/services/reports.service"
 import {
     Area,
@@ -11,13 +12,13 @@ import {
     YAxis,
 } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatCurrency } from "@/lib/utils" // Assuming this exists, if not I'll use Intl
 
 interface SalesTrendChartProps {
     data: DailySalesData[]
 }
 
 export function SalesTrendChart({ data }: SalesTrendChartProps) {
+    const t = useTranslations('reports.charts')
     // Format date for display
     const formattedData = data.map(item => ({
         ...item,
@@ -30,9 +31,9 @@ export function SalesTrendChart({ data }: SalesTrendChartProps) {
     return (
         <Card className="col-span-4">
             <CardHeader>
-                <CardTitle>Tendencia de Ventas</CardTitle>
+                <CardTitle>{t('salesTrend')}</CardTitle>
                 <CardDescription>
-                    Ingresos diarios de los últimos 30 días
+                    {t('dailyRevenue')}
                 </CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
@@ -61,8 +62,8 @@ export function SalesTrendChart({ data }: SalesTrendChartProps) {
                             />
                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
                             <Tooltip
-                                formatter={(value: number) => [`$${value.toFixed(2)}`, 'Ventas']}
-                                labelFormatter={(label) => `Fecha: ${label}`}
+                                formatter={(value: number) => [`$${value.toFixed(2)}`, t('sales')]}
+                                labelFormatter={(label) => `${t('date')}: ${label}`}
                             />
                             <Area
                                 type="monotone"

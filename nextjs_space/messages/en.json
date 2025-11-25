@@ -882,6 +882,65 @@
       "deleteError": "Error deleting customer"
     }
   },
+  "reports": {
+    "title": "Reports",
+    "subtitle": "Business analytics and statistics",
+    "filters": {
+      "dateRange": "Date Range",
+      "location": "Location",
+      "allLocations": "All Locations",
+      "reportType": "Report Type",
+      "apply": "Apply Filters",
+      "last7Days": "Last 7 Days",
+      "last30Days": "Last 30 Days",
+      "last90Days": "Last 90 Days",
+      "customRange": "Custom Range"
+    },
+    "types": {
+      "sales": "Sales",
+      "inventory": "Inventory",
+      "customers": "Customers",
+      "financial": "Financial"
+    },
+    "summary": {
+      "totalSales": "Total Sales",
+      "transactions": "Transactions",
+      "avgTicket": "Average Ticket",
+      "grossProfit": "Gross Profit",
+      "period": "Last {days} days",
+      "completedSales": "Completed sales",
+      "perTransaction": "Per transaction"
+    },
+    "charts": {
+      "salesTrend": "Sales Trend",
+      "topProducts": "Top Selling Products",
+      "revenueByCategory": "Revenue by Category",
+      "salesByLocation": "Sales by Location",
+      "dailyRevenue": "Daily revenue for the last 30 days",
+      "topByRevenue": "Top 5 products by revenue",
+      "sales": "Sales",
+      "revenue": "Revenue",
+      "date": "Date"
+    },
+    "export": {
+      "pdf": "Download PDF",
+      "excel": "Download Excel",
+      "csv": "Download CSV",
+      "generating": "Generating...",
+      "success": "Report downloaded successfully",
+      "error": "Error generating report"
+    },
+    "empty": {
+      "noData": "No data for the selected period",
+      "tryDifferentRange": "Try a different date range",
+      "noSales": "No sales found"
+    },
+    "messages": {
+      "loading": "Loading reports...",
+      "error": "Could not load reports",
+      "retry": "Try Again"
+    }
+  },
   "team": {
     "title": "Team",
     "subtitle": "Manage your business users",

@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from 'next-intl'
 import { TopProductData } from "@/lib/services/reports.service"
 import {
     Bar,
@@ -17,12 +18,13 @@ interface TopProductsChartProps {
 }
 
 export function TopProductsChart({ data }: TopProductsChartProps) {
+    const t = useTranslations('reports.charts')
     return (
         <Card className="col-span-3">
             <CardHeader>
-                <CardTitle>Productos Más Vendidos</CardTitle>
+                <CardTitle>{t('topProducts')}</CardTitle>
                 <CardDescription>
-                    Top 5 productos por ingresos
+                    {t('topByRevenue')}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -39,7 +41,7 @@ export function TopProductsChart({ data }: TopProductsChartProps) {
                                 axisLine={false}
                             />
                             <Tooltip
-                                formatter={(value: number) => [`$${value.toFixed(2)}`, 'Ingresos']}
+                                formatter={(value: number) => [`$${value.toFixed(2)}`, t('revenue')]}
                                 cursor={{ fill: 'transparent' }}
                             />
                             <Bar dataKey="total_revenue" radius={[0, 4, 4, 0]}>
