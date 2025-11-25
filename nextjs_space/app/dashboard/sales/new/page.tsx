@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProductSearch } from '@/components/sales/product-search'
@@ -11,6 +12,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function NewSalePage() {
+  const t = useTranslations('sales.pos')
   const router = useRouter()
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const { items } = useCartStore()
@@ -40,13 +42,13 @@ export default function NewSalePage() {
             <Link href="/dashboard/sales">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Volver
+                {t('back')}
               </Button>
             </Link>
             <div>
-              <h1 className="text-2xl font-bold">Nueva Venta</h1>
+              <h1 className="text-2xl font-bold">{t('title')}</h1>
               <p className="text-sm text-muted-foreground">
-                Busca y agrega productos al carrito
+                {t('subtitle')}
               </p>
             </div>
           </div>
@@ -68,10 +70,10 @@ export default function NewSalePage() {
             {/* Quick Access / Recent Products (Optional) */}
             <div className="bg-accent/50 rounded-lg p-6 text-center text-muted-foreground">
               <p>
-                Puedes buscar productos por nombre o código SKU
+                {t('searchHelp')}
               </p>
               <p className="text-sm mt-2">
-                Los productos se agregarán automáticamente al carrito
+                {t('autoAddHelp')}
               </p>
             </div>
           </div>

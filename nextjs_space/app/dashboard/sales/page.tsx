@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Plus, Search, Filter, Eye, Download, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,14 +35,8 @@ const STATUS_COLORS = {
   refunded: 'bg-gray-100 text-gray-800'
 }
 
-const STATUS_LABELS = {
-  completed: 'Completada',
-  pending: 'Pendiente',
-  cancelled: 'Cancelada',
-  refunded: 'Reembolsada'
-}
-
 export default function SalesPage() {
+  const t = useTranslations('sales')
   const router = useRouter()
   const [sales, setSales] = useState<SaleListItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -88,7 +83,7 @@ export default function SalesPage() {
       setTotal(response.total)
     } catch (error: any) {
       console.error('Error loading sales:', error)
-      toast.error('Error al cargar las ventas')
+      toast.error(t('errors.loadFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -109,15 +104,15 @@ export default function SalesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Ventas</h1>
+          <h1 className="text-3xl font-bold">{t('title')}</h1>
           <p className="text-muted-foreground">
-            Gestiona y consulta todas las ventas realizadas
+            {t('subtitle')}
           </p>
         </div>
         <Link href="/dashboard/sales/new">
           <Button size="lg">
             <Plus className="h-5 w-5 mr-2" />
-            Nueva Venta
+            {t('newSale')}
           </Button>
         </Link>
       </div>
@@ -127,7 +122,7 @@ export default function SalesPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Ventas
+              {t('stats.totalSales')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -138,7 +133,7 @@ export default function SalesPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Completadas
+              {t('stats.completed')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -151,7 +146,7 @@ export default function SalesPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Pendientes
+              {t('stats.pending')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -164,7 +159,7 @@ export default function SalesPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Canceladas
+              {t('stats.cancelled')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -180,7 +175,7 @@ export default function SalesPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
-            Filtros
+            {t('filters.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -189,7 +184,7 @@ export default function SalesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Buscar por número de venta..."
+                placeholder={t('filters.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -198,20 +193,20 @@ export default function SalesPage() {
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Estado" />
+                <SelectValue placeholder={t('filters.status')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los estados</SelectItem>
-                <SelectItem value="completed">Completadas</SelectItem>
-                <SelectItem value="pending">Pendientes</SelectItem>
-                <SelectItem value="cancelled">Canceladas</SelectItem>
-                <SelectItem value="refunded">Reembolsadas</SelectItem>
+                <SelectItem value="all">{t('filters.allStatuses')}</SelectItem>
+                <SelectItem value="completed">{t('status.completed')}</SelectItem>
+                <SelectItem value="pending">{t('status.pending')}</SelectItem>
+                <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
+                <SelectItem value="refunded">{t('status.refunded')}</SelectItem>
               </SelectContent>
             </Select>
 
             <Button type="submit">
               <Search className="h-4 w-4 mr-2" />
-              Buscar
+              {t('filters.search')}
             </Button>
 
             <Button
@@ -220,7 +215,7 @@ export default function SalesPage() {
               onClick={loadSales}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
-              Actualizar
+              {t('filters.refresh')}
             </Button>
           </form>
         </CardContent>
@@ -231,27 +226,27 @@ export default function SalesPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">
-              Cargando ventas...
+              {t('loading')}
             </div>
           ) : sales.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
-              No se encontraron ventas
+              {t('noSales')}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Número</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Productos</TableHead>
-                    <TableHead className="text-right">Subtotal</TableHead>
-                    <TableHead className="text-right">Descuento</TableHead>
-                    <TableHead className="text-right">Impuestos</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead>{t('table.number')}</TableHead>
+                    <TableHead>{t('table.date')}</TableHead>
+                    <TableHead>{t('table.customer')}</TableHead>
+                    <TableHead>{t('table.products')}</TableHead>
+                    <TableHead className="text-right">{t('table.subtotal')}</TableHead>
+                    <TableHead className="text-right">{t('table.discount')}</TableHead>
+                    <TableHead className="text-right">{t('table.taxes')}</TableHead>
+                    <TableHead className="text-right">{t('table.total')}</TableHead>
+                    <TableHead>{t('table.status')}</TableHead>
+                    <TableHead className="text-right">{t('table.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -264,11 +259,11 @@ export default function SalesPage() {
                         {formatDate(sale.createdAt)}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {sale.customerName || 'Cliente general'}
+                        {sale.customerName || t('table.generalCustomer')}
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">
-                          {sale.itemCount} {sale.itemCount === 1 ? 'producto' : 'productos'}
+                          {sale.itemCount} {sale.itemCount === 1 ? t('table.product') : t('table.products_plural')}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -285,7 +280,7 @@ export default function SalesPage() {
                       </TableCell>
                       <TableCell>
                         <Badge className={STATUS_COLORS[sale.status]}>
-                          {STATUS_LABELS[sale.status]}
+                          {t(`status.${sale.status}`)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -313,7 +308,7 @@ export default function SalesPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between p-4 border-t">
               <div className="text-sm text-muted-foreground">
-                Página {currentPage} de {totalPages} ({total} ventas en total)
+                {t('pagination.page')} {currentPage} {t('pagination.of')} {totalPages} ({total} {t('pagination.salesTotal')})
               </div>
               <div className="flex gap-2">
                 <Button
@@ -322,7 +317,7 @@ export default function SalesPage() {
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                 >
-                  Anterior
+                  {t('pagination.previous')}
                 </Button>
                 <Button
                   variant="outline"
@@ -330,7 +325,7 @@ export default function SalesPage() {
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                 >
-                  Siguiente
+                  {t('pagination.next')}
                 </Button>
               </div>
             </div>

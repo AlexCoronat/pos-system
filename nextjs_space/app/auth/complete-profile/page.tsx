@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,6 +20,7 @@ import { getUserFriendlyMessage } from '@/lib/utils/error-handler'
 type Step = 1 | 2 | 3
 
 export default function CompleteProfilePage() {
+  const t = useTranslations('auth.completeProfile')
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [formData, setFormData] = useState({
     // Personal data
@@ -65,8 +67,8 @@ export default function CompleteProfilePage() {
   const validateStep1 = () => {
     if (!formData.firstName || !formData.lastName) {
       toast({
-        title: "Campos requeridos",
-        description: "Por favor ingresa tu nombre y apellido",
+        title: t('validation.fieldsRequired'),
+        description: t('validation.firstNameRequired'),
         variant: "destructive",
       })
       return false
@@ -77,8 +79,8 @@ export default function CompleteProfilePage() {
   const validateStep2 = () => {
     if (!formData.businessName) {
       toast({
-        title: "Campo requerido",
-        description: "El nombre del negocio es obligatorio",
+        title: t('validation.fieldRequired'),
+        description: t('validation.businessNameRequired'),
         variant: "destructive",
       })
       return false
@@ -89,8 +91,8 @@ export default function CompleteProfilePage() {
   const validateStep3 = () => {
     if (!formData.locationName) {
       toast({
-        title: "Campo requerido",
-        description: "El nombre de la ubicación es obligatorio",
+        title: t('validation.fieldRequired'),
+        description: t('validation.locationNameRequired'),
         variant: "destructive",
       })
       return false
@@ -211,8 +213,8 @@ export default function CompleteProfilePage() {
       })
 
       toast({
-        title: "Perfil completado",
-        description: "Tu cuenta y negocio han sido configurados exitosamente",
+        title: t('messages.profileCompleted'),
+        description: t('messages.profileCompletedDesc'),
       })
 
       router.push(ROUTES.DASHBOARD)
@@ -232,9 +234,9 @@ export default function CompleteProfilePage() {
   }
 
   const steps = [
-    { number: 1, title: 'Datos personales', icon: User },
-    { number: 2, title: 'Tu negocio', icon: Building2 },
-    { number: 3, title: 'Primera ubicación', icon: MapPin },
+    { number: 1, title: t('steps.personal'), icon: User },
+    { number: 2, title: t('steps.business'), icon: Building2 },
+    { number: 3, title: t('steps.location'), icon: MapPin },
   ]
 
   if (isCheckingAuth) {
@@ -251,9 +253,9 @@ export default function CompleteProfilePage() {
         <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
           {/* Header */}
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold text-gray-900">Completa tu perfil</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
             <p className="text-gray-600">
-              Configura tu negocio para comenzar
+              {t('subtitle')}
             </p>
             {userEmail && (
               <p className="text-sm text-blue-600">
@@ -301,7 +303,7 @@ export default function CompleteProfilePage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">Nombre *</Label>
+                    <Label htmlFor="firstName">{t('step1.firstName')}</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                       <Input
@@ -309,7 +311,7 @@ export default function CompleteProfilePage() {
                         type="text"
                         required
                         className="pl-10 h-12"
-                        placeholder="Tu nombre"
+                        placeholder={t('step1.firstNamePlaceholder')}
                         value={formData.firstName}
                         onChange={(e) => handleInputChange('firstName', e.target.value)}
                       />
@@ -317,7 +319,7 @@ export default function CompleteProfilePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Apellido *</Label>
+                    <Label htmlFor="lastName">{t('step1.lastName')}</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                       <Input
@@ -325,7 +327,7 @@ export default function CompleteProfilePage() {
                         type="text"
                         required
                         className="pl-10 h-12"
-                        placeholder="Tu apellido"
+                        placeholder={t('step1.lastNamePlaceholder')}
                         value={formData.lastName}
                         onChange={(e) => handleInputChange('lastName', e.target.value)}
                       />
@@ -334,14 +336,14 @@ export default function CompleteProfilePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Teléfono (opcional)</Label>
+                  <Label htmlFor="phone">{t('step1.phone')}</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
                       id="phone"
                       type="tel"
                       className="pl-10 h-12"
-                      placeholder="(555) 123-4567"
+                      placeholder={t('step1.phonePlaceholder')}
                       value={formData.phone}
                       onChange={(e) => handleInputChange('phone', e.target.value)}
                     />
@@ -356,13 +358,13 @@ export default function CompleteProfilePage() {
                 <Card className="bg-blue-50 border-blue-200">
                   <CardContent className="pt-4">
                     <p className="text-sm text-blue-800">
-                      Ingresa los datos de tu negocio. Serás el administrador principal.
+                      {t('step2.infoMessage')}
                     </p>
                   </CardContent>
                 </Card>
 
                 <div className="space-y-2">
-                  <Label htmlFor="businessName">Nombre del negocio *</Label>
+                  <Label htmlFor="businessName">{t('step2.businessName')}</Label>
                   <div className="relative">
                     <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
@@ -370,7 +372,7 @@ export default function CompleteProfilePage() {
                       type="text"
                       required
                       className="pl-10 h-12"
-                      placeholder="Mi Papelería"
+                      placeholder={t('step2.businessNamePlaceholder')}
                       value={formData.businessName}
                       onChange={(e) => handleInputChange('businessName', e.target.value)}
                     />
@@ -378,24 +380,24 @@ export default function CompleteProfilePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="businessTaxId">RFC (opcional)</Label>
+                  <Label htmlFor="businessTaxId">{t('step2.businessTaxId')}</Label>
                   <Input
                     id="businessTaxId"
                     type="text"
                     className="h-12"
-                    placeholder="XAXX010101000"
+                    placeholder={t('step2.businessTaxIdPlaceholder')}
                     value={formData.businessTaxId}
                     onChange={(e) => handleInputChange('businessTaxId', e.target.value.toUpperCase())}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="businessType">Giro del negocio</Label>
+                  <Label htmlFor="businessType">{t('step2.businessType')}</Label>
                   <Input
                     id="businessType"
                     type="text"
                     className="h-12"
-                    placeholder="Papelería, Abarrotes, etc."
+                    placeholder={t('step2.businessTypePlaceholder')}
                     value={formData.businessType}
                     onChange={(e) => handleInputChange('businessType', e.target.value)}
                   />
@@ -409,13 +411,13 @@ export default function CompleteProfilePage() {
                 <Card className="bg-green-50 border-green-200">
                   <CardContent className="pt-4">
                     <p className="text-sm text-green-800">
-                      Configura tu primera sucursal o punto de venta.
+                      {t('step3.infoMessage')}
                     </p>
                   </CardContent>
                 </Card>
 
                 <div className="space-y-2">
-                  <Label htmlFor="locationName">Nombre de la sucursal *</Label>
+                  <Label htmlFor="locationName">{t('step3.locationName')}</Label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
@@ -423,7 +425,7 @@ export default function CompleteProfilePage() {
                       type="text"
                       required
                       className="pl-10 h-12"
-                      placeholder="Sucursal Centro"
+                      placeholder={t('step3.locationNamePlaceholder')}
                       value={formData.locationName}
                       onChange={(e) => handleInputChange('locationName', e.target.value)}
                     />
@@ -431,12 +433,12 @@ export default function CompleteProfilePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="locationAddress">Dirección</Label>
+                  <Label htmlFor="locationAddress">{t('step3.locationAddress')}</Label>
                   <Input
                     id="locationAddress"
                     type="text"
                     className="h-12"
-                    placeholder="Calle, número, colonia"
+                    placeholder={t('step3.locationAddressPlaceholder')}
                     value={formData.locationAddress}
                     onChange={(e) => handleInputChange('locationAddress', e.target.value)}
                   />
@@ -444,23 +446,23 @@ export default function CompleteProfilePage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="locationCity">Ciudad</Label>
+                    <Label htmlFor="locationCity">{t('step3.locationCity')}</Label>
                     <Input
                       id="locationCity"
                       type="text"
                       className="h-12"
-                      placeholder="Ciudad"
+                      placeholder={t('step3.locationCityPlaceholder')}
                       value={formData.locationCity}
                       onChange={(e) => handleInputChange('locationCity', e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="locationState">Estado</Label>
+                    <Label htmlFor="locationState">{t('step3.locationState')}</Label>
                     <Input
                       id="locationState"
                       type="text"
                       className="h-12"
-                      placeholder="Estado"
+                      placeholder={t('step3.locationStatePlaceholder')}
                       value={formData.locationState}
                       onChange={(e) => handleInputChange('locationState', e.target.value)}
                     />
@@ -469,23 +471,23 @@ export default function CompleteProfilePage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="locationPostalCode">CP</Label>
+                    <Label htmlFor="locationPostalCode">{t('step3.locationPostalCode')}</Label>
                     <Input
                       id="locationPostalCode"
                       type="text"
                       className="h-12"
-                      placeholder="12345"
+                      placeholder={t('step3.locationPostalCodePlaceholder')}
                       value={formData.locationPostalCode}
                       onChange={(e) => handleInputChange('locationPostalCode', e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="locationPhone">Teléfono</Label>
+                    <Label htmlFor="locationPhone">{t('step3.locationPhone')}</Label>
                     <Input
                       id="locationPhone"
                       type="tel"
                       className="h-12"
-                      placeholder="(555) 123-4567"
+                      placeholder={t('step3.locationPhonePlaceholder')}
                       value={formData.locationPhone}
                       onChange={(e) => handleInputChange('locationPhone', e.target.value)}
                     />
@@ -504,7 +506,7 @@ export default function CompleteProfilePage() {
                   onClick={handleBack}
                 >
                   <ArrowLeft className="h-5 w-5 mr-2" />
-                  Anterior
+                  {t('buttons.back')}
                 </Button>
               )}
 
@@ -514,7 +516,7 @@ export default function CompleteProfilePage() {
                   className="flex-1 h-12 bg-blue-600 hover:bg-blue-700"
                   onClick={handleNext}
                 >
-                  Siguiente
+                  {t('buttons.next')}
                   <ArrowRight className="h-5 w-5 ml-2" />
                 </Button>
               ) : (
@@ -526,10 +528,10 @@ export default function CompleteProfilePage() {
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
                       <Loader2 className="h-5 w-5 animate-spin" />
-                      <span>Guardando...</span>
+                      <span>{t('buttons.saving')}</span>
                     </div>
                   ) : (
-                    <span>Completar configuración</span>
+                    <span>{t('buttons.complete')}</span>
                   )}
                 </Button>
               )}

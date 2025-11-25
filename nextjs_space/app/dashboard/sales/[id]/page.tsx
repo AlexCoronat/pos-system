@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Download, Ban, RotateCcw, Eye, Package, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -39,22 +40,17 @@ const STATUS_COLORS = {
   refunded: 'bg-gray-100 text-gray-800'
 }
 
-const STATUS_LABELS = {
-  completed: 'Completada',
-  pending: 'Pendiente',
-  cancelled: 'Cancelada',
-  refunded: 'Reembolsada'
-}
-
-const PAYMENT_METHOD_NAMES: Record<number, string> = {
-  1: 'Efectivo',
-  2: 'Tarjeta',
-  3: 'Transferencia',
-  4: 'Mercado Pago',
-  5: 'Crédito'
+const PAYMENT_METHOD_KEYS: Record<number, string> = {
+  1: 'cash',
+  2: 'card',
+  3: 'transfer',
+  4: 'mercadoPago',
+  5: 'credit'
 }
 
 export default function SaleDetailPage({ params }: { params: { id: string } }) {
+  const t = useTranslations('sales.detail')
+  const tStatus = useTranslations('sales.status')
   const router = useRouter()
   const [sale, setSale] = useState<SaleWithItems | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -86,10 +82,10 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
 
-      toast.success('PDF descargado exitosamente')
+      toast.success(t('messages.pdfDownloaded'))
     } catch (error) {
       console.error('Error generating PDF:', error)
-      toast.error('Error al generar el PDF')
+      toast.error(t('messages.pdfError'))
     } finally {
       setIsGeneratingPDF(false)
     }
@@ -119,7 +115,7 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
       setSale(saleData)
     } catch (error: any) {
       console.error('Error loading sale:', error)
-      toast.error('Error al cargar la venta')
+      toast.error(t('messages.loadError'))
       router.push('/dashboard/sales')
     } finally {
       setIsLoading(false)
@@ -132,19 +128,19 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
 
   const handleCancelSale = async () => {
     if (!sale || !cancelReason.trim()) {
-      toast.error('Debes proporcionar un motivo de cancelación')
+      toast.error(t('messages.cancelReasonRequired'))
       return
     }
 
     setIsCancelling(true)
     try {
       await salesService.cancelSale(sale.id, cancelReason)
-      toast.success('Venta cancelada exitosamente')
+      toast.success(t('messages.cancelSuccess'))
       setCancelDialogOpen(false)
       loadSale()
     } catch (error: any) {
       console.error('Error cancelling sale:', error)
-      toast.error(error.message || 'Error al cancelar la venta')
+      toast.error(error.message || t('messages.cancelError'))
     } finally {
       setIsCancelling(false)
     }
@@ -154,7 +150,7 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Cargando venta...</p>
+          <p className="text-muted-foreground">{t('loading')}</p>
         </div>
       </div>
     )
@@ -164,7 +160,7 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Venta no encontrada</p>
+          <p className="text-muted-foreground">{t('notFound')}</p>
         </div>
       </div>
     )
@@ -178,14 +174,14 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
           <Link href="/dashboard/sales">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
+              {t('back')}
             </Button>
           </Link>
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold">{sale.saleNumber}</h1>
               <Badge className={STATUS_COLORS[sale.status]}>
-                {STATUS_LABELS[sale.status]}
+                {tStatus(sale.status)}
               </Badge>
             </div>
             <p className="text-muted-foreground mt-1">
@@ -206,7 +202,7 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
             ) : (
               <Download className="h-4 w-4 mr-2" />
             )}
-            {isGeneratingPDF ? 'Generando...' : 'Descargar PDF'}
+            {isGeneratingPDF ? t('generating') : t('downloadPDF')}
           </Button>
           {sale.status === 'completed' && (
             <>
@@ -217,11 +213,11 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
                 onClick={() => setCancelDialogOpen(true)}
               >
                 <Ban className="h-4 w-4 mr-2" />
-                Cancelar Venta
+                {t('cancelSale')}
               </Button>
               <Button variant="outline" size="sm">
                 <RotateCcw className="h-4 w-4 mr-2" />
-                Reembolsar
+                {t('refund')}
               </Button>
             </>
           )}
@@ -233,14 +229,14 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
         {/* Customer Info */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Cliente</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('customer')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="font-semibold">{sale.customerName || 'Cliente general'}</p>
+            <p className="font-semibold">{sale.customerName || t('generalCustomer')}</p>
             {sale.customerId && (
               <Button variant="link" className="p-0 h-auto mt-2" size="sm">
                 <Eye className="h-3 w-3 mr-1" />
-                Ver perfil
+                {t('viewProfile')}
               </Button>
             )}
           </CardContent>
@@ -249,20 +245,20 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
         {/* Location Info */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Ubicación</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('location')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="font-semibold">{sale.locationName || `Ubicación ${sale.locationId}`}</p>
+            <p className="font-semibold">{sale.locationName || t('locationFallback', { id: sale.locationId })}</p>
           </CardContent>
         </Card>
 
         {/* Sold By */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Vendido por</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('soldBy')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="font-semibold">{sale.soldByName || 'Usuario'}</p>
+            <p className="font-semibold">{sale.soldByName || t('userFallback')}</p>
           </CardContent>
         </Card>
       </div>
@@ -272,20 +268,20 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Productos ({sale.items.length})
+            {t('products')} ({sale.items.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Producto</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead className="text-center">Cantidad</TableHead>
-                <TableHead className="text-right">Precio Unit.</TableHead>
-                <TableHead className="text-right">Descuento</TableHead>
-                <TableHead className="text-right">Impuestos</TableHead>
-                <TableHead className="text-right">Total</TableHead>
+                <TableHead>{t('itemsTable.product')}</TableHead>
+                <TableHead>{t('itemsTable.sku')}</TableHead>
+                <TableHead className="text-center">{t('itemsTable.quantity')}</TableHead>
+                <TableHead className="text-right">{t('itemsTable.unitPrice')}</TableHead>
+                <TableHead className="text-right">{t('itemsTable.discount')}</TableHead>
+                <TableHead className="text-right">{t('itemsTable.taxes')}</TableHead>
+                <TableHead className="text-right">{t('itemsTable.total')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -331,30 +327,30 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
         {/* Totals */}
         <Card>
           <CardHeader>
-            <CardTitle>Resumen de Venta</CardTitle>
+            <CardTitle>{t('summary.title')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal:</span>
+              <span className="text-muted-foreground">{t('summary.subtotal')}</span>
               <span className="font-medium">{formatCurrency(sale.subtotal)}</span>
             </div>
 
             {sale.discountAmount > 0 && (
               <div className="flex justify-between text-green-600">
-                <span>Descuentos:</span>
+                <span>{t('summary.discounts')}</span>
                 <span className="font-medium">-{formatCurrency(sale.discountAmount)}</span>
               </div>
             )}
 
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Impuestos (16%):</span>
+              <span className="text-muted-foreground">{t('summary.taxes')}</span>
               <span className="font-medium">{formatCurrency(sale.taxAmount)}</span>
             </div>
 
             <Separator />
 
             <div className="flex justify-between text-lg font-bold">
-              <span>TOTAL:</span>
+              <span>{t('summary.total')}</span>
               <span className="text-primary">{formatCurrency(sale.total)}</span>
             </div>
           </CardContent>
@@ -363,29 +359,32 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
         {/* Payments */}
         <Card>
           <CardHeader>
-            <CardTitle>Métodos de Pago</CardTitle>
+            <CardTitle>{t('payments.title')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {sale.payments.map((payment) => (
-              <div key={payment.id} className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">
-                    {PAYMENT_METHOD_NAMES[payment.paymentMethodId] || 'Método de pago'}
-                  </p>
-                  {payment.reference && (
-                    <p className="text-sm text-muted-foreground">
-                      Ref: {payment.reference}
+            {sale.payments.map((payment) => {
+              const methodKey = PAYMENT_METHOD_KEYS[payment.paymentMethodId]
+              return (
+                <div key={payment.id} className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">
+                      {methodKey ? t(`payments.methods.${methodKey}`) : t('payments.methodFallback')}
                     </p>
-                  )}
+                    {payment.reference && (
+                      <p className="text-sm text-muted-foreground">
+                        {t('payments.reference')} {payment.reference}
+                      </p>
+                    )}
+                  </div>
+                  <span className="font-semibold">{formatCurrency(payment.amount)}</span>
                 </div>
-                <span className="font-semibold">{formatCurrency(payment.amount)}</span>
-              </div>
-            ))}
+              )
+            })}
 
             <Separator />
 
             <div className="flex justify-between font-bold">
-              <span>Total Pagado:</span>
+              <span>{t('payments.totalPaid')}</span>
               <span className="text-green-600">
                 {formatCurrency(sale.payments.reduce((sum, p) => sum + p.amount, 0))}
               </span>
@@ -398,7 +397,7 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
       {sale.notes && (
         <Card>
           <CardHeader>
-            <CardTitle>Notas</CardTitle>
+            <CardTitle>{t('notes')}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground whitespace-pre-wrap">{sale.notes}</p>
@@ -410,20 +409,19 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancelar Venta</DialogTitle>
+            <DialogTitle>{t('cancelDialog.title')}</DialogTitle>
             <DialogDescription>
-              Esta acción cancelará la venta y restaurará el inventario.
-              Por favor proporciona un motivo de cancelación.
+              {t('cancelDialog.description')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Motivo de cancelación *</Label>
+              <Label>{t('cancelDialog.reasonLabel')}</Label>
               <Textarea
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="Describe el motivo de la cancelación..."
+                placeholder={t('cancelDialog.reasonPlaceholder')}
                 rows={4}
               />
             </div>
@@ -435,14 +433,14 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
               onClick={() => setCancelDialogOpen(false)}
               disabled={isCancelling}
             >
-              Cerrar
+              {t('cancelDialog.close')}
             </Button>
             <Button
               variant="destructive"
               onClick={handleCancelSale}
               disabled={isCancelling || !cancelReason.trim()}
             >
-              {isCancelling ? 'Cancelando...' : 'Confirmar Cancelación'}
+              {isCancelling ? t('cancelDialog.cancelling') : t('cancelDialog.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>

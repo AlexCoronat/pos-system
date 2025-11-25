@@ -2,16 +2,19 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useAuth } from '@/lib/auth/use-auth'
+import { useAuth } from '@/lib/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { Mail, ArrowLeft, Send, CheckCircle } from 'lucide-react'
 
 export default function RecoverPasswordPage() {
+  const t = useTranslations('auth.recoverPassword')
+  const tCommon = useTranslations('common')
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
@@ -131,9 +134,9 @@ export default function RecoverPasswordPage() {
             />
           </div>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900">Forgot password?</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
         <p className="text-gray-600">
-          No worries, we&apos;ll send you reset instructions
+          {t('subtitle')}
         </p>
       </div>
 
@@ -143,7 +146,7 @@ export default function RecoverPasswordPage() {
           {/* Email Field */}
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-              Email address
+              {t('email')}
             </Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -154,7 +157,7 @@ export default function RecoverPasswordPage() {
                 autoComplete="email"
                 required
                 className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Enter your email address"
+                placeholder={t('email')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -179,7 +182,7 @@ export default function RecoverPasswordPage() {
           ) : (
             <div className="flex items-center space-x-2">
               <Send className="h-5 w-5" />
-              <span>Send recovery email</span>
+              <span>{t('sendLink')}</span>
             </div>
           )}
         </Button>
@@ -192,7 +195,7 @@ export default function RecoverPasswordPage() {
           className="inline-flex items-center text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to sign in
+          {t('backToLogin')}
         </Link>
       </div>
 

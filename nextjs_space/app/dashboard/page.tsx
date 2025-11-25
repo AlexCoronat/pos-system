@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
@@ -41,6 +42,7 @@ interface TopProduct {
 }
 
 export default function DashboardPage() {
+  const t = useTranslations('dashboard')
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats>({
@@ -267,9 +269,16 @@ export default function DashboardPage() {
     }).format(value)
   }
 
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return t('greeting.morning')
+    if (hour < 18) return t('greeting.afternoon')
+    return t('greeting.evening')
+  }
+
   const dashboardStats = [
     {
-      title: "Today's Sales",
+      title: t('stats.todaySales'),
       value: formatCurrency(stats.todaySales),
       change: `${stats.percentageChange.sales > 0 ? '+' : ''}${stats.percentageChange.sales}%`,
       icon: DollarSign,
@@ -278,7 +287,7 @@ export default function DashboardPage() {
       trending: stats.percentageChange.sales >= 0
     },
     {
-      title: "Transactions",
+      title: t('stats.transactions'),
       value: stats.todayTransactions.toString(),
       change: `${stats.percentageChange.transactions > 0 ? '+' : ''}${stats.percentageChange.transactions}%`,
       icon: ShoppingCart,
@@ -287,18 +296,18 @@ export default function DashboardPage() {
       trending: stats.percentageChange.transactions >= 0
     },
     {
-      title: "Low Stock Items",
+      title: t('stats.lowStockItems'),
       value: stats.lowStockCount.toString(),
-      change: "Needs attention",
+      change: t('stats.needsAttention'),
       icon: Package,
       color: stats.lowStockCount > 0 ? "text-orange-600" : "text-green-600",
       bgColor: "bg-orange-100",
       trending: false
     },
     {
-      title: "Pending Quotes",
+      title: t('stats.pendingQuotes'),
       value: stats.pendingQuotes.toString(),
-      change: "Awaiting action",
+      change: t('stats.awaitingAction'),
       icon: FileText,
       color: "text-purple-600",
       bgColor: "bg-purple-100",
@@ -319,10 +328,10 @@ export default function DashboardPage() {
       {/* Welcome Section */}
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {user?.firstName}!
+          {getGreeting()}, {user?.firstName}!
         </h2>
         <p className="text-gray-600">
-          Here's what's happening with your store today.
+          {t('subtitle')}
         </p>
       </div>
 
@@ -368,10 +377,10 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
-              Sales Overview (Last 7 Days)
+              {t('charts.salesOverview')}
             </CardTitle>
             <CardDescription>
-              Daily sales performance
+              {t('charts.dailyPerformance')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -390,7 +399,7 @@ export default function DashboardPage() {
                   dataKey="sales"
                   stroke="#2563eb"
                   strokeWidth={2}
-                  name="Sales"
+                  name={t('charts.sales')}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -402,10 +411,10 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <Package className="h-5 w-5 mr-2 text-purple-600" />
-              Top Selling Products
+              {t('charts.topProducts')}
             </CardTitle>
             <CardDescription>
-              Best performers this period
+              {t('charts.bestPerformers')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -424,7 +433,7 @@ export default function DashboardPage() {
                   contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb' }}
                 />
                 <Legend />
-                <Bar dataKey="quantity" fill="#8b5cf6" name="Quantity Sold" />
+                <Bar dataKey="quantity" fill="#8b5cf6" name={t('charts.quantitySold')} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -437,10 +446,10 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <AlertTriangle className="h-5 w-5 mr-2 text-yellow-600" />
-              Inventory Alerts
+              {t('alerts.inventoryAlerts')}
             </CardTitle>
             <CardDescription>
-              Items requiring your attention
+              {t('alerts.itemsAttention')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -451,12 +460,11 @@ export default function DashboardPage() {
                 </div>
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-yellow-800">
-                    Low Stock Alert
+                    {t('alerts.lowStockAlert')}
                   </h3>
                   <div className="mt-2 text-sm text-yellow-700">
                     <p>
-                      You have {stats.lowStockCount} product(s) with stock below reorder level.
-                      Please review your inventory and place orders to avoid stockouts.
+                      {t('alerts.lowStockMessage', { count: stats.lowStockCount })}
                     </p>
                   </div>
                 </div>

@@ -56,6 +56,91 @@
     }
   },
   "auth": {
+    "callback": {
+      "loading": "Completando inicio de sesión...",
+      "loadingMessage": "Por favor espera mientras configuramos tu cuenta.",
+      "success": "¡Éxito!",
+      "successMessage": "Redirigiendo ahora...",
+      "error": "Algo salió mal",
+      "errorMessage": "Redirigiendo a la página de inicio de sesión..."
+    },
+    "verifyEmail": {
+      "loading": "Verificando tu correo",
+      "loadingMessage": "Por favor espera mientras verificamos tu dirección de correo...",
+      "success": "¡Correo verificado!",
+      "successMessage": "Tu correo ha sido verificado exitosamente!",
+      "successRedirect": "Redirigiendo al panel...",
+      "goToDashboard": "Ir al Panel",
+      "failed": "Verificación fallida",
+      "failedMessage": "Por favor intenta de nuevo o contacta a soporte si el problema persiste.",
+      "backToLogin": "Volver al inicio de sesión",
+      "expired": "Enlace expirado",
+      "expiredMessage": "El enlace de verificación ha expirado. Por favor solicita uno nuevo.",
+      "expiredInfo": "Los enlaces de verificación expiran después de 24 horas por razones de seguridad.",
+      "resendButton": "Reenviar correo de verificación",
+      "sending": "Enviando...",
+      "resendSuccess": "¡Correo de verificación enviado! Por favor revisa tu bandeja de entrada.",
+      "invalidLink": "Enlace de verificación inválido. Por favor revisa tu correo para obtener el enlace correcto."
+    },
+    "completeProfile": {
+      "title": "Completa tu perfil",
+      "subtitle": "Configura tu negocio para comenzar",
+      "steps": {
+        "personal": "Datos personales",
+        "business": "Tu negocio",
+        "location": "Primera ubicación"
+      },
+      "step1": {
+        "infoMessage": "Ingresa tus datos personales",
+        "firstName": "Nombre *",
+        "firstNamePlaceholder": "Tu nombre",
+        "lastName": "Apellido *",
+        "lastNamePlaceholder": "Tu apellido",
+        "phone": "Teléfono (opcional)",
+        "phonePlaceholder": "(555) 123-4567"
+      },
+      "step2": {
+        "infoMessage": "Ingresa los datos de tu negocio. Serás el administrador principal.",
+        "businessName": "Nombre del negocio *",
+        "businessNamePlaceholder": "Mi Papelería",
+        "businessTaxId": "RFC (opcional)",
+        "businessTaxIdPlaceholder": "XAXX010101000",
+        "businessType": "Giro del negocio",
+        "businessTypePlaceholder": "Papelería, Abarrotes, etc."
+      },
+      "step3": {
+        "infoMessage": "Configura tu primera sucursal o punto de venta.",
+        "locationName": "Nombre de la sucursal *",
+        "locationNamePlaceholder": "Sucursal Centro",
+        "locationAddress": "Dirección",
+        "locationAddressPlaceholder": "Calle, número, colonia",
+        "locationCity": "Ciudad",
+        "locationCityPlaceholder": "Ciudad",
+        "locationState": "Estado",
+        "locationStatePlaceholder": "Estado",
+        "locationPostalCode": "CP",
+        "locationPostalCodePlaceholder": "12345",
+        "locationPhone": "Teléfono",
+        "locationPhonePlaceholder": "(555) 123-4567"
+      },
+      "buttons": {
+        "back": "Anterior",
+        "next": "Siguiente",
+        "complete": "Completar configuración",
+        "saving": "Guardando..."
+      },
+      "validation": {
+        "fieldsRequired": "Campos requeridos",
+        "firstNameRequired": "Por favor ingresa tu nombre y apellido",
+        "fieldRequired": "Campo requerido",
+        "businessNameRequired": "El nombre del negocio es obligatorio",
+        "locationNameRequired": "El nombre de la ubicación es obligatorio"
+      },
+      "messages": {
+        "profileCompleted": "Perfil completado",
+        "profileCompletedDesc": "Tu cuenta y negocio han sido configurados exitosamente"
+      }
+    },
     "login": {
       "title": "Iniciar Sesión",
       "subtitle": "Ingresa a tu cuenta",
@@ -70,21 +155,86 @@
       "googleSignIn": "Iniciar sesión con Google"
     },
     "register": {
-      "title": "Crear Cuenta",
-      "subtitle": "Regístrate para comenzar",
-      "firstName": "Nombre",
-      "lastName": "Apellido",
-      "email": "Correo electrónico",
-      "password": "Contraseña",
-      "confirmPassword": "Confirmar contraseña",
-      "phone": "Teléfono",
-      "signUp": "Registrarse",
-      "haveAccount": "¿Ya tienes cuenta?",
-      "signIn": "Inicia sesión",
-      "terms": "Al registrarte, aceptas nuestros",
-      "termsLink": "Términos y Condiciones",
-      "and": "y",
-      "privacyLink": "Política de Privacidad"
+      "title": "Crear cuenta",
+      "subtitle": "Configura tu sistema POS en minutos",
+      "orRegisterWith": "O regístrate con email",
+      "steps": {
+        "personal": "Datos personales",
+        "business": "Tu negocio",
+        "location": "Primera ubicación"
+      },
+      "step1": {
+        "firstName": "Nombre *",
+        "firstNamePlaceholder": "Tu nombre",
+        "lastName": "Apellido *",
+        "lastNamePlaceholder": "Tu apellido",
+        "email": "Correo electrónico *",
+        "emailPlaceholder": "tu@email.com",
+        "phone": "Teléfono (opcional)",
+        "phonePlaceholder": "(555) 123-4567",
+        "password": "Contraseña *",
+        "passwordPlaceholder": "Mínimo 8 caracteres",
+        "confirmPassword": "Confirmar contraseña *",
+        "confirmPasswordPlaceholder": "Repite tu contraseña",
+        "passwordMismatch": "Las contraseñas no coinciden",
+        "passwordStrength": {
+          "weak": "Débil",
+          "fair": "Regular",
+          "good": "Buena",
+          "strong": "Fuerte",
+          "veryStrong": "Muy fuerte"
+        }
+      },
+      "step2": {
+        "infoMessage": "Ingresa los datos de tu negocio. Serás el administrador principal con acceso total.",
+        "businessName": "Nombre del negocio *",
+        "businessNamePlaceholder": "Mi Papelería",
+        "businessTaxId": "RFC (opcional)",
+        "businessTaxIdPlaceholder": "XAXX010101000",
+        "businessType": "Giro del negocio",
+        "businessTypePlaceholder": "Papelería, Abarrotes, Farmacia, etc."
+      },
+      "step3": {
+        "infoMessage": "Configura tu primera sucursal o punto de venta. Podrás agregar más después.",
+        "locationName": "Nombre de la sucursal *",
+        "locationNamePlaceholder": "Sucursal Centro",
+        "locationAddress": "Dirección",
+        "locationAddressPlaceholder": "Calle, número, colonia",
+        "locationCity": "Ciudad",
+        "locationCityPlaceholder": "Ciudad",
+        "locationState": "Estado",
+        "locationStatePlaceholder": "Estado",
+        "locationPostalCode": "Código Postal",
+        "locationPostalCodePlaceholder": "12345",
+        "locationPhone": "Teléfono",
+        "locationPhonePlaceholder": "(555) 123-4567",
+        "acceptTerms": "Acepto los",
+        "termsLink": "Términos y Condiciones",
+        "and": "y la",
+        "privacyLink": "Política de Privacidad"
+      },
+      "buttons": {
+        "previous": "Anterior",
+        "next": "Siguiente",
+        "creating": "Creando cuenta...",
+        "create": "Crear cuenta"
+      },
+      "validation": {
+        "weakPassword": "Contraseña débil",
+        "weakPasswordMessage": "La contraseña debe tener al menos 8 caracteres, mayúsculas, minúsculas y números",
+        "fieldRequired": "Campo requerido",
+        "businessNameRequired": "El nombre del negocio es obligatorio",
+        "locationNameRequired": "El nombre de la ubicación es obligatorio",
+        "termsRequired": "Términos requeridos",
+        "termsRequiredMessage": "Debes aceptar los términos y condiciones"
+      },
+      "messages": {
+        "accountCreated": "Cuenta creada",
+        "accountCreatedMessage": "Tu cuenta y negocio han sido creados exitosamente",
+        "registerError": "Error al registrar"
+      },
+      "haveAccount": "¿Ya tienes una cuenta?",
+      "signIn": "Inicia sesión aquí"
     },
     "recoverPassword": {
       "title": "Recuperar Contraseña",
@@ -95,10 +245,41 @@
     },
     "resetPassword": {
       "title": "Restablecer Contraseña",
-      "subtitle": "Ingresa tu nueva contraseña",
+      "subtitle": "Crea una contraseña nueva y segura para tu cuenta",
       "newPassword": "Nueva contraseña",
-      "confirmPassword": "Confirmar contraseña",
-      "resetPassword": "Restablecer contraseña"
+      "newPasswordPlaceholder": "Ingresa nueva contraseña",
+      "confirmPassword": "Confirmar nueva contraseña",
+      "confirmPasswordPlaceholder": "Confirma tu nueva contraseña",
+      "resetPassword": "Restablecer contraseña",
+      "resettingPassword": "Restableciendo contraseña...",
+      "backToLogin": "Volver al inicio de sesión",
+      "passwordRequirements": "Requisitos de contraseña:",
+      "requirement1": "Al menos 8 caracteres de longitud",
+      "requirement2": "Contiene letras minúsculas",
+      "requirement3": "Contiene letras mayúsculas",
+      "requirement4": "Contiene números",
+      "requirement5": "Contiene caracteres especiales",
+      "strength": {
+        "veryWeak": "Muy débil",
+        "weak": "Débil",
+        "fair": "Regular",
+        "good": "Buena",
+        "strong": "Fuerte"
+      },
+      "success": {
+        "title": "¡Contraseña restablecida!",
+        "message": "Tu contraseña ha sido restablecida exitosamente. Ahora puedes iniciar sesión con tu nueva contraseña.",
+        "redirecting": "Redirigiendo a la página de inicio de sesión...",
+        "goToLogin": "Ir a Iniciar Sesión"
+      },
+      "errors": {
+        "fillAllFields": "Por favor completa todos los campos",
+        "passwordsNotMatch": "Las contraseñas no coinciden",
+        "weakPassword": "Contraseña débil",
+        "weakPasswordMessage": "La contraseña debe tener al menos 8 caracteres y contener mayúsculas, minúsculas, números y caracteres especiales",
+        "resetFailed": "Error al restablecer contraseña",
+        "resetFailedMessage": "No se pudo restablecer la contraseña. El enlace puede haber expirado."
+      }
     },
     "errors": {
       "invalidCredentials": "Credenciales inválidas",
@@ -288,6 +469,226 @@
         "description": "Configuración de seguridad y sesiones",
         "comingSoon": "Próximamente"
       }
+    }
+  },
+  "dashboard": {
+    "greeting": {
+      "morning": "Buenos días",
+      "afternoon": "Buenas tardes",
+      "evening": "Buenas noches"
+    },
+    "subtitle": "Esto es lo que está pasando con tu tienda hoy",
+    "stats": {
+      "todaySales": "Ventas del Día",
+      "transactions": "Transacciones",
+      "lowStockItems": "Productos con Bajo Stock",
+      "pendingQuotes": "Cotizaciones Pendientes",
+      "needsAttention": "Requiere atención",
+      "awaitingAction": "En espera de acción"
+    },
+    "charts": {
+      "salesOverview": "Resumen de Ventas (Últimos 7 Días)",
+      "dailyPerformance": "Rendimiento diario",
+      "topProducts": "Productos Más Vendidos",
+      "bestPerformers": "Mejores productos de este período",
+      "sales": "Ventas",
+      "quantitySold": "Cantidad Vendida"
+    },
+    "alerts": {
+      "inventoryAlerts": "Alertas de Inventario",
+      "itemsAttention": "Productos que requieren tu atención",
+      "lowStockAlert": "Alerta de Bajo Stock",
+      "lowStockMessage": "Tienes {count} producto(s) con stock por debajo del punto de reorden. Por favor revisa tu inventario y realiza pedidos para evitar desabastecimientos."
+    }
+  },
+  "sales": {
+    "title": "Ventas",
+    "subtitle": "Gestiona y consulta todas las ventas realizadas",
+    "newSale": "Nueva Venta",
+    "stats": {
+      "totalSales": "Total Ventas",
+      "completed": "Completadas",
+      "pending": "Pendientes",
+      "cancelled": "Canceladas"
+    },
+    "status": {
+      "completed": "Completada",
+      "pending": "Pendiente",
+      "cancelled": "Cancelada",
+      "refunded": "Reembolsada"
+    },
+    "filters": {
+      "title": "Filtros",
+      "search": "Buscar",
+      "refresh": "Actualizar",
+      "searchPlaceholder": "Buscar por número de venta...",
+      "status": "Estado",
+      "allStatuses": "Todos los estados"
+    },
+    "table": {
+      "number": "Número",
+      "date": "Fecha",
+      "customer": "Cliente",
+      "products": "Productos",
+      "subtotal": "Subtotal",
+      "discount": "Descuento",
+      "taxes": "Impuestos",
+      "total": "Total",
+      "status": "Estado",
+      "actions": "Acciones",
+      "product": "producto",
+      "products_plural": "productos",
+      "generalCustomer": "Cliente general"
+    },
+    "loading": "Cargando ventas...",
+    "noSales": "No se encontraron ventas",
+    "pagination": {
+      "page": "Página",
+      "of": "de",
+      "salesTotal": "ventas en total",
+      "previous": "Anterior",
+      "next": "Siguiente"
+    },
+    "pos": {
+      "title": "Nueva Venta",
+      "subtitle": "Busca y agrega productos al carrito",
+      "back": "Volver",
+      "searchHelp": "Puedes buscar productos por nombre o código SKU",
+      "autoAddHelp": "Los productos se agregarán automáticamente al carrito"
+    },
+    "detail": {
+      "back": "Volver",
+      "loading": "Cargando venta...",
+      "notFound": "Venta no encontrada",
+      "downloadPDF": "Descargar PDF",
+      "generating": "Generando...",
+      "cancelSale": "Cancelar Venta",
+      "refund": "Reembolsar",
+      "customer": "Cliente",
+      "generalCustomer": "Cliente general",
+      "viewProfile": "Ver perfil",
+      "location": "Ubicación",
+      "locationFallback": "Ubicación {id}",
+      "soldBy": "Vendido por",
+      "userFallback": "Usuario",
+      "products": "Productos",
+      "itemsTable": {
+        "product": "Producto",
+        "sku": "SKU",
+        "quantity": "Cantidad",
+        "unitPrice": "Precio Unit.",
+        "discount": "Descuento",
+        "taxes": "Impuestos",
+        "total": "Total"
+      },
+      "summary": {
+        "title": "Resumen de Venta",
+        "subtotal": "Subtotal:",
+        "discounts": "Descuentos:",
+        "taxes": "Impuestos (16%):",
+        "total": "TOTAL:"
+      },
+      "payments": {
+        "title": "Métodos de Pago",
+        "methodFallback": "Método de pago",
+        "reference": "Ref:",
+        "totalPaid": "Total Pagado:",
+        "methods": {
+          "cash": "Efectivo",
+          "card": "Tarjeta",
+          "transfer": "Transferencia",
+          "mercadoPago": "Mercado Pago",
+          "credit": "Crédito"
+        }
+      },
+      "notes": "Notas",
+      "cancelDialog": {
+        "title": "Cancelar Venta",
+        "description": "Esta acción cancelará la venta y restaurará el inventario. Por favor proporciona un motivo de cancelación.",
+        "reasonLabel": "Motivo de cancelación *",
+        "reasonPlaceholder": "Describe el motivo de la cancelación...",
+        "close": "Cerrar",
+        "confirm": "Confirmar Cancelación",
+        "cancelling": "Cancelando..."
+      },
+      "messages": {
+        "pdfDownloaded": "PDF descargado exitosamente",
+        "pdfError": "Error al generar el PDF",
+        "loadError": "Error al cargar la venta",
+        "cancelReasonRequired": "Debes proporcionar un motivo de cancelación",
+        "cancelSuccess": "Venta cancelada exitosamente",
+        "cancelError": "Error al cancelar la venta"
+      }
+    },
+    "errors": {
+      "loadFailed": "Error al cargar las ventas"
+    }
+  },
+  "inventory": {
+    "title": "Inventario",
+    "subtitle": "Gestiona productos, categorías y stock",
+    "products": {
+      "title": "Productos",
+      "newProduct": "Nuevo Producto",
+      "editProduct": "Editar Producto",
+      "search": "Buscar productos...",
+      "category": "Categoría",
+      "allCategories": "Todas las categorías",
+      "status": "Estado",
+      "allStatuses": "Todos los estados",
+      "lowStock": "Stock Bajo",
+      "outOfStock": "Sin Stock",
+      "inStock": "En Stock",
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "table": {
+      "sku": "SKU",
+      "name": "Nombre",
+      "category": "Categoría",
+      "price": "Precio",
+      "stock": "Stock",
+      "status": "Estado",
+      "actions": "Acciones"
+    },
+    "form": {
+      "general": "General",
+      "pricing": "Precios",
+      "stock": "Inventario",
+      "name": "Nombre del Producto",
+      "description": "Descripción",
+      "sku": "SKU",
+      "barcode": "Código de Barras",
+      "category": "Categoría",
+      "selectCategory": "Seleccionar categoría",
+      "costPrice": "Precio de Costo",
+      "salePrice": "Precio de Venta",
+      "tax": "Impuesto",
+      "taxIncluded": "IVA Incluido",
+      "quantity": "Cantidad",
+      "reorderPoint": "Punto de Reorden",
+      "save": "Guardar",
+      "cancel": "Cancelar"
+    },
+    "categories": {
+      "title": "Categorías",
+      "newCategory": "Nueva Categoría",
+      "name": "Nombre",
+      "description": "Descripción",
+      "products": "Productos"
+    },
+    "stats": {
+      "totalProducts": "Total Productos",
+      "lowStockItems": "Productos con Bajo Stock",
+      "outOfStockItems": "Productos sin Stock",
+      "categories": "Categorías"
+    },
+    "loading": "Cargando productos...",
+    "noProducts": "No se encontraron productos",
+    "errors": {
+      "loadFailed": "Error al cargar productos",
+      "saveFailed": "Error al guardar producto",
+      "deleteFailed": "Error al eliminar producto"
     }
   },
   "errors": {

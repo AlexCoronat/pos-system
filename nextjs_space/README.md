@@ -576,15 +576,15 @@ Implementar soporte completo de múltiples idiomas usando `next-intl`, con espa�
 **Tiempo estimado:** 3-4 horas
 
 **Páginas a traducir:**
-- [ ] **Login** (`app/auth/login/page.tsx`)
+- [*] **Login** (`app/auth/login/page.tsx`)
   - Formulario, mensajes de error, links
-- [ ] **Register** (`app/auth/register/page.tsx`)
+- [*] **Register** (`app/auth/register/page.tsx`)
   - Formulario de registro, validaciones
-- [ ] **Complete Profile** (`app/auth/complete-profile/page.tsx`)
+- [*] **Complete Profile** (`app/auth/complete-profile/page.tsx`)
   - Creación de negocio y ubicación
-- [ ] **Password Recovery** (`app/auth/recover-password/page.tsx`)
-- [ ] **Reset Password** (`app/auth/reset-password/page.tsx`)
-- [ ] **Email Verification** (`app/auth/verify-email/page.tsx`)
+- [*] **Password Recovery** (`app/auth/recover-password/page.tsx`)
+- [*] **Reset Password** (`app/auth/reset-password/page.tsx`)
+- [*] **Email Verification** (`app/auth/verify-email/page.tsx`)
 
 **Archivos de traducción:**
 ```json
@@ -627,11 +627,11 @@ Implementar soporte completo de múltiples idiomas usando `next-intl`, con espa�
 
 ---
 
-### Fase 5: Dashboard Principal 📊
+### Fase 5: Dashboard Principal 📊 ✅
 **Tiempo estimado:** 2-3 horas
 
 **Componentes a traducir:**
-- [ ] **Dashboard Home** (`app/dashboard/page.tsx`)
+- [*] **Dashboard Home** (`app/dashboard/page.tsx`)
   - Saludo por hora del día
   - Cards de métricas (Ventas del día, Transacciones, etc.)
   - Gráfico de ventas
@@ -640,36 +640,36 @@ Implementar soporte completo de múltiples idiomas usando `next-intl`, con espa�
 
 ---
 
-### Fase 6: Módulo de Ventas 💰
+### Fase 6: Módulo de Ventas 💰 ✅
 **Tiempo estimado:** 4-5 horas
 
 **Páginas a traducir:**
-- [ ] **Sales List** (`app/dashboard/sales/page.tsx`)
+- [*] **Sales List** (`app/dashboard/sales/page.tsx`)
   - Tabla, filtros, estados
-- [ ] **New Sale / POS** (`app/dashboard/sales/new/page.tsx`)
+- [*] **New Sale / POS** (`app/dashboard/sales/new/page.tsx`)
   - Búsqueda de productos
   - Carrito
   - Checkout
   - Métodos de pago
-- [ ] **Sale Detail** (`app/dashboard/sales/[id]/page.tsx`)
+- [*] **Sale Detail** (`app/dashboard/sales/[id]/page.tsx`)
   - Detalles de la venta
   - Items, totales
   - Acciones (cancelar, reembolsar)
 
 ---
 
-### Fase 7: Módulo de Inventario 📦
+### Fase 7: Módulo de Inventario 📦 ✅
 **Tiempo estimado:** 4-5 horas
 
 **Páginas a traducir:**
-- [ ] **Inventory List** (`app/dashboard/inventory/page.tsx`)
+- [*] **Inventory List** (`app/dashboard/inventory/page.tsx`)
   - Tabs: Productos, Stock, Alertas
   - Tabla de productos
   - Filtros y búsqueda
-- [ ] **Product Form** (`app/dashboard/inventory/products/new/page.tsx`)
+- [*] **Product Form** (`app/dashboard/inventory/products/new/page.tsx`)
   - Formulario de producto
   - Categorías, precios
-- [ ] **Product Detail** (`app/dashboard/inventory/products/[id]/page.tsx`)
+- [*] **Product Detail** (`app/dashboard/inventory/products/[id]/page.tsx`)
   - Información del producto
   - Ajustes de inventario
   - Historial de movimientos
@@ -770,7 +770,10 @@ Implementar soporte completo de múltiples idiomas usando `next-intl`, con espa�
 2. ✅ **Fase 2** (Layout) - Alta, se ve en todas las páginas
 3. ✅ **Fase 4** (Profile) - Alta, incluye selector de idioma funcional
 4. ✅ **Fase 3** (Auth) - Media-Alta, primera impresión
-5. ⚡ Resto de fases según prioridad de negocio
+5. ✅ **Fase 5** (Dashboard) - Media-Alta, página principal
+6. ✅ **Fase 6** (Ventas) - Alta, funcionalidad core del negocio
+7. ✅ **Fase 7** (Inventario) - Alta, gestión de productos
+8. ⚡ **Fase 8-12** - Según prioridad de negocio
 
 ---
 

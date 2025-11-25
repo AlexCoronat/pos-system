@@ -3,6 +3,7 @@
 
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,8 @@ import { ROUTES, MESSAGES } from '@/lib/constants'
 import { getUserFriendlyMessage } from '@/lib/utils/error-handler'
 
 export default function LoginPage() {
+  const t = useTranslations('auth.login')
+  const tCommon = useTranslations('common')
   const [formData, setFormData] = useState<LoginCredentials>({
     email: '',
     password: '',
@@ -81,16 +84,16 @@ export default function LoginPage() {
           <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center">
             <Image
               src="https://cdn.abacus.ai/images/559a9b32-de85-4273-a1a0-d4349091d32d.jpg"
-              alt="Login"
+              alt={t('title')}
               width={32}
               height={32}
               className="rounded-lg"
             />
           </div>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900">Welcome back</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
         <p className="text-gray-600">
-          Sign in to your POS account to continue
+          {t('subtitle')}
         </p>
       </div>
 
@@ -100,7 +103,7 @@ export default function LoginPage() {
           {/* Email Field */}
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-              Email address
+              {t('email')}
             </Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -111,7 +114,7 @@ export default function LoginPage() {
                 autoComplete="email"
                 required
                 className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Enter your email"
+                placeholder={t('email')}
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
               />
@@ -121,7 +124,7 @@ export default function LoginPage() {
           {/* Password Field */}
           <div className="space-y-2">
             <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-              Password
+              {t('password')}
             </Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -132,7 +135,7 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 required
                 className="pl-10 pr-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Enter your password"
+                placeholder={t('password')}
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
               />
@@ -154,21 +157,21 @@ export default function LoginPage() {
         {/* Remember Me & Forgot Password */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Checkbox 
+            <Checkbox
               id="remember-me"
               checked={formData.rememberMe}
               onCheckedChange={(checked) => handleInputChange('rememberMe', checked as boolean)}
             />
             <Label htmlFor="remember-me" className="text-sm text-gray-600">
-              Remember me
+              {t('rememberMe')}
             </Label>
           </div>
-          
+
           <Link
             href={ROUTES.AUTH.RECOVER_PASSWORD}
             className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors"
           >
-            Forgot your password?
+            {t('forgotPassword')}
           </Link>
         </div>
 
@@ -181,12 +184,12 @@ export default function LoginPage() {
           {isLoading ? (
             <div className="flex items-center space-x-2">
               <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-              <span>Signing in...</span>
+              <span>{tCommon('loading')}</span>
             </div>
           ) : (
             <div className="flex items-center space-x-2">
               <LogIn className="h-5 w-5" />
-              <span>Sign in</span>
+              <span>{t('signIn')}</span>
             </div>
           )}
         </Button>
@@ -198,7 +201,7 @@ export default function LoginPage() {
           <div className="w-full border-t border-gray-300"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-gray-500">Or continue with</span>
+          <span className="px-2 bg-white text-gray-500">{t('orContinueWith')}</span>
         </div>
       </div>
 
@@ -208,12 +211,12 @@ export default function LoginPage() {
       {/* Register Link */}
       <div className="text-center">
         <p className="text-sm text-gray-600">
-          Don&apos;t have an account?{' '}
+          {t('noAccount')}{' '}
           <Link
             href={ROUTES.AUTH.REGISTER}
             className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
           >
-            Create one now
+            {t('signUp')}
           </Link>
         </p>
       </div>

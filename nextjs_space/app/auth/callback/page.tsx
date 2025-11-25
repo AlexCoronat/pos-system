@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { authService } from '@/lib/services/auth.service'
 import { useToast } from '@/hooks/use-toast'
@@ -11,6 +12,7 @@ import { getUserFriendlyMessage } from '@/lib/utils/error-handler'
 export default function AuthCallbackPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const t = useTranslations('auth.callback')
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
 
   useEffect(() => {
@@ -68,8 +70,8 @@ export default function AuthCallbackPage() {
           {status === 'loading' && (
             <>
               <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-              <h2 className="text-2xl font-bold text-gray-900">Completing sign in...</h2>
-              <p className="mt-2 text-gray-600">Please wait while we set up your account.</p>
+              <h2 className="text-2xl font-bold text-gray-900">{t('loading')}</h2>
+              <p className="mt-2 text-gray-600">{t('loadingMessage')}</p>
             </>
           )}
 
@@ -80,8 +82,8 @@ export default function AuthCallbackPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">Success!</h2>
-              <p className="mt-2 text-gray-600">Redirecting you now...</p>
+              <h2 className="text-2xl font-bold text-gray-900">{t('success')}</h2>
+              <p className="mt-2 text-gray-600">{t('successMessage')}</p>
             </>
           )}
 
@@ -92,8 +94,8 @@ export default function AuthCallbackPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">Something went wrong</h2>
-              <p className="mt-2 text-gray-600">Redirecting you to login page...</p>
+              <h2 className="text-2xl font-bold text-gray-900">{t('error')}</h2>
+              <p className="mt-2 text-gray-600">{t('errorMessage')}</p>
             </>
           )}
         </div>

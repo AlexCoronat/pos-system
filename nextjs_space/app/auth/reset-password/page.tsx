@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ import { Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
 import { AUTH_CONSTANTS, ROUTES } from '@/lib/constants'
 
 export default function ResetPasswordPage() {
+  const t = useTranslations('auth.resetPassword')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showNewPassword, setShowNewPassword] = useState(false)
@@ -37,7 +39,13 @@ export default function ResetPasswordPage() {
   }
 
   const passwordStrength = getPasswordStrength(newPassword)
-  const passwordStrengthText = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'][passwordStrength]
+  const passwordStrengthText = [
+    t('strength.veryWeak'),
+    t('strength.weak'),
+    t('strength.fair'),
+    t('strength.good'),
+    t('strength.strong')
+  ][passwordStrength]
   const passwordStrengthColor = ['red', 'orange', 'yellow', 'blue', 'green'][passwordStrength]
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,8 +54,8 @@ export default function ResetPasswordPage() {
     // Validation
     if (!newPassword || !confirmPassword) {
       toast({
-        title: "Error",
-        description: "Please fill in all fields",
+        title: t('errors.fillAllFields'),
+        description: t('errors.fillAllFields'),
         variant: "destructive",
       })
       return
@@ -55,8 +63,8 @@ export default function ResetPasswordPage() {
 
     if (newPassword !== confirmPassword) {
       toast({
-        title: "Error",
-        description: "Passwords do not match",
+        title: t('errors.passwordsNotMatch'),
+        description: t('errors.passwordsNotMatch'),
         variant: "destructive",
       })
       return
@@ -64,8 +72,8 @@ export default function ResetPasswordPage() {
 
     if (passwordStrength < 3 || newPassword.length < AUTH_CONSTANTS.PASSWORD.MIN_LENGTH) {
       toast({
-        title: "Weak password",
-        description: `Password must be at least ${AUTH_CONSTANTS.PASSWORD.MIN_LENGTH} characters and contain uppercase, lowercase, numbers, and special characters`,
+        title: t('errors.weakPassword'),
+        description: t('errors.weakPasswordMessage'),
         variant: "destructive",
       })
       return
@@ -82,8 +90,8 @@ export default function ResetPasswordPage() {
 
       setIsSuccess(true)
       toast({
-        title: "Password reset successful!",
-        description: "You can now sign in with your new password.",
+        title: t('success.title'),
+        description: t('success.message'),
       })
 
       // Redirect to login after 3 seconds
@@ -92,8 +100,8 @@ export default function ResetPasswordPage() {
       }, 3000)
     } catch (error: any) {
       toast({
-        title: "Password reset failed",
-        description: error.message || "Failed to reset password. The link may have expired.",
+        title: t('errors.resetFailed'),
+        description: error.message || t('errors.resetFailedMessage'),
         variant: "destructive",
       })
     } finally {
@@ -113,23 +121,23 @@ export default function ResetPasswordPage() {
                   <CheckCircle className="w-8 h-8 text-green-600" />
                 </div>
               </div>
-              <h1 className="text-3xl font-bold text-gray-900">Password reset!</h1>
+              <h1 className="text-3xl font-bold text-gray-900">{t('success.title')}</h1>
               <p className="text-gray-600">
-                Your password has been successfully reset. You can now sign in with your new password.
+                {t('success.message')}
               </p>
             </div>
 
             {/* Redirect message */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
               <p className="text-sm text-blue-700">
-                Redirecting you to the login page...
+                {t('success.redirecting')}
               </p>
             </div>
 
             {/* Manual redirect button */}
             <Link href={ROUTES.AUTH.LOGIN}>
               <Button className="w-full h-12 bg-blue-600 hover:bg-blue-700">
-                Go to Login
+                {t('success.goToLogin')}
               </Button>
             </Link>
           </div>
@@ -148,16 +156,16 @@ export default function ResetPasswordPage() {
               <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center">
                 <Image
                   src="https://cdn.abacus.ai/images/559a9b32-de85-4273-a1a0-d4349091d32d.jpg"
-                  alt="Reset Password"
+                  alt={t('title')}
                   width={32}
                   height={32}
                   className="rounded-lg"
                 />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Reset your password</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
             <p className="text-gray-600">
-              Create a strong new password for your account
+              {t('subtitle')}
             </p>
           </div>
 
@@ -167,7 +175,7 @@ export default function ResetPasswordPage() {
               {/* New Password Field */}
               <div className="space-y-2">
                 <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700">
-                  New password
+                  {t('newPassword')}
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -178,7 +186,7 @@ export default function ResetPasswordPage() {
                     autoComplete="new-password"
                     required
                     className="pl-10 pr-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                    placeholder="Enter new password"
+                    placeholder={t('newPasswordPlaceholder')}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                   />
@@ -214,7 +222,7 @@ export default function ResetPasswordPage() {
               {/* Confirm Password Field */}
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
-                  Confirm new password
+                  {t('confirmPassword')}
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -224,10 +232,9 @@ export default function ResetPasswordPage() {
                     type={showConfirmPassword ? "text" : "password"}
                     autoComplete="new-password"
                     required
-                    className={`pl-10 pr-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 ${
-                      confirmPassword && newPassword !== confirmPassword ? 'border-red-500' : ''
-                    }`}
-                    placeholder="Confirm new password"
+                    className={`pl-10 pr-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 ${confirmPassword && newPassword !== confirmPassword ? 'border-red-500' : ''
+                      }`}
+                    placeholder={t('confirmPasswordPlaceholder')}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                   />
@@ -246,29 +253,29 @@ export default function ResetPasswordPage() {
                 {confirmPassword && newPassword !== confirmPassword && (
                   <p className="text-sm text-red-600 flex items-center gap-1">
                     <AlertCircle className="w-4 h-4" />
-                    Passwords do not match
+                    {t('errors.passwordsNotMatch')}
                   </p>
                 )}
               </div>
 
               {/* Password Requirements */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Password requirements:</h3>
+                <h3 className="text-sm font-medium text-gray-900 mb-2">{t('passwordRequirements')}</h3>
                 <ul className="text-xs text-gray-600 space-y-1">
                   <li className={newPassword.length >= 8 ? 'text-green-600' : ''}>
-                    • At least 8 characters long
+                    • {t('requirement1')}
                   </li>
                   <li className={/[a-z]/.test(newPassword) ? 'text-green-600' : ''}>
-                    • Contains lowercase letters
+                    • {t('requirement2')}
                   </li>
                   <li className={/[A-Z]/.test(newPassword) ? 'text-green-600' : ''}>
-                    • Contains uppercase letters
+                    • {t('requirement3')}
                   </li>
                   <li className={/[0-9]/.test(newPassword) ? 'text-green-600' : ''}>
-                    • Contains numbers
+                    • {t('requirement4')}
                   </li>
                   <li className={/[^A-Za-z0-9]/.test(newPassword) ? 'text-green-600' : ''}>
-                    • Contains special characters
+                    • {t('requirement5')}
                   </li>
                 </ul>
               </div>
@@ -283,10 +290,10 @@ export default function ResetPasswordPage() {
               {isLoading ? (
                 <div className="flex items-center space-x-2">
                   <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                  <span>Resetting password...</span>
+                  <span>{t('resettingPassword')}</span>
                 </div>
               ) : (
-                <span>Reset Password</span>
+                <span>{t('resetPassword')}</span>
               )}
             </Button>
           </form>
@@ -297,7 +304,7 @@ export default function ResetPasswordPage() {
               href={ROUTES.AUTH.LOGIN}
               className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors"
             >
-              Back to sign in
+              {t('backToLogin')}
             </Link>
           </div>
         </div>

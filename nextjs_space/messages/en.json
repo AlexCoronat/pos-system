@@ -56,6 +56,91 @@
     }
   },
   "auth": {
+    "callback": {
+      "loading": "Completing sign in...",
+      "loadingMessage": "Please wait while we set up your account.",
+      "success": "Success!",
+      "successMessage": "Redirecting you now...",
+      "error": "Something went wrong",
+      "errorMessage": "Redirecting you to login page..."
+    },
+    "verifyEmail": {
+      "loading": "Verifying your email",
+      "loadingMessage": "Please wait while we verify your email address...",
+      "success": "Email verified!",
+      "successMessage": "Your email has been successfully verified!",
+      "successRedirect": "Redirecting you to the dashboard...",
+      "goToDashboard": "Go to Dashboard",
+      "failed": "Verification failed",
+      "failedMessage": "Please try again or contact support if the problem persists.",
+      "backToLogin": "Back to Login",
+      "expired": "Link expired",
+      "expiredMessage": "Verification link has expired. Please request a new one.",
+      "expiredInfo": "Verification links expire after 24 hours for security reasons.",
+      "resendButton": "Resend Verification Email",
+      "sending": "Sending...",
+      "resendSuccess": "Verification email sent! Please check your inbox.",
+      "invalidLink": "Invalid verification link. Please check your email for the correct link."
+    },
+    "completeProfile": {
+      "title": "Complete your profile",
+      "subtitle": "Set up your business to get started",
+      "steps": {
+        "personal": "Personal information",
+        "business": "Your business",
+        "location": "First location"
+      },
+      "step1": {
+        "infoMessage": "Enter your personal information",
+        "firstName": "First name *",
+        "firstNamePlaceholder": "Your first name",
+        "lastName": "Last name *",
+        "lastNamePlaceholder": "Your last name",
+        "phone": "Phone (optional)",
+        "phonePlaceholder": "(555) 123-4567"
+      },
+      "step2": {
+        "infoMessage": "Enter your business information. You will be the main administrator.",
+        "businessName": "Business name *",
+        "businessNamePlaceholder": "My Store",
+        "businessTaxId": "Tax ID (optional)",
+        "businessTaxIdPlaceholder": "XAXX010101000",
+        "businessType": "Business type",
+        "businessTypePlaceholder": "Retail, Grocery, etc."
+      },
+      "step3": {
+        "infoMessage": "Set up your first branch or point of sale.",
+        "locationName": "Branch name *",
+        "locationNamePlaceholder": "Downtown Branch",
+        "locationAddress": "Address",
+        "locationAddressPlaceholder": "Street, number, neighborhood",
+        "locationCity": "City",
+        "locationCityPlaceholder": "City",
+        "locationState": "State",
+        "locationStatePlaceholder": "State",
+        "locationPostalCode": "Postal Code",
+        "locationPostalCodePlaceholder": "12345",
+        "locationPhone": "Phone",
+        "locationPhonePlaceholder": "(555) 123-4567"
+      },
+      "buttons": {
+        "back": "Back",
+        "next": "Next",
+        "complete": "Complete setup",
+        "saving": "Saving..."
+      },
+      "validation": {
+        "fieldsRequired": "Required fields",
+        "firstNameRequired": "Please enter your first and last name",
+        "fieldRequired": "Required field",
+        "businessNameRequired": "Business name is required",
+        "locationNameRequired": "Location name is required"
+      },
+      "messages": {
+        "profileCompleted": "Profile completed",
+        "profileCompletedDesc": "Your account and business have been successfully set up"
+      }
+    },
     "login": {
       "title": "Sign In",
       "subtitle": "Sign in to your account",
@@ -70,21 +155,86 @@
       "googleSignIn": "Sign in with Google"
     },
     "register": {
-      "title": "Create Account",
-      "subtitle": "Sign up to get started",
-      "firstName": "First name",
-      "lastName": "Last name",
-      "email": "Email address",
-      "password": "Password",
-      "confirmPassword": "Confirm password",
-      "phone": "Phone",
-      "signUp": "Sign up",
+      "title": "Create account",
+      "subtitle": "Set up your POS system in minutes",
+      "orRegisterWith": "Or register with email",
+      "steps": {
+        "personal": "Personal information",
+        "business": "Your business",
+        "location": "First location"
+      },
+      "step1": {
+        "firstName": "First name *",
+        "firstNamePlaceholder": "Your first name",
+        "lastName": "Last name *",
+        "lastNamePlaceholder": "Your last name",
+        "email": "Email address *",
+        "emailPlaceholder": "you@email.com",
+        "phone": "Phone (optional)",
+        "phonePlaceholder": "(555) 123-4567",
+        "password": "Password *",
+        "passwordPlaceholder": "Minimum 8 characters",
+        "confirmPassword": "Confirm password *",
+        "confirmPasswordPlaceholder": "Repeat your password",
+        "passwordMismatch": "Passwords don't match",
+        "passwordStrength": {
+          "weak": "Weak",
+          "fair": "Fair",
+          "good": "Good",
+          "strong": "Strong",
+          "veryStrong": "Very strong"
+        }
+      },
+      "step2": {
+        "infoMessage": "Enter your business information. You will be the main administrator with full access.",
+        "businessName": "Business name *",
+        "businessNamePlaceholder": "My Store",
+        "businessTaxId": "Tax ID (optional)",
+        "businessTaxIdPlaceholder": "XAXX010101000",
+        "businessType": "Business type",
+        "businessTypePlaceholder": "Retail, Grocery, Pharmacy, etc."
+      },
+      "step3": {
+        "infoMessage": "Set up your first branch or point of sale. You can add more later.",
+        "locationName": "Branch name *",
+        "locationNamePlaceholder": "Downtown Branch",
+        "locationAddress": "Address",
+        "locationAddressPlaceholder": "Street, number, neighborhood",
+        "locationCity": "City",
+        "locationCityPlaceholder": "City",
+        "locationState": "State",
+        "locationStatePlaceholder": "State",
+        "locationPostalCode": "Postal Code",
+        "locationPostalCodePlaceholder": "12345",
+        "locationPhone": "Phone",
+        "locationPhonePlaceholder": "(555) 123-4567",
+        "acceptTerms": "I accept the",
+        "termsLink": "Terms and Conditions",
+        "and": "and the",
+        "privacyLink": "Privacy Policy"
+      },
+      "buttons": {
+        "previous": "Previous",
+        "next": "Next",
+        "creating": "Creating account...",
+        "create": "Create account"
+      },
+      "validation": {
+        "weakPassword": "Weak password",
+        "weakPasswordMessage": "Password must have at least 8 characters, uppercase, lowercase and numbers",
+        "fieldRequired": "Required field",
+        "businessNameRequired": "Business name is required",
+        "locationNameRequired": "Location name is required",
+        "termsRequired": "Terms required",
+        "termsRequiredMessage": "You must accept the terms and conditions"
+      },
+      "messages": {
+        "accountCreated": "Account created",
+        "accountCreatedMessage": "Your account and business have been successfully created",
+        "registerError": "Error registering"
+      },
       "haveAccount": "Already have an account?",
-      "signIn": "Sign in",
-      "terms": "By signing up, you agree to our",
-      "termsLink": "Terms and Conditions",
-      "and": "and",
-      "privacyLink": "Privacy Policy"
+      "signIn": "Sign in here"
     },
     "recoverPassword": {
       "title": "Recover Password",
@@ -95,10 +245,41 @@
     },
     "resetPassword": {
       "title": "Reset Password",
-      "subtitle": "Enter your new password",
+      "subtitle": "Create a strong new password for your account",
       "newPassword": "New password",
-      "confirmPassword": "Confirm password",
-      "resetPassword": "Reset password"
+      "newPasswordPlaceholder": "Enter new password",
+      "confirmPassword": "Confirm new password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "resetPassword": "Reset Password",
+      "resettingPassword": "Resetting password...",
+      "backToLogin": "Back to sign in",
+      "passwordRequirements": "Password requirements:",
+      "requirement1": "At least 8 characters long",
+      "requirement2": "Contains lowercase letters",
+      "requirement3": "Contains uppercase letters",
+      "requirement4": "Contains numbers",
+      "requirement5": "Contains special characters",
+      "strength": {
+        "veryWeak": "Very Weak",
+        "weak": "Weak",
+        "fair": "Fair",
+        "good": "Good",
+        "strong": "Strong"
+      },
+      "success": {
+        "title": "Password reset!",
+        "message": "Your password has been successfully reset. You can now sign in with your new password.",
+        "redirecting": "Redirecting you to the login page...",
+        "goToLogin": "Go to Login"
+      },
+      "errors": {
+        "fillAllFields": "Please fill in all fields",
+        "passwordsNotMatch": "Passwords do not match",
+        "weakPassword": "Weak password",
+        "weakPasswordMessage": "Password must be at least 8 characters and contain uppercase, lowercase, numbers, and special characters",
+        "resetFailed": "Password reset failed",
+        "resetFailedMessage": "Failed to reset password. The link may have expired."
+      }
     },
     "errors": {
       "invalidCredentials": "Invalid credentials",
@@ -288,6 +469,226 @@
         "description": "Security and session settings",
         "comingSoon": "Coming soon"
       }
+    }
+  },
+  "dashboard": {
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "subtitle": "Here's what's happening with your store today",
+    "stats": {
+      "todaySales": "Today's Sales",
+      "transactions": "Transactions",
+      "lowStockItems": "Low Stock Items",
+      "pendingQuotes": "Pending Quotes",
+      "needsAttention": "Needs attention",
+      "awaitingAction": "Awaiting action"
+    },
+    "charts": {
+      "salesOverview": "Sales Overview (Last 7 Days)",
+      "dailyPerformance": "Daily sales performance",
+      "topProducts": "Top Selling Products",
+      "bestPerformers": "Best performers this period",
+      "sales": "Sales",
+      "quantitySold": "Quantity Sold"
+    },
+    "alerts": {
+      "inventoryAlerts": "Inventory Alerts",
+      "itemsAttention": "Items requiring your attention",
+      "lowStockAlert": "Low Stock Alert",
+      "lowStockMessage": "You have {count} product(s) with stock below reorder level. Please review your inventory and place orders to avoid stockouts."
+    }
+  },
+  "sales": {
+    "title": "Sales",
+    "subtitle": "Manage and view all sales transactions",
+    "newSale": "New Sale",
+    "stats": {
+      "totalSales": "Total Sales",
+      "completed": "Completed",
+      "pending": "Pending",
+      "cancelled": "Cancelled"
+    },
+    "status": {
+      "completed": "Completed",
+      "pending": "Pending",
+      "cancelled": "Cancelled",
+      "refunded": "Refunded"
+    },
+    "filters": {
+      "title": "Filters",
+      "search": "Search",
+      "refresh": "Refresh",
+      "searchPlaceholder": "Search by sale number...",
+      "status": "Status",
+      "allStatuses": "All statuses"
+    },
+    "table": {
+      "number": "Number",
+      "date": "Date",
+      "customer": "Customer",
+      "products": "Products",
+      "subtotal": "Subtotal",
+      "discount": "Discount",
+      "taxes": "Taxes",
+      "total": "Total",
+      "status": "Status",
+      "actions": "Actions",
+      "product": "product",
+      "products_plural": "products",
+      "generalCustomer": "General customer"
+    },
+    "loading": "Loading sales...",
+    "noSales": "No sales found",
+    "pagination": {
+      "page": "Page",
+      "of": "of",
+      "salesTotal": "sales in total",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "pos": {
+      "title": "New Sale",
+      "subtitle": "Search and add products to cart",
+      "back": "Back",
+      "searchHelp": "You can search products by name or SKU code",
+      "autoAddHelp": "Products will be automatically added to cart"
+    },
+    "detail": {
+      "back": "Back",
+      "loading": "Loading sale...",
+      "notFound": "Sale not found",
+      "downloadPDF": "Download PDF",
+      "generating": "Generating...",
+      "cancelSale": "Cancel Sale",
+      "refund": "Refund",
+      "customer": "Customer",
+      "generalCustomer": "General customer",
+      "viewProfile": "View profile",
+      "location": "Location",
+      "locationFallback": "Location {id}",
+      "soldBy": "Sold by",
+      "userFallback": "User",
+      "products": "Products",
+      "itemsTable": {
+        "product": "Product",
+        "sku": "SKU",
+        "quantity": "Quantity",
+        "unitPrice": "Unit Price",
+        "discount": "Discount",
+        "taxes": "Taxes",
+        "total": "Total"
+      },
+      "summary": {
+        "title": "Sale Summary",
+        "subtotal": "Subtotal:",
+        "discounts": "Discounts:",
+        "taxes": "Taxes (16%):",
+        "total": "TOTAL:"
+      },
+      "payments": {
+        "title": "Payment Methods",
+        "methodFallback": "Payment method",
+        "reference": "Ref:",
+        "totalPaid": "Total Paid:",
+        "methods": {
+          "cash": "Cash",
+          "card": "Card",
+          "transfer": "Transfer",
+          "mercadoPago": "Mercado Pago",
+          "credit": "Credit"
+        }
+      },
+      "notes": "Notes",
+      "cancelDialog": {
+        "title": "Cancel Sale",
+        "description": "This action will cancel the sale and restore inventory. Please provide a cancellation reason.",
+        "reasonLabel": "Cancellation reason *",
+        "reasonPlaceholder": "Describe the reason for cancellation...",
+        "close": "Close",
+        "confirm": "Confirm Cancellation",
+        "cancelling": "Cancelling..."
+      },
+      "messages": {
+        "pdfDownloaded": "PDF downloaded successfully",
+        "pdfError": "Error generating PDF",
+        "loadError": "Error loading sale",
+        "cancelReasonRequired": "You must provide a cancellation reason",
+        "cancelSuccess": "Sale cancelled successfully",
+        "cancelError": "Error cancelling sale"
+      }
+    },
+    "errors": {
+      "loadFailed": "Failed to load sales"
+    }
+  },
+  "inventory": {
+    "title": "Inventory",
+    "subtitle": "Manage products, categories and stock",
+    "products": {
+      "title": "Products",
+      "newProduct": "New Product",
+      "editProduct": "Edit Product",
+      "search": "Search products...",
+      "category": "Category",
+      "allCategories": "All categories",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "lowStock": "Low Stock",
+      "outOfStock": "Out of Stock",
+      "inStock": "In Stock",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "table": {
+      "sku": "SKU",
+      "name": "Name",
+      "category": "Category",
+      "price": "Price",
+      "stock": "Stock",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "form": {
+      "general": "General",
+      "pricing": "Pricing",
+      "stock": "Inventory",
+      "name": "Product Name",
+      "description": "Description",
+      "sku": "SKU",
+      "barcode": "Barcode",
+      "category": "Category",
+      "selectCategory": "Select category",
+      "costPrice": "Cost Price",
+      "salePrice": "Sale Price",
+      "tax": "Tax",
+      "taxIncluded": "Tax Included",
+      "quantity": "Quantity",
+      "reorderPoint": "Reorder Point",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "categories": {
+      "title": "Categories",
+      "newCategory": "New Category",
+      "name": "Name",
+      "description": "Description",
+      "products": "Products"
+    },
+    "stats": {
+      "totalProducts": "Total Products",
+      "lowStockItems": "Low Stock Items",
+      "outOfStockItems": "Out of Stock Items",
+      "categories": "Categories"
+    },
+    "loading": "Loading products...",
+    "noProducts": "No products found",
+    "errors": {
+      "loadFailed": "Failed to load products",
+      "saveFailed": "Failed to save product",
+      "deleteFailed": "Failed to delete product"
     }
   },
   "errors": {

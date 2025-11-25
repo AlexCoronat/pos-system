@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,9 @@ import { getUserFriendlyMessage } from '@/lib/utils/error-handler'
 type Step = 1 | 2 | 3
 
 export default function RegisterPage() {
+  const t = useTranslations('auth.register')
+  const tErrors = useTranslations('auth.errors')
+  const tCommon = useTranslations('common')
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [formData, setFormData] = useState<RegisterData>({
     email: '',
@@ -64,14 +68,14 @@ export default function RegisterPage() {
   }
 
   const passwordStrength = getPasswordStrength(formData.password)
-  const passwordStrengthText = ['Muy débil', 'Débil', 'Regular', 'Buena', 'Fuerte'][passwordStrength]
   const passwordStrengthColor = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500'][passwordStrength]
+  const passwordStrengthText = ['', t('step1.passwordStrength.weak'), t('step1.passwordStrength.fair'), t('step1.passwordStrength.good'), t('step1.passwordStrength.strong'), t('step1.passwordStrength.veryStrong')][passwordStrength]
 
   const validateStep1 = () => {
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
       toast({
-        title: "Campos requeridos",
-        description: "Por favor completa todos los campos obligatorios",
+        title: tErrors('required'),
+        description: tErrors('required'),
         variant: "destructive",
       })
       return false
@@ -79,8 +83,8 @@ export default function RegisterPage() {
 
     if (formData.password !== confirmPassword) {
       toast({
-        title: "Error",
-        description: "Las contraseñas no coinciden",
+        title: tCommon('error'),
+        description: tErrors('passwordMismatch'),
         variant: "destructive",
       })
       return false
@@ -88,8 +92,8 @@ export default function RegisterPage() {
 
     if (passwordStrength < 3 || formData.password.length < AUTH_CONSTANTS.PASSWORD.MIN_LENGTH) {
       toast({
-        title: "Contraseña débil",
-        description: "La contraseña debe tener al menos 8 caracteres, mayúsculas, minúsculas y números",
+        title: t('validation.weakPassword'),
+        description: t('validation.weakPasswordMessage'),
         variant: "destructive",
       })
       return false
@@ -101,8 +105,8 @@ export default function RegisterPage() {
   const validateStep2 = () => {
     if (!formData.businessName) {
       toast({
-        title: "Campo requerido",
-        description: "El nombre del negocio es obligatorio",
+        title: t('validation.fieldRequired'),
+        description: t('validation.businessNameRequired'),
         variant: "destructive",
       })
       return false
@@ -113,8 +117,8 @@ export default function RegisterPage() {
   const validateStep3 = () => {
     if (!formData.locationName) {
       toast({
-        title: "Campo requerido",
-        description: "El nombre de la ubicación es obligatorio",
+        title: t('validation.fieldRequired'),
+        description: t('validation.locationNameRequired'),
         variant: "destructive",
       })
       return false
@@ -122,8 +126,8 @@ export default function RegisterPage() {
 
     if (!formData.acceptTerms) {
       toast({
-        title: "Términos requeridos",
-        description: "Debes aceptar los términos y condiciones",
+        title: t('validation.termsRequired'),
+        description: t('validation.termsRequiredMessage'),
         variant: "destructive",
       })
       return false
@@ -156,13 +160,13 @@ export default function RegisterPage() {
     try {
       await register(formData)
       toast({
-        title: "Cuenta creada",
-        description: "Tu cuenta y negocio han sido creados exitosamente",
+        title: t('messages.accountCreated'),
+        description: t('messages.accountCreatedMessage'),
       })
       router.push(ROUTES.DASHBOARD)
     } catch (error: any) {
       toast({
-        title: "Error al registrar",
+        title: t('messages.registerError'),
         description: getUserFriendlyMessage(error),
         variant: "destructive",
       })
@@ -176,18 +180,18 @@ export default function RegisterPage() {
   }
 
   const steps = [
-    { number: 1, title: 'Datos personales', icon: User },
-    { number: 2, title: 'Tu negocio', icon: Building2 },
-    { number: 3, title: 'Primera ubicación', icon: MapPin },
+    { number: 1, title: t('steps.personal'), icon: User },
+    { number: 2, title: t('steps.business'), icon: Building2 },
+    { number: 3, title: t('steps.location'), icon: MapPin },
   ]
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold text-gray-900">Crear cuenta</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
         <p className="text-gray-600">
-          Configura tu sistema POS en minutos
+          {t('subtitle')}
         </p>
       </div>
 
@@ -232,7 +236,7 @@ export default function RegisterPage() {
               <div className="w-full border-t border-gray-300"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">O regístrate con email</span>
+              <span className="px-2 bg-white text-gray-500">{t('orRegisterWith')}</span>
             </div>
           </div>
         </>
@@ -246,7 +250,7 @@ export default function RegisterPage() {
             {/* Name Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName">Nombre *</Label>
+                <Label htmlFor="firstName">{t('step1.firstName')}</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
@@ -254,7 +258,7 @@ export default function RegisterPage() {
                     type="text"
                     required
                     className="pl-10 h-12"
-                    placeholder="Tu nombre"
+                    placeholder={t('step1.firstNamePlaceholder')}
                     value={formData.firstName}
                     onChange={(e) => handleInputChange('firstName', e.target.value)}
                   />
@@ -262,7 +266,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="lastName">Apellido *</Label>
+                <Label htmlFor="lastName">{t('step1.lastName')}</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
@@ -270,7 +274,7 @@ export default function RegisterPage() {
                     type="text"
                     required
                     className="pl-10 h-12"
-                    placeholder="Tu apellido"
+                    placeholder={t('step1.lastNamePlaceholder')}
                     value={formData.lastName}
                     onChange={(e) => handleInputChange('lastName', e.target.value)}
                   />
@@ -280,7 +284,7 @@ export default function RegisterPage() {
 
             {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="email">Correo electrónico *</Label>
+              <Label htmlFor="email">{t('step1.email')}</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
@@ -288,7 +292,7 @@ export default function RegisterPage() {
                   type="email"
                   required
                   className="pl-10 h-12"
-                  placeholder="tu@email.com"
+                  placeholder={t('step1.emailPlaceholder')}
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                 />
@@ -297,14 +301,14 @@ export default function RegisterPage() {
 
             {/* Phone */}
             <div className="space-y-2">
-              <Label htmlFor="phone">Teléfono (opcional)</Label>
+              <Label htmlFor="phone">{t('step1.phone')}</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
                   id="phone"
                   type="tel"
                   className="pl-10 h-12"
-                  placeholder="(555) 123-4567"
+                  placeholder={t('step1.phonePlaceholder')}
                   value={formData.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                 />
@@ -313,7 +317,7 @@ export default function RegisterPage() {
 
             {/* Password */}
             <div className="space-y-2">
-              <Label htmlFor="password">Contraseña *</Label>
+              <Label htmlFor="password">{t('step1.password')}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
@@ -321,7 +325,7 @@ export default function RegisterPage() {
                   type={showPassword ? "text" : "password"}
                   required
                   className="pl-10 pr-10 h-12"
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder={t('step1.passwordPlaceholder')}
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
                 />
@@ -352,7 +356,7 @@ export default function RegisterPage() {
 
             {/* Confirm Password */}
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar contraseña *</Label>
+              <Label htmlFor="confirmPassword">{t('step1.confirmPassword')}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
@@ -362,7 +366,7 @@ export default function RegisterPage() {
                   className={`pl-10 pr-10 h-12 ${
                     confirmPassword && formData.password !== confirmPassword ? 'border-red-500' : ''
                   }`}
-                  placeholder="Repite tu contraseña"
+                  placeholder={t('step1.confirmPasswordPlaceholder')}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
@@ -379,7 +383,7 @@ export default function RegisterPage() {
                 </button>
               </div>
               {confirmPassword && formData.password !== confirmPassword && (
-                <p className="text-sm text-red-600">Las contraseñas no coinciden</p>
+                <p className="text-sm text-red-600">{t('step1.passwordMismatch')}</p>
               )}
             </div>
           </div>
@@ -391,14 +395,14 @@ export default function RegisterPage() {
             <Card className="bg-blue-50 border-blue-200">
               <CardContent className="pt-4">
                 <p className="text-sm text-blue-800">
-                  Ingresa los datos de tu negocio. Serás el administrador principal con acceso total.
+                  {t('step2.infoMessage')}
                 </p>
               </CardContent>
             </Card>
 
             {/* Business Name */}
             <div className="space-y-2">
-              <Label htmlFor="businessName">Nombre del negocio *</Label>
+              <Label htmlFor="businessName">{t('step2.businessName')}</Label>
               <div className="relative">
                 <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
@@ -406,7 +410,7 @@ export default function RegisterPage() {
                   type="text"
                   required
                   className="pl-10 h-12"
-                  placeholder="Mi Papelería"
+                  placeholder={t('step2.businessNamePlaceholder')}
                   value={formData.businessName}
                   onChange={(e) => handleInputChange('businessName', e.target.value)}
                 />
@@ -415,12 +419,12 @@ export default function RegisterPage() {
 
             {/* Tax ID */}
             <div className="space-y-2">
-              <Label htmlFor="businessTaxId">RFC (opcional)</Label>
+              <Label htmlFor="businessTaxId">{t('step2.businessTaxId')}</Label>
               <Input
                 id="businessTaxId"
                 type="text"
                 className="h-12"
-                placeholder="XAXX010101000"
+                placeholder={t('step2.businessTaxIdPlaceholder')}
                 value={formData.businessTaxId}
                 onChange={(e) => handleInputChange('businessTaxId', e.target.value.toUpperCase())}
               />
@@ -428,12 +432,12 @@ export default function RegisterPage() {
 
             {/* Business Type */}
             <div className="space-y-2">
-              <Label htmlFor="businessType">Giro del negocio</Label>
+              <Label htmlFor="businessType">{t('step2.businessType')}</Label>
               <Input
                 id="businessType"
                 type="text"
                 className="h-12"
-                placeholder="Papelería, Abarrotes, Farmacia, etc."
+                placeholder={t('step2.businessTypePlaceholder')}
                 value={formData.businessType}
                 onChange={(e) => handleInputChange('businessType', e.target.value)}
               />
@@ -447,14 +451,14 @@ export default function RegisterPage() {
             <Card className="bg-green-50 border-green-200">
               <CardContent className="pt-4">
                 <p className="text-sm text-green-800">
-                  Configura tu primera sucursal o punto de venta. Podrás agregar más después.
+                  {t('step3.infoMessage')}
                 </p>
               </CardContent>
             </Card>
 
             {/* Location Name */}
             <div className="space-y-2">
-              <Label htmlFor="locationName">Nombre de la sucursal *</Label>
+              <Label htmlFor="locationName">{t('step3.locationName')}</Label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
@@ -462,7 +466,7 @@ export default function RegisterPage() {
                   type="text"
                   required
                   className="pl-10 h-12"
-                  placeholder="Sucursal Centro"
+                  placeholder={t('step3.locationNamePlaceholder')}
                   value={formData.locationName}
                   onChange={(e) => handleInputChange('locationName', e.target.value)}
                 />
@@ -471,12 +475,12 @@ export default function RegisterPage() {
 
             {/* Address */}
             <div className="space-y-2">
-              <Label htmlFor="locationAddress">Dirección</Label>
+              <Label htmlFor="locationAddress">{t('step3.locationAddress')}</Label>
               <Input
                 id="locationAddress"
                 type="text"
                 className="h-12"
-                placeholder="Calle, número, colonia"
+                placeholder={t('step3.locationAddressPlaceholder')}
                 value={formData.locationAddress}
                 onChange={(e) => handleInputChange('locationAddress', e.target.value)}
               />
@@ -485,23 +489,23 @@ export default function RegisterPage() {
             {/* City and State */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="locationCity">Ciudad</Label>
+                <Label htmlFor="locationCity">{t('step3.locationCity')}</Label>
                 <Input
                   id="locationCity"
                   type="text"
                   className="h-12"
-                  placeholder="Ciudad"
+                  placeholder={t('step3.locationCityPlaceholder')}
                   value={formData.locationCity}
                   onChange={(e) => handleInputChange('locationCity', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="locationState">Estado</Label>
+                <Label htmlFor="locationState">{t('step3.locationState')}</Label>
                 <Input
                   id="locationState"
                   type="text"
                   className="h-12"
-                  placeholder="Estado"
+                  placeholder={t('step3.locationStatePlaceholder')}
                   value={formData.locationState}
                   onChange={(e) => handleInputChange('locationState', e.target.value)}
                 />
@@ -511,23 +515,23 @@ export default function RegisterPage() {
             {/* Postal Code and Phone */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="locationPostalCode">Código Postal</Label>
+                <Label htmlFor="locationPostalCode">{t('step3.locationPostalCode')}</Label>
                 <Input
                   id="locationPostalCode"
                   type="text"
                   className="h-12"
-                  placeholder="12345"
+                  placeholder={t('step3.locationPostalCodePlaceholder')}
                   value={formData.locationPostalCode}
                   onChange={(e) => handleInputChange('locationPostalCode', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="locationPhone">Teléfono</Label>
+                <Label htmlFor="locationPhone">{t('step3.locationPhone')}</Label>
                 <Input
                   id="locationPhone"
                   type="tel"
                   className="h-12"
-                  placeholder="(555) 123-4567"
+                  placeholder={t('step3.locationPhonePlaceholder')}
                   value={formData.locationPhone}
                   onChange={(e) => handleInputChange('locationPhone', e.target.value)}
                 />
@@ -543,13 +547,13 @@ export default function RegisterPage() {
                 className="mt-1"
               />
               <Label htmlFor="accept-terms" className="text-sm text-gray-600 leading-relaxed">
-                Acepto los{' '}
+                {t('step3.acceptTerms')}{' '}
                 <Link href={ROUTES.TERMS} className="font-medium text-blue-600 hover:text-blue-500">
-                  Términos y Condiciones
+                  {t('step3.termsLink')}
                 </Link>
-                {' '}y la{' '}
+                {' '}{t('step3.and')}{' '}
                 <Link href={ROUTES.PRIVACY} className="font-medium text-blue-600 hover:text-blue-500">
-                  Política de Privacidad
+                  {t('step3.privacyLink')}
                 </Link>
               </Label>
             </div>
@@ -566,7 +570,7 @@ export default function RegisterPage() {
               onClick={handleBack}
             >
               <ArrowLeft className="h-5 w-5 mr-2" />
-              Anterior
+              {t('buttons.previous')}
             </Button>
           )}
 
@@ -576,7 +580,7 @@ export default function RegisterPage() {
               className="flex-1 h-12 bg-blue-600 hover:bg-blue-700"
               onClick={handleNext}
             >
-              Siguiente
+              {t('buttons.next')}
               <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
           ) : (
@@ -588,12 +592,12 @@ export default function RegisterPage() {
               {isLoading ? (
                 <div className="flex items-center space-x-2">
                   <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                  <span>Creando cuenta...</span>
+                  <span>{t('buttons.creating')}</span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">
                   <UserPlus className="h-5 w-5" />
-                  <span>Crear cuenta</span>
+                  <span>{t('buttons.create')}</span>
                 </div>
               )}
             </Button>
@@ -604,12 +608,12 @@ export default function RegisterPage() {
       {/* Login Link */}
       <div className="text-center">
         <p className="text-sm text-gray-600">
-          ¿Ya tienes una cuenta?{' '}
+          {t('haveAccount')}{' '}
           <Link
             href={ROUTES.AUTH.LOGIN}
             className="font-medium text-blue-600 hover:text-blue-500"
           >
-            Inicia sesión aquí
+            {t('signIn')}
           </Link>
         </p>
       </div>
