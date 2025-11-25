@@ -728,20 +728,20 @@ Implementar soporte completo de múltiples idiomas usando `next-intl`, con espa�
 
 ---
 
-### Fase 11: Formato de Fechas, Números y Moneda 💱
+### Fase 11: Formato de Fechas, Números y Moneda 💱 ✅
 **Tiempo estimado:** 2-3 horas
 
 **Tareas:**
-- [ ] Configurar formato de fechas según idioma
+- [*] Configurar formato de fechas según idioma
   - `es`: DD/MM/YYYY
   - `en`: MM/DD/YYYY
-- [ ] Configurar formato de números
+- [*] Configurar formato de números
   - `es`: 1.234,56
   - `en`: 1,234.56
-- [ ] Configurar formato de moneda
+- [*] Configurar formato de moneda
   - Símbolo: $ (MXN)
   - Separadores según idioma
-- [ ] Crear helpers de formateo
+- [*] Crear helpers de formateo
   - `formatDate()`
   - `formatCurrency()`
   - `formatNumber()`
