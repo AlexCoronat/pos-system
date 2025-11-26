@@ -20,7 +20,8 @@ import {
   Lock,
   Pencil,
   Trash2,
-  Archive
+  Archive,
+  User
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -73,6 +74,8 @@ import { teamService, TeamMember, RoleOption, CreateTeamMemberData } from '@/lib
 import { locationService } from '@/lib/services/location.service'
 import type { LocationListItem } from '@/lib/types/settings'
 import { toast } from 'sonner'
+import { TemporaryPasswordModal } from '@/components/team/TemporaryPasswordModal'
+import { validateUsername } from '@/lib/utils/password-utils'
 
 export default function TeamPage() {
   const t = useTranslations('team')
@@ -87,9 +90,22 @@ export default function TeamPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  const [formData, setFormData] = useState({
+  // Temporary password modal state
+  const [showTempPasswordModal, setShowTempPasswordModal] = useState(false)
+  const [tempPasswordData, setTempPasswordData] = useState({
+    username: '',
     email: '',
-    password: '',
+    temporaryPassword: '',
+    isUsername: false
+  })
+
+  // Search filter
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const [formData, setFormData] = useState({
+    useEmail: true, // Toggle: true = email, false = username
+    email: '',
+    username: '',
     firstName: '',
     lastName: '',
     phone: '',
@@ -131,8 +147,9 @@ export default function TeamPage() {
 
   const resetForm = () => {
     setFormData({
+      useEmail: true,
       email: '',
-      password: '',
+      username: '',
       firstName: '',
       lastName: '',
       phone: '',
@@ -158,13 +175,28 @@ export default function TeamPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
-      toast.error(t('validation.requiredFields'))
-      return
+    // Validate based on useEmail toggle
+    if (formData.useEmail) {
+      if (!formData.email) {
+        toast.error('El email es requerido')
+        return
+      }
+    } else {
+      if (!formData.username) {
+        toast.error('El nombre de usuario es requerido')
+        return
+      }
+
+      // Validate username format
+      const validation = validateUsername(formData.username)
+      if (!validation.valid) {
+        toast.error(validation.error || 'Nombre de usuario inválido')
+        return
+      }
     }
 
-    if (formData.password.length < 8) {
-      toast.error(t('validation.passwordLength'))
+    if (!formData.firstName || !formData.lastName) {
+      toast.error(t('validation.requiredFields'))
       return
     }
 
@@ -177,8 +209,9 @@ export default function TeamPage() {
 
     try {
       const data: CreateTeamMemberData = {
-        email: formData.email,
-        password: formData.password,
+        useEmail: formData.useEmail,
+        email: formData.useEmail ? formData.email : undefined,
+        username: formData.useEmail ? undefined : formData.username,
         firstName: formData.firstName,
         lastName: formData.lastName,
         phone: formData.phone || undefined,
@@ -187,7 +220,17 @@ export default function TeamPage() {
         primaryLocationId: parseInt(formData.primaryLocationId)
       }
 
-      await teamService.addTeamMember(data)
+      const result = await teamService.addTeamMember(data)
+
+      // Show temporary password modal
+      setTempPasswordData({
+        username: formData.useEmail ? formData.email : formData.username,
+        email: formData.useEmail ? formData.email : '', // Email is empty for username-based accounts
+        temporaryPassword: result.temporaryPassword,
+        isUsername: !formData.useEmail
+      })
+      setShowTempPasswordModal(true)
+
       toast.success(t('messages.memberAdded'))
       setDialogOpen(false)
       loadData()
@@ -334,6 +377,20 @@ export default function TeamPage() {
     })
   }
 
+  // Filter members based on search term
+  const filteredMembers = members.filter(member => {
+    if (!searchTerm) return true
+
+    const search = searchTerm.toLowerCase()
+    const fullName = `${member.firstName} ${member.lastName}`.toLowerCase()
+    const email = member.email.toLowerCase()
+    const role = member.roleName.toLowerCase()
+
+    return fullName.includes(search) ||
+      email.includes(search) ||
+      role.includes(search)
+  })
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -368,27 +425,45 @@ export default function TeamPage() {
       {/* Team Members Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            {t('stats.members')}
-          </CardTitle>
-          <CardDescription>
-            {members.length} {members.length !== 1 ? t('stats.users') : t('stats.user')} {t('stats.inBusiness')}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                {t('stats.members')}
+              </CardTitle>
+              <CardDescription>
+                {members.length} {members.length !== 1 ? t('stats.users') : t('stats.user')} {t('stats.inBusiness')}
+              </CardDescription>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative w-72">
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Buscar por nombre, email o rol..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-8 text-center">
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
             </div>
-          ) : members.length === 0 ? (
+          ) : filteredMembers.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>{t('empty.title')}</p>
-              <Button className="mt-4" onClick={handleOpenDialog}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                {t('empty.addFirst')}
-              </Button>
+              <p>{searchTerm ? 'No se encontraron resultados' : t('empty.title')}</p>
+              {!searchTerm && (
+                <Button className="mt-4" onClick={handleOpenDialog}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  {t('empty.addFirst')}
+                </Button>
+              )}
             </div>
           ) : (
             <Table>
@@ -403,7 +478,7 @@ export default function TeamPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {members.map((member) => (
+                {filteredMembers.map((member) => (
                   <TableRow key={member.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -553,48 +628,69 @@ export default function TeamPage() {
               </div>
             </div>
 
-            {/* Email */}
-            <div className="space-y-2">
-              <Label htmlFor="email">{t('addDialog.email')}</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  className="pl-10"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder={t('addDialog.emailPlaceholder')}
-                />
+            {/* Email or Username Toggle */}
+            <div className="space-y-3">
+              <Label>Tipo de Acceso</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={formData.useEmail ? 'default' : 'outline'}
+                  className="flex-1"
+                  onClick={() => setFormData({ ...formData, useEmail: true })}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Email
+                </Button>
+                <Button
+                  type="button"
+                  variant={!formData.useEmail ? 'default' : 'outline'}
+                  className="flex-1"
+                  onClick={() => setFormData({ ...formData, useEmail: false })}
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Usuario
+                </Button>
               </div>
             </div>
 
-            {/* Password */}
-            <div className="space-y-2">
-              <Label htmlFor="password">{t('addDialog.password')}</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  className="pl-10 pr-10"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder={t('addDialog.passwordPlaceholder')}
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
-                  )}
-                </button>
+            {/* Email Field (conditional) */}
+            {formData.useEmail && (
+              <div className="space-y-2">
+                <Label htmlFor="email">Email *</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    className="pl-10"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="usuario@empresa.com"
+                  />
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Username Field (conditional) */}
+            {!formData.useEmail && (
+              <div className="space-y-2">
+                <Label htmlFor="username">Nombre de Usuario *</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="username"
+                    type="text"
+                    className="pl-10"
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    placeholder="jdoe123"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Solo letras, números, guiones y guiones bajos. Mínimo 3 caracteres.
+                </p>
+              </div>
+            )}
 
             {/* Phone */}
             <div className="space-y-2">
@@ -838,6 +934,16 @@ export default function TeamPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Temporary Password Modal */}
+      <TemporaryPasswordModal
+        isOpen={showTempPasswordModal}
+        onClose={() => setShowTempPasswordModal(false)}
+        username={tempPasswordData.username}
+        email={tempPasswordData.email}
+        temporaryPassword={tempPasswordData.temporaryPassword}
+        isUsername={tempPasswordData.isUsername}
+      />
     </div>
   )
 }

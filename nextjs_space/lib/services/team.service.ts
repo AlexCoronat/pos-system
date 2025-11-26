@@ -4,10 +4,17 @@
  */
 
 import { supabase } from '@/lib/supabase/client'
+import {
+  generateTemporaryPassword,
+  encryptPassword,
+  generateInternalEmail,
+  validateUsername
+} from '@/lib/utils/password-utils'
 
 export interface TeamMember {
   id: string
   email: string
+  username?: string  // Added username field
   firstName: string
   lastName: string
   phone?: string
@@ -29,8 +36,9 @@ export interface TeamMember {
 }
 
 export interface CreateTeamMemberData {
-  email: string
-  password: string
+  useEmail: boolean  // Toggle: true = use email, false = use username
+  email?: string  // Optional - required if useEmail = true
+  username?: string  // Optional - required if useEmail = false
   firstName: string
   lastName: string
   phone?: string
@@ -104,7 +112,6 @@ class TeamService {
           )
         `)
         .eq('business_id', currentUser.business_id)
-        .eq('is_active', true)
         .order('first_name', { ascending: true })
 
       if (error) throw error
@@ -139,9 +146,30 @@ class TeamService {
 
   /**
    * Add a new team member to the business
+   * Returns the created member and the generated temporary password
    */
-  async addTeamMember(data: CreateTeamMemberData): Promise<TeamMember> {
+  async addTeamMember(data: CreateTeamMemberData): Promise<{
+    member: TeamMember
+    temporaryPassword: string
+  }> {
     try {
+      // Validate input based on useEmail flag
+      if (data.useEmail) {
+        if (!data.email) {
+          throw new Error('Email is required when useEmail is true')
+        }
+      } else {
+        if (!data.username) {
+          throw new Error('Username is required when useEmail is false')
+        }
+
+        // Validate username format
+        const validation = validateUsername(data.username)
+        if (!validation.valid) {
+          throw new Error(validation.error || 'Invalid username format')
+        }
+      }
+
       // Get current user's business_id
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('No authenticated user')
@@ -156,6 +184,9 @@ class TeamService {
         throw new Error('User has no business assigned')
       }
 
+      // Note: Username uniqueness is enforced by DB UNIQUE constraint
+      // No need to check manually - DB will throw error if duplicate
+
       // Check plan limits
       const { data: canAdd } = await supabase
         .rpc('check_plan_limit', {
@@ -167,11 +198,19 @@ class TeamService {
         throw new Error('Has alcanzado el límite de usuarios de tu plan')
       }
 
-      // Create auth user using admin API (this requires service role key)
-      // For now, we'll use signUp which will send a confirmation email
+      // Generate temporary password
+      const temporaryPassword = generateTemporaryPassword()
+      const encryptedPassword = encryptPassword(temporaryPassword)
+
+      // Determine email to use for auth
+      const authEmail = data.useEmail
+        ? data.email!
+        : generateInternalEmail(data.username!)
+
+      // Create auth user with temporary password
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
+        email: authEmail,
+        password: temporaryPassword,
         options: {
           data: {
             first_name: data.firstName,
@@ -186,13 +225,16 @@ class TeamService {
 
       const newUserId = authData.user.id
 
-      // Update user_details with business and role
+      // Update user_details with business, role, username, and temporary password
       const { error: updateError } = await supabase
         .from('user_details')
         .update({
+          username: data.useEmail ? null : data.username,
           business_id: currentUser.business_id,
           role_id: data.roleId || 3, // Default to Cashier
-          default_location_id: data.primaryLocationId
+          default_location_id: data.primaryLocationId,
+          temporary_password_hash: encryptedPassword,
+          force_password_change: true // Must change password on first login
         })
         .eq('id', newUserId)
 
@@ -217,10 +259,58 @@ class TeamService {
         throw new Error('Error retrieving created member')
       }
 
-      return newMember
+      return {
+        member: newMember,
+        temporaryPassword // Return temp password to show to admin
+      }
     } catch (error: any) {
       console.error('Error adding team member:', error)
       throw new Error(error.message || 'Error al agregar miembro del equipo')
+    }
+  }
+
+  /**
+   * Regenerate temporary password for a user (Admin only)
+   * Generates a new temporary password and forces password change on next login
+   */
+  async regenerateTemporaryPassword(memberId: string): Promise<string> {
+    try {
+      // Generate new temporary password
+      const temporaryPassword = generateTemporaryPassword()
+      const encryptedPassword = encryptPassword(temporaryPassword)
+
+      // Get user details to find their email
+      const { data: userDetails, error: fetchError } = await supabase
+        .from('user_details')
+        .select('email, username')
+        .eq('id', memberId)
+        .single()
+
+      if (fetchError || !userDetails) {
+        throw new Error('Usuario no encontrado')
+      }
+
+      // Update user_details with new encrypted temp password
+      const { error: updateError } = await supabase
+        .from('user_details')
+        .update({
+          temporary_password_hash: encryptedPassword,
+          force_password_change: true,
+          password_changed_at: null // Reset password change timestamp
+        })
+        .eq('id', memberId)
+
+      if (updateError) throw updateError
+
+      // TODO: Update actual auth password via Supabase Admin API
+      // This requires service role key - for now, temp password is stored
+      // but user needs to be told to use it and change it
+      // In production, you'd want to use Supabase Admin API to actually reset the auth password
+
+      return temporaryPassword
+    } catch (error: any) {
+      console.error('Error regenerating temporary password:', error)
+      throw new Error(error.message || 'Error al regenerar contraseña')
     }
   }
 

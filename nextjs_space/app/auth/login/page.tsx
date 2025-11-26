@@ -61,6 +61,14 @@ export default function LoginPage() {
       router.push(redirectTo)
     } catch (error: any) {
       console.error('Login error caught:', error)
+
+      // Check for forced password change
+      if (error.message === 'FORCE_PASSWORD_CHANGE') {
+        console.log('Redirecting to password change page')
+        router.push('/auth/change-password')
+        return
+      }
+
       toast({
         ...MESSAGES.AUTH.LOGIN_FAILED,
         description: getUserFriendlyMessage(error),
@@ -100,21 +108,21 @@ export default function LoginPage() {
       {/* Login Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
-          {/* Email Field */}
+          {/* Email or Username Field */}
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-              {t('email')}
+              Email o Usuario
             </Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 id="email"
                 name="email"
-                type="email"
-                autoComplete="email"
+                type="text"
+                autoComplete="username"
                 required
                 className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                placeholder={t('email')}
+                placeholder="Email o Usuario"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
               />

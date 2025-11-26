@@ -21,6 +21,7 @@ import { STORAGE_KEYS, DEFAULT_PERMISSIONS, AUTH_CONSTANTS } from '../constants/
 import { ROUTES } from '../constants/routes'
 import { parseAuthError, logError, AuthenticationError } from '../utils/error-handler'
 import { logger } from '../utils/logger'
+import { isInternalEmail, extractUsernameFromEmail } from '../utils/password-utils'
 import type { User } from '@supabase/supabase-js'
 
 class AuthService {
@@ -83,14 +84,33 @@ class AuthService {
   }
 
   /**
-   * Login with email and password
+   * Login with email or username and password
    */
   async login(credentials: LoginCredentials): Promise<AuthUser> {
     try {
       this.setLoading(true)
 
+      // Check if credentials.email is actually a username
+      // If it doesn't contain @, assume it's a username
+      let actualEmail = credentials.email
+
+      if (!credentials.email.includes('@')) {
+        // It's a username, lookup the actual email
+        const { data: userDetails, error: lookupError } = await this.supabase
+          .from('user_details')
+          .select('email')
+          .eq('username', credentials.email)
+          .single()
+
+        if (lookupError || !userDetails) {
+          throw new AuthenticationError('Usuario o contraseña incorrectos')
+        }
+
+        actualEmail = userDetails.email
+      }
+
       const { data, error } = await this.supabase.auth.signInWithPassword({
-        email: credentials.email,
+        email: actualEmail,
         password: credentials.password,
       })
 
@@ -102,8 +122,22 @@ class AuthService {
         console.error('No user returned from login')
         throw new AuthenticationError('No user returned from login')
       }
+
       // Load full user profile
       const user = await this.loadUserProfile(data.user.id)
+
+      // Check if user needs to change password
+      const { data: userDetails } = await this.supabase
+        .from('user_details')
+        .select('force_password_change')
+        .eq('id', data.user.id)
+        .single()
+
+      if (userDetails?.force_password_change) {
+        // Store user ID for password change page
+        localStorage.setItem('pending_password_change_user_id', data.user.id)
+        throw new AuthenticationError('FORCE_PASSWORD_CHANGE')
+      }
 
       // Create session record
       await this.createUserSession({
@@ -417,6 +451,53 @@ class AuthService {
     })
 
     if (error) throw this.handleAuthError(error as AuthError)
+  }
+
+  /**
+   * Change password on first login (forced password change)
+   */
+  async changePasswordFirstLogin(
+    currentPassword: string,
+    newPassword: string,
+    confirmPassword: string
+  ): Promise<void> {
+    if (newPassword !== confirmPassword) {
+      throw new Error('Las contraseñas no coinciden')
+    }
+
+    // Validate password strength
+    const { validatePasswordStrength } = await import('../utils/password-utils')
+    const validation = validatePasswordStrength(newPassword)
+
+    if (!validation.valid) {
+      throw new Error(validation.errors.join(', '))
+    }
+
+    // Get pending user ID
+    const userId = localStorage.getItem('pending_password_change_user_id')
+    if (!userId) {
+      throw new Error('No pending password change found')
+    }
+
+    // Update password via Supabase Auth
+    const { error } = await this.supabase.auth.updateUser({
+      password: newPassword
+    })
+
+    if (error) throw this.handleAuthError(error as AuthError)
+
+    // Update user_details to clear force_password_change and update timestamp
+    await this.supabase
+      .from('user_details')
+      .update({
+        force_password_change: false,
+        password_changed_at: new Date().toISOString(),
+        temporary_password_hash: null // Clear temp password
+      })
+      .eq('id', userId)
+
+    // Clear pending change flag
+    localStorage.removeItem('pending_password_change_user_id')
   }
 
   /**

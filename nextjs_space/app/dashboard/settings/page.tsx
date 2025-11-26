@@ -33,19 +33,11 @@ export default function SettingsPage() {
       color: 'text-violet-600 bg-violet-100'
     },
     {
-      titleKey: 'sections.locations.title',
-      descriptionKey: 'sections.locations.description',
-      href: '/dashboard/settings/locations',
-      icon: MapPin,
-      color: 'text-blue-600 bg-blue-100'
-    },
-    {
       titleKey: 'sections.company.title',
       descriptionKey: 'sections.company.description',
       href: '/dashboard/settings/company',
       icon: Building2,
-      color: 'text-purple-600 bg-purple-100',
-      disabled: true
+      color: 'text-purple-600 bg-purple-100'
     },
     {
       titleKey: 'sections.payments.title',
@@ -91,11 +83,10 @@ export default function SettingsPage() {
         {settingsSections.map((section) => (
           <Card
             key={section.titleKey}
-            className={`transition-all ${
-              section.disabled
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:shadow-md cursor-pointer'
-            }`}
+            className={`transition-all ${section.disabled
+              ? 'opacity-50 cursor-not-allowed'
+              : 'hover:shadow-md cursor-pointer'
+              }`}
           >
             {section.disabled ? (
               <div className="p-6">
