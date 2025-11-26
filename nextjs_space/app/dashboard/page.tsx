@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { createClient } from '@/lib/supabase/client'
 import {
   Package,
@@ -41,10 +42,18 @@ interface TopProduct {
   revenue: number
 }
 
+interface Location {
+  id: number
+  name: string
+  code: string
+}
+
 export default function DashboardPage() {
   const t = useTranslations('dashboard')
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
+  const [locations, setLocations] = useState<Location[]>([])
+  const [selectedLocationId, setSelectedLocationId] = useState<number | null>(null) // null = all locations
   const [stats, setStats] = useState<DashboardStats>({
     todaySales: 0,
     todayTransactions: 0,
@@ -57,30 +66,79 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (user) {
+      loadLocations()
       loadDashboardData()
     }
   }, [user])
 
+  useEffect(() => {
+    if (user && locations.length > 0) {
+      loadDashboardData()
+    }
+  }, [selectedLocationId])
+
+  const loadLocations = async () => {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, name, code')
+        .eq('business_id', user?.businessId)
+        .is('deleted_at', null)
+        .order('name')
+
+      if (error) {
+        console.error('Error fetching locations:', error)
+        return
+      }
+
+      setLocations(data || [])
+    } catch (error) {
+      console.error('Error loading locations:', error)
+    }
+  }
+
   const loadDashboardData = async () => {
     try {
       const supabase = createClient()
-      const today = new Date().toISOString().split('T')[0]
-      const locationId = user?.defaultLocationId || user?.assignedLocations?.[0]?.locationId
+      // Use local date, not UTC date
+      const now = new Date()
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+
+      console.log('=== DASHBOARD DEBUG ===', {
+        now: now.toISOString(),
+        todayLocal: today.toString(),
+        todayISO: today.toISOString(),
+        tomorrowISO: tomorrow.toISOString()
+      })
+
+      // Use selected location or null for all locations
+      const locationId = selectedLocationId
+      console.log('Selected Location ID:', locationId, '(null = all locations)')
 
       // Build base query for today's sales - filter by location only if available
       let salesQuery = supabase
         .from('sales')
         .select('total_amount, id')
-        .gte('created_at', `${today}T00:00:00`)
-        .lte('created_at', `${today}T23:59:59`)
+        .gte('created_at', today.toISOString())
+        .lt('created_at', tomorrow.toISOString())
         .is('deleted_at', null)
 
-      if (locationId) {
+      // Only filter by location if one is selected (null = all locations)
+      if (locationId !== null) {
         salesQuery = salesQuery.eq('location_id', locationId)
       }
 
       // Fetch today's sales
       const { data: todaySalesData, error: salesError } = await salesQuery
+
+      console.log('Sales Query Result:', {
+        data: todaySalesData,
+        error: salesError,
+        count: todaySalesData?.length
+      })
 
       if (salesError && salesError.code !== 'PGRST116') {
         console.error('Error fetching sales:', salesError)
@@ -89,12 +147,14 @@ export default function DashboardPage() {
       const todayTotal = todaySalesData?.reduce((sum, sale) => sum + (sale.total_amount || 0), 0) || 0
       const todayCount = todaySalesData?.length || 0
 
+      console.log('Today Stats:', { todayTotal, todayCount })
+
       // Fetch low stock products from inventory table
       let stockQuery = supabase
         .from('inventory')
         .select('id, quantity_available, reorder_point')
 
-      if (locationId) {
+      if (locationId !== null) {
         stockQuery = stockQuery.eq('location_id', locationId)
       }
 
@@ -114,7 +174,7 @@ export default function DashboardPage() {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'Pending')
 
-      if (locationId) {
+      if (locationId !== null) {
         quotesQuery = quotesQuery.eq('location_id', locationId)
       }
 
@@ -135,7 +195,7 @@ export default function DashboardPage() {
         .is('deleted_at', null)
         .order('created_at', { ascending: true })
 
-      if (locationId) {
+      if (locationId !== null) {
         weekQuery = weekQuery.eq('location_id', locationId)
       }
 
@@ -172,7 +232,7 @@ export default function DashboardPage() {
         .gte('created_at', thirtyDaysAgo.toISOString())
         .is('deleted_at', null)
 
-      if (locationId) {
+      if (locationId !== null) {
         recentSalesQuery = recentSalesQuery.eq('location_id', locationId)
       }
 
@@ -188,7 +248,7 @@ export default function DashboardPage() {
             product_id,
             quantity,
             line_total,
-            product:products!product_id(name)
+            products!product_id(name)
           `)
           .in('sale_id', saleIds)
 
@@ -198,6 +258,11 @@ export default function DashboardPage() {
           topProductsData = data || []
         }
       }
+
+      console.log('Top Products Raw Data:', {
+        count: topProductsData.length,
+        sample: topProductsData[0]
+      })
 
       // Calculate percentage changes (compare with yesterday)
       let salesChange = 0
@@ -238,7 +303,7 @@ export default function DashboardPage() {
       if (topProductsData) {
         const productMap = new Map<number, { name: string, quantity: number, revenue: number }>()
         topProductsData.forEach((item: any) => {
-          const productName = item.product?.[0]?.name || 'Unknown'
+          const productName = item.products?.name || 'Unknown'
           const current = productMap.get(item.product_id) || { name: productName, quantity: 0, revenue: 0 }
           productMap.set(item.product_id, {
             name: productName,
@@ -327,12 +392,41 @@ export default function DashboardPage() {
     <div className="p-6 space-y-6">
       {/* Welcome Section */}
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          {getGreeting()}, {user?.firstName}!
-        </h2>
-        <p className="text-gray-600">
-          {t('subtitle')}
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              {getGreeting()}, {user?.firstName}!
+            </h2>
+            <p className="text-gray-600">
+              {t('subtitle')}
+            </p>
+          </div>
+
+          {/* Location Filter */}
+          {locations.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                Ubicación:
+              </label>
+              <Select
+                value={selectedLocationId === null ? 'all' : String(selectedLocationId)}
+                onValueChange={(value) => setSelectedLocationId(value === 'all' ? null : Number(value))}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Todas las ubicaciones" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las ubicaciones</SelectItem>
+                  {locations.map((location) => (
+                    <SelectItem key={location.id} value={String(location.id)}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Stats Grid */}

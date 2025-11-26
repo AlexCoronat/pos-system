@@ -541,5 +541,123 @@ GROUP BY
   p.sku,
   s.location_id;
 
-COMMENT ON MATERIALIZED VIEW mv_daily_sales_by_location IS 'Ventas diarias agrupadas por ubicación';
 COMMENT ON MATERIALIZED VIEW mv_top_selling_products IS 'Productos más vendidos en los últimos 30 días';
+
+-- =====================================================
+-- SECTION 20: QUOTES MODULE
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS quotes (
+    id BIGSERIAL PRIMARY KEY,
+    business_id BIGINT NOT NULL REFERENCES businesses(id),
+    quote_number VARCHAR(50) NOT NULL,
+    customer_id BIGINT REFERENCES customers(id),
+    location_id BIGINT NOT NULL REFERENCES locations(id),
+    created_by UUID NOT NULL REFERENCES auth.users(id),
+    
+    -- Dates
+    quote_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    expiry_date DATE,
+    
+    -- Status
+    status VARCHAR(30) DEFAULT 'pending',
+    
+    -- Totals
+    subtotal DECIMAL(12,2) DEFAULT 0,
+    discount_amount DECIMAL(12,2) DEFAULT 0,
+    tax_amount DECIMAL(12,2) DEFAULT 0,
+    total_amount DECIMAL(12,2) DEFAULT 0,
+    currency VARCHAR(3) DEFAULT 'MXN',
+    
+    -- Additional info
+    notes TEXT,
+    internal_notes TEXT,
+    terms_and_conditions TEXT,
+    delivery_time VARCHAR(100),
+    payment_method VARCHAR(50),
+    
+    -- Conversion
+    converted_to_sale_id BIGINT REFERENCES sales(id),
+    converted_at TIMESTAMP WITH TIME ZONE,
+    
+    -- Approval
+    approved_by UUID REFERENCES auth.users(id),
+    approved_at TIMESTAMP WITH TIME ZONE,
+    
+    -- Metadata & Audit
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    
+    CONSTRAINT positive_amounts CHECK (
+        subtotal >= 0 AND
+        tax_amount >= 0 AND
+        discount_amount >= 0 AND
+        total_amount >= 0
+    )
+);
+
+CREATE TABLE IF NOT EXISTS quote_items (
+    id BIGSERIAL PRIMARY KEY,
+    quote_id BIGINT NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+    product_id BIGINT NOT NULL REFERENCES products(id),
+    
+    quantity DECIMAL(10,2) NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    discount_amount DECIMAL(10,2) DEFAULT 0,
+    tax_rate DECIMAL(5,2) DEFAULT 16.00,
+    tax_amount DECIMAL(10,2) DEFAULT 0,
+    subtotal DECIMAL(12,2) NOT NULL,
+    
+    notes TEXT,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_quotes_business ON quotes(business_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_customer ON quotes(customer_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_status ON quotes(status);
+CREATE INDEX IF NOT EXISTS idx_quotes_date ON quotes(quote_date);
+CREATE INDEX IF NOT EXISTS idx_quotes_expiry ON quotes(expiry_date);
+CREATE INDEX IF NOT EXISTS idx_quote_items_quote ON quote_items(quote_id);
+CREATE INDEX IF NOT EXISTS idx_quote_items_product ON quote_items(product_id);
+
+COMMENT ON TABLE quotes IS 'Cotizaciones para clientes';
+COMMENT ON TABLE quote_items IS 'Items de las cotizaciones';
+
+-- =====================================================
+-- SECTION 21: USER ARCHIVE
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS user_details_archive (
+    id UUID PRIMARY KEY,
+    email VARCHAR(255),
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    phone VARCHAR(20),
+    business_id INTEGER,
+    role_id INTEGER,
+    default_location_id INTEGER,
+    is_active BOOLEAN DEFAULT false,
+    last_login_at TIMESTAMPTZ,
+    
+    -- Archive metadata
+    archived_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    archived_by UUID REFERENCES auth.users(id),
+    removal_reason TEXT,
+    
+    -- Original timestamps
+    original_created_at TIMESTAMPTZ,
+    original_updated_at TIMESTAMPTZ,
+    
+    -- Store assigned locations as JSONB
+    assigned_locations JSONB
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_archive_business ON user_details_archive(business_id);
+CREATE INDEX IF NOT EXISTS idx_user_archive_email ON user_details_archive(email);
+CREATE INDEX IF NOT EXISTS idx_user_archive_archived_at ON user_details_archive(archived_at);
+
+COMMENT ON TABLE user_details_archive IS 'Archivo histórico de usuarios eliminados';
+

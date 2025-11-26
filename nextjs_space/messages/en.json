@@ -30,7 +30,11 @@
     "error": "Error",
     "success": "Success",
     "warning": "Warning",
-    "info": "Information"
+    "info": "Information",
+    "summary": "Summary",
+    "page": "Page",
+    "of": "of",
+    "optional": "Optional"
   },
   "layout": {
     "appName": "POS System",
@@ -1174,88 +1178,6 @@
       "create": "Create First Location"
     }
   },
-  "common": {
-    "loading": "Loading...",
-    "error": "Error",
-    "success": "Success",
-    "actions": {
-      "save": "Save",
-      "cancel": "Cancel",
-      "delete": "Delete",
-      "edit": "Edit",
-      "create": "Create",
-      "update": "Update",
-      "close": "Close",
-      "confirm": "Confirm",
-      "back": "Back",
-      "next": "Next",
-      "previous": "Previous",
-      "submit": "Submit",
-      "reset": "Reset",
-      "search": "Search",
-      "filter": "Filter",
-      "export": "Export",
-      "import": "Import",
-      "print": "Print",
-      "download": "Download",
-      "upload": "Upload",
-      "view": "View",
-      "details": "Details",
-      "refresh": "Refresh",
-      "add": "Add",
-      "remove": "Remove",
-      "select": "Select",
-      "selectAll": "Select all",
-      "deselectAll": "Deselect all",
-      "apply": "Apply",
-      "clear": "Clear"
-    },
-    "status": {
-      "loading": "Loading...",
-      "saving": "Saving...",
-      "deleting": "Deleting...",
-      "processing": "Processing...",
-      "uploading": "Uploading...",
-      "downloading": "Downloading...",
-      "updating": "Updating...",
-      "creating": "Creating...",
-      "sending": "Sending...",
-      "connecting": "Connecting...",
-      "searching": "Searching..."
-    },
-    "confirmation": {
-      "areYouSure": "Are you sure?",
-      "cannotUndo": "This action cannot be undone",
-      "confirmDelete": "Confirm deletion?",
-      "unsavedChanges": "You have unsaved changes",
-      "loseChanges": "You will lose your changes if you continue",
-      "confirmAction": "Confirm this action?",
-      "permanentAction": "This action is permanent"
-    },
-    "empty": {
-      "noData": "No data available",
-      "noResults": "No results found",
-      "noItems": "No items",
-      "tryDifferentSearch": "Try a different search",
-      "noResultsFor": "No results found for \"{query}\"",
-      "startByAdding": "Start by adding a new item",
-      "nothingHere": "Nothing here yet"
-    },
-    "messages": {
-      "selectOption": "Select an option",
-      "optional": "Optional",
-      "required": "Required",
-      "all": "All",
-      "none": "None",
-      "yes": "Yes",
-      "no": "No",
-      "ok": "OK",
-      "done": "Done",
-      "continue": "Continue",
-      "skip": "Skip",
-      "finish": "Finish"
-    }
-  },
   "validation": {
     "required": "This field is required",
     "requiredField": "The {field} field is required",
@@ -1403,5 +1325,120 @@
     "networkError": "Network error",
     "timeoutError": "Timeout error",
     "tryAgain": "Try again"
+  },
+  "quotes": {
+    "title": "Quotes",
+    "subtitle": "Manage quotes for your customers",
+    "newQuote": "New Quote",
+    "editQuote": "Edit Quote",
+    "quoteDetails": "Quote Details",
+    "stats": {
+      "totalQuotes": "Total Quotes",
+      "pendingQuotes": "Pending",
+      "acceptedQuotes": "Accepted",
+      "convertedQuotes": "Converted to Sale"
+    },
+    "filters": {
+      "title": "Filters",
+      "search": "Search",
+      "searchPlaceholder": "Search by number, customer...",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "dateRange": "Date range",
+      "refresh": "Refresh"
+    },
+    "table": {
+      "number": "Number",
+      "date": "Date",
+      "customer": "Customer",
+      "total": "Total",
+      "status": "Status",
+      "expiry": "Expires",
+      "actions": "Actions"
+    },
+    "status": {
+      "draft": "Draft",
+      "pending": "Pending",
+      "sent": "Sent",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "expired": "Expired",
+      "converted": "Converted"
+    },
+    "form": {
+      "customer": "Customer",
+      "selectCustomer": "Select customer",
+      "date": "Issue Date",
+      "expiryDate": "Expiry Date",
+      "items": "Quote Items",
+      "addItem": "Add Product",
+      "notes": "Notes",
+      "notesPlaceholder": "Notes visible to the customer...",
+      "internalNotes": "Internal Notes",
+      "internalNotesPlaceholder": "Notes for internal use only...",
+      "terms": "Terms and Conditions",
+      "termsPlaceholder": "Specific terms for this quote...",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "discount": "Discount",
+      "total": "Total",
+      "saveDraft": "Save Draft",
+      "create": "Create Quote",
+      "update": "Update Quote",
+      "cancel": "Cancel"
+    },
+    "actions": {
+      "view": "View Details",
+      "edit": "Edit",
+      "delete": "Delete",
+      "convertToSale": "Convert to Sale",
+      "markAccepted": "Mark as Accepted",
+      "markRejected": "Mark as Rejected",
+      "markSent": "Mark as Sent",
+      "downloadPdf": "Download PDF",
+      "sendEmail": "Send by Email"
+    },
+    "messages": {
+      "created": "Quote created successfully",
+      "updated": "Quote updated successfully",
+      "deleted": "Quote deleted successfully",
+      "statusChanged": "Status updated successfully",
+      "converted": "Quote converted to sale successfully",
+      "confirmDelete": "Are you sure you want to delete this quote?",
+      "confirmConvert": "Are you sure you want to convert this quote to a sale? This will create a new sale with the same items.",
+      "noItems": "You must add at least one item to the quote",
+      "customerRequired": "You must select a customer",
+      "notFound": "Quote not found",
+      "noQuotesFound": "No quotes found",
+      "loadError": "Failed to load quotes",
+      "loadDetailError": "Failed to load quote details",
+      "createError": "Failed to create quote",
+      "updateError": "Failed to update quote",
+      "deleteError": "Failed to delete quote",
+      "statusChangeError": "Failed to update status",
+      "convertError": "Failed to convert to sale",
+      "loadDataError": "Failed to load customers or products",
+      "deleting": "Deleting..."
+    },
+    "labels": {
+      "created": "Created",
+      "unknownCustomer": "Unknown Customer",
+      "deliveryTime": "Delivery time",
+      "conversion": "conversion",
+      "quotesCount": "quotes"
+    },
+    "items": {
+      "product": "Product",
+      "quantity": "Quantity",
+      "price": "Price",
+      "discount": "Disc.",
+      "tax": "Tax",
+      "total": "Total",
+      "actions": "Actions",
+      "searchProduct": "Search product...",
+      "unknownProduct": "Unknown Product",
+      "noItems": "No items in this quote",
+      "noProducts": "No products found"
+    }
   }
 }

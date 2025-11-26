@@ -116,9 +116,10 @@ export interface CreateSaleItemData {
   productId: number
   variantId?: number
   quantity: number
-  unitPrice: number
+  unitPrice: number // Precio de venta (con impuesto incluido)
   discountAmount?: number
   taxAmount?: number
+  taxRate?: number // Tasa de impuesto (ej: 16 para 16%)
   notes?: string
 }
 

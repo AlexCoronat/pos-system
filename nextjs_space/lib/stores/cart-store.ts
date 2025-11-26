@@ -55,14 +55,20 @@ export const useCartStore = create<CartStore>()(
             throw new Error(`Stock insuficiente. Disponible: ${item.availableStock}`)
           }
 
+          // El precio de venta (unitPrice) ya incluye el impuesto
+          // Necesitamos extraer el impuesto del precio de venta
+          const priceWithTax = existingItem.unitPrice * newQuantity
+          const priceWithoutTax = priceWithTax / (1 + DEFAULT_TAX_PERCENTAGE / 100)
+          const taxAmount = priceWithTax - priceWithoutTax
+
           newItems[existingItemIndex] = {
             ...existingItem,
             quantity: newQuantity,
             discountAmount: 0,
             discountPercentage: 0,
             taxPercentage: DEFAULT_TAX_PERCENTAGE,
-            taxAmount: (existingItem.unitPrice * newQuantity * DEFAULT_TAX_PERCENTAGE) / 100,
-            total: (existingItem.unitPrice * newQuantity) + ((existingItem.unitPrice * newQuantity * DEFAULT_TAX_PERCENTAGE) / 100)
+            taxAmount,
+            total: priceWithTax
           }
         } else {
           // Add new item
@@ -70,8 +76,12 @@ export const useCartStore = create<CartStore>()(
             throw new Error(`Stock insuficiente. Disponible: ${item.availableStock}`)
           }
 
-          const taxAmount = (item.unitPrice * item.quantity * DEFAULT_TAX_PERCENTAGE) / 100
-          const total = (item.unitPrice * item.quantity) + taxAmount
+          // El precio de venta (unitPrice) ya incluye el impuesto
+          // Necesitamos extraer el impuesto del precio de venta
+          const priceWithTax = item.unitPrice * item.quantity
+          const priceWithoutTax = priceWithTax / (1 + DEFAULT_TAX_PERCENTAGE / 100)
+          const taxAmount = priceWithTax - priceWithoutTax
+          const total = priceWithTax
 
           newItems = [
             ...items,
@@ -113,13 +123,18 @@ export const useCartStore = create<CartStore>()(
               throw new Error(`Stock insuficiente. Disponible: ${item.availableStock}`)
             }
 
-            const subtotal = item.unitPrice * quantity
+            // El precio unitario ya incluye impuesto
+            const priceWithTax = item.unitPrice * quantity
+            const priceWithoutTax = priceWithTax / (1 + item.taxPercentage / 100)
+
+            // Calcular descuento sobre el precio SIN impuesto
             const discountAmount = item.discountPercentage > 0
-              ? (subtotal * item.discountPercentage) / 100
+              ? (priceWithoutTax * item.discountPercentage) / 100
               : item.discountAmount
-            const subtotalAfterDiscount = subtotal - discountAmount
-            const taxAmount = (subtotalAfterDiscount * item.taxPercentage) / 100
-            const total = subtotalAfterDiscount + taxAmount
+
+            const priceAfterDiscount = priceWithoutTax - discountAmount
+            const taxAmount = priceAfterDiscount * (item.taxPercentage / 100)
+            const total = priceAfterDiscount + taxAmount
 
             return {
               ...item,
@@ -140,22 +155,25 @@ export const useCartStore = create<CartStore>()(
       updateItemDiscount: (productId, discount, variantId, isPercentage = false) => {
         const items = get().items.map(item => {
           if (item.productId === productId && item.variantId === variantId) {
-            const subtotal = item.unitPrice * item.quantity
+            // El precio unitario ya incluye impuesto
+            const priceWithTax = item.unitPrice * item.quantity
+            const priceWithoutTax = priceWithTax / (1 + item.taxPercentage / 100)
 
             let discountAmount = 0
             let discountPercentage = 0
 
             if (isPercentage) {
               discountPercentage = Math.min(100, Math.max(0, discount))
-              discountAmount = (subtotal * discountPercentage) / 100
+              // El descuento se aplica sobre el precio SIN impuesto
+              discountAmount = (priceWithoutTax * discountPercentage) / 100
             } else {
-              discountAmount = Math.min(subtotal, Math.max(0, discount))
-              discountPercentage = (discountAmount / subtotal) * 100
+              discountAmount = Math.min(priceWithoutTax, Math.max(0, discount))
+              discountPercentage = (discountAmount / priceWithoutTax) * 100
             }
 
-            const subtotalAfterDiscount = subtotal - discountAmount
-            const taxAmount = (subtotalAfterDiscount * item.taxPercentage) / 100
-            const total = subtotalAfterDiscount + taxAmount
+            const priceAfterDiscount = priceWithoutTax - discountAmount
+            const taxAmount = priceAfterDiscount * (item.taxPercentage / 100)
+            const total = priceAfterDiscount + taxAmount
 
             return {
               ...item,
@@ -199,8 +217,11 @@ export const useCartStore = create<CartStore>()(
       calculateTotals: () => {
         const items = get().items
 
+        // Subtotal debe ser el precio SIN impuesto (antes de descuentos)
         const subtotal = items.reduce((sum, item) => {
-          return sum + (item.unitPrice * item.quantity)
+          const priceWithTax = item.unitPrice * item.quantity
+          const priceWithoutTax = priceWithTax / (1 + item.taxPercentage / 100)
+          return sum + priceWithoutTax
         }, 0)
 
         const totalDiscount = items.reduce((sum, item) => {
@@ -211,6 +232,7 @@ export const useCartStore = create<CartStore>()(
           return sum + item.taxAmount
         }, 0)
 
+        // Total = Subtotal - Descuentos + Impuestos
         const total = subtotal - totalDiscount + totalTax
 
         set({

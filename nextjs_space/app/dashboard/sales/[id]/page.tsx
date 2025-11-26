@@ -285,38 +285,46 @@ export default function SaleDetailPage({ params }: { params: { id: string } }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sale.items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{item.productName}</p>
-                      {item.variantName && (
-                        <Badge variant="outline" className="mt-1">
-                          {item.variantName}
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {item.productSku}
-                  </TableCell>
-                  <TableCell className="text-center font-semibold">
-                    {item.quantity}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(item.unitPrice)}
-                  </TableCell>
-                  <TableCell className="text-right text-green-600">
-                    {item.discountAmount > 0 ? `-${formatCurrency(item.discountAmount)}` : '-'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(item.taxAmount)}
-                  </TableCell>
-                  <TableCell className="text-right font-semibold">
-                    {formatCurrency(item.total)}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {sale.items.map((item) => {
+                // El unitPrice almacenado incluye el impuesto
+                // Necesitamos mostrar el precio sin impuesto
+                const TAX_RATE = 16 // TODO: Obtener del item si está disponible
+                const priceWithTax = item.unitPrice
+                const priceWithoutTax = priceWithTax / (1 + TAX_RATE / 100)
+
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{item.productName}</p>
+                        {item.variantName && (
+                          <Badge variant="outline" className="mt-1">
+                            {item.variantName}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {item.productSku}
+                    </TableCell>
+                    <TableCell className="text-center font-semibold">
+                      {item.quantity}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(priceWithoutTax)}
+                    </TableCell>
+                    <TableCell className="text-right text-green-600">
+                      {item.discountAmount > 0 ? `-${formatCurrency(item.discountAmount)}` : '-'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(item.taxAmount)}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">
+                      {formatCurrency(item.total)}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </CardContent>

@@ -219,7 +219,9 @@ export function ShoppingCart({ onCheckout }: ShoppingCartProps) {
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-sm">
                     <span>Precio unitario:</span>
-                    <span className="font-medium">{formatCurrency(item.unitPrice)}</span>
+                    <span className="font-medium">
+                      {formatCurrency(item.unitPrice / (1 + item.taxPercentage / 100))}
+                    </span>
                   </div>
 
                   {item.discountAmount > 0 && (
@@ -230,7 +232,7 @@ export function ShoppingCart({ onCheckout }: ShoppingCartProps) {
                   )}
 
                   <div className="flex items-center justify-between text-sm">
-                    <span>Impuestos:</span>
+                    <span>Impuestos ({item.taxPercentage.toFixed(0)}%):</span>
                     <span>{formatCurrency(item.taxAmount)}</span>
                   </div>
 
@@ -342,36 +344,38 @@ export function ShoppingCart({ onCheckout }: ShoppingCartProps) {
               />
             </div>
 
-            {selectedItem && (
-              <div className="bg-accent p-3 rounded-lg space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>Subtotal original:</span>
-                  <span>{formatCurrency(selectedItem.unitPrice * selectedItem.quantity)}</span>
+            {selectedItem && (() => {
+              const priceWithTax = selectedItem.unitPrice * selectedItem.quantity
+              const priceWithoutTax = priceWithTax / (1 + selectedItem.taxPercentage / 100)
+              const discountAmount = discountType === 'percentage'
+                ? (priceWithoutTax * (parseFloat(discountValue) || 0)) / 100
+                : parseFloat(discountValue) || 0
+              const priceAfterDiscount = priceWithoutTax - discountAmount
+              const newTaxAmount = priceAfterDiscount * (selectedItem.taxPercentage / 100)
+              const newTotal = priceAfterDiscount + newTaxAmount
+
+              return (
+                <div className="bg-accent p-3 rounded-lg space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Subtotal original (sin impuesto):</span>
+                    <span>{formatCurrency(priceWithoutTax)}</span>
+                  </div>
+                  <div className="flex justify-between text-green-600">
+                    <span>Descuento:</span>
+                    <span>-{formatCurrency(discountAmount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Impuestos ({selectedItem.taxPercentage.toFixed(0)}%):</span>
+                    <span>{formatCurrency(newTaxAmount)}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between font-semibold">
+                    <span>Nuevo total:</span>
+                    <span>{formatCurrency(newTotal)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-green-600">
-                  <span>Descuento:</span>
-                  <span>
-                    -{formatCurrency(
-                      discountType === 'percentage'
-                        ? ((selectedItem.unitPrice * selectedItem.quantity) * (parseFloat(discountValue) || 0)) / 100
-                        : parseFloat(discountValue) || 0
-                    )}
-                  </span>
-                </div>
-                <Separator />
-                <div className="flex justify-between font-semibold">
-                  <span>Nuevo total:</span>
-                  <span>
-                    {formatCurrency(
-                      (selectedItem.unitPrice * selectedItem.quantity) -
-                      (discountType === 'percentage'
-                        ? ((selectedItem.unitPrice * selectedItem.quantity) * (parseFloat(discountValue) || 0)) / 100
-                        : parseFloat(discountValue) || 0)
-                    )}
-                  </span>
-                </div>
-              </div>
-            )}
+              )
+            })()}
           </div>
 
           <DialogFooter>

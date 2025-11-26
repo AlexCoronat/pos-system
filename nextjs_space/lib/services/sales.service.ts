@@ -29,8 +29,6 @@ class SalesService {
    */
   async createSale(data: CreateSaleData): Promise<SaleWithItems> {
     try {
-      logger.info('Creating new sale', { locationId: data.locationId })
-
       // Get business context
       const { businessId, userId } = await getBusinessContext()
 
@@ -38,8 +36,14 @@ class SalesService {
       const saleNumber = await this.generateSaleNumber()
 
       // Calculate totals
+      // IMPORTANTE: unitPrice ahora incluye el impuesto
+      // Subtotal debe ser el precio SIN impuesto
       const subtotal = data.items.reduce((sum, item) => {
-        return sum + (item.unitPrice * item.quantity)
+        const priceWithTax = item.unitPrice * item.quantity
+        const taxRate = item.taxRate || 16 // Default 16% si no se especifica
+        const priceWithoutTax = priceWithTax / (1 + taxRate / 100)
+
+        return sum + priceWithoutTax
       }, 0)
 
       const totalDiscount = data.discountAmount || data.items.reduce((sum, item) => {
@@ -79,21 +83,27 @@ class SalesService {
 
       if (saleError) throw saleError
       if (!sale) throw new Error('Failed to create sale')
-
-      logger.info('Sale created', { saleId: sale.id, saleNumber: sale.sale_number })
-
       // Insert sale items
-      const saleItems = data.items.map(item => ({
-        sale_id: sale.id,
-        product_id: item.productId,
-        variant_id: item.variantId,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-        discount_amount: item.discountAmount || 0,
-        tax_amount: item.taxAmount || 0,
-        line_total: (item.unitPrice * item.quantity) - (item.discountAmount || 0) + (item.taxAmount || 0),
-        notes: item.notes
-      }))
+      const saleItems = data.items.map(item => {
+        // IMPORTANTE: unitPrice incluye el impuesto
+        const priceWithTax = item.unitPrice * item.quantity
+        const taxRate = item.taxRate || 16 // Default 16% si no se especifica
+        const priceWithoutTax = priceWithTax / (1 + taxRate / 100)
+        const priceAfterDiscount = priceWithoutTax - (item.discountAmount || 0)
+        const lineTotal = priceAfterDiscount + (item.taxAmount || 0)
+
+        return {
+          sale_id: sale.id,
+          product_id: item.productId,
+          variant_id: item.variantId,
+          quantity: item.quantity,
+          unit_price: item.unitPrice, // Precio de venta (con impuesto incluido)
+          discount_amount: item.discountAmount || 0,
+          tax_amount: item.taxAmount || 0,
+          line_total: lineTotal,
+          notes: item.notes
+        }
+      })
 
       const { data: items, error: itemsError } = await this.supabase
         .from('sale_items')
@@ -105,8 +115,6 @@ class SalesService {
         await this.supabase.from('sales').delete().eq('id', sale.id)
         throw itemsError
       }
-
-      logger.info('Sale items created', { count: items.length })
 
       // Insert payment transactions
       const payments = data.payments.map(payment => ({
@@ -128,8 +136,6 @@ class SalesService {
         await this.supabase.from('sales').delete().eq('id', sale.id)
         throw paymentsError
       }
-
-      logger.info('Payment transactions created', { count: paymentTransactions.length })
 
       // Reduce inventory
       await this.reduceInventory(data.locationId, data.items)
@@ -261,8 +267,6 @@ class SalesService {
    */
   async cancelSale(saleId: number, reason: string): Promise<Sale> {
     try {
-      logger.info('Cancelling sale', { saleId, reason })
-
       // Get sale details first
       const sale = await this.getSaleById(saleId)
 
@@ -287,7 +291,6 @@ class SalesService {
       // Restore inventory
       await this.restoreInventory(sale.locationId, sale.items)
 
-      logger.info('Sale cancelled successfully', { saleId })
       return this.transformSaleBasic(data)
     } catch (error) {
       logger.error('Error cancelling sale', { error, saleId })
@@ -300,8 +303,6 @@ class SalesService {
    */
   async createRefund(data: CreateRefundData): Promise<Refund> {
     try {
-      logger.info('Creating refund', { saleId: data.saleId, amount: data.amount })
-
       // Get sale to validate
       const sale = await this.getSaleById(data.saleId)
 
@@ -334,7 +335,6 @@ class SalesService {
         .update({ status: 'refunded' })
         .eq('id', data.saleId)
 
-      logger.info('Refund created successfully', { refundId: refund.id })
       return this.transformRefund(refund)
     } catch (error) {
       logger.error('Error creating refund', { error, data })
@@ -423,7 +423,6 @@ class SalesService {
         }
 
         inventoryId = newInventory.id
-        logger.info('Created inventory record for product', { productId: item.productId, inventoryId })
       } else {
         inventoryId = inventory.id
         currentQty = inventory.quantity_available || 0

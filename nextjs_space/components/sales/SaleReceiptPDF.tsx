@@ -328,19 +328,27 @@ export const SaleReceiptPDF = ({
             </View>
 
             {/* Table Rows */}
-            {sale.items.map((item) => (
-              <View key={item.id} style={styles.tableRow}>
-                <View style={styles.colProduct}>
-                  <Text style={styles.productName}>{item.productName}</Text>
-                  <Text style={styles.productSku}>{item.productSku}</Text>
+            {sale.items.map((item) => {
+              // El unitPrice almacenado incluye el impuesto
+              // Necesitamos mostrar el precio sin impuesto
+              const TAX_RATE = 16
+              const priceWithTax = item.unitPrice
+              const priceWithoutTax = priceWithTax / (1 + TAX_RATE / 100)
+
+              return (
+                <View key={item.id} style={styles.tableRow}>
+                  <View style={styles.colProduct}>
+                    <Text style={styles.productName}>{item.productName}</Text>
+                    <Text style={styles.productSku}>{item.productSku}</Text>
+                  </View>
+                  <Text style={styles.colQty}>{item.quantity}</Text>
+                  <Text style={styles.colPrice}>
+                    {formatCurrency(priceWithoutTax)}
+                  </Text>
+                  <Text style={styles.colTotal}>{formatCurrency(item.total)}</Text>
                 </View>
-                <Text style={styles.colQty}>{item.quantity}</Text>
-                <Text style={styles.colPrice}>
-                  {formatCurrency(item.unitPrice)}
-                </Text>
-                <Text style={styles.colTotal}>{formatCurrency(item.total)}</Text>
-              </View>
-            ))}
+              )
+            })}
           </View>
         </View>
 

@@ -114,7 +114,8 @@ export function PaymentDialog({ open, onOpenChange, onSuccess, locationId }: Pay
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           discountAmount: item.discountAmount,
-          taxAmount: item.taxAmount
+          taxAmount: item.taxAmount,
+          taxRate: item.taxPercentage // Agregar la tasa de impuesto
         })),
         payments
       }

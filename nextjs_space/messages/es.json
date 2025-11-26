@@ -30,7 +30,11 @@
     "error": "Error",
     "success": "Éxito",
     "warning": "Advertencia",
-    "info": "Información"
+    "info": "Información",
+    "summary": "Resumen",
+    "page": "Página",
+    "of": "de",
+    "optional": "Opcional"
   },
   "layout": {
     "appName": "Sistema POS",
@@ -1174,88 +1178,6 @@
       "create": "Crear Primera Ubicacion"
     }
   },
-  "common": {
-    "loading": "Cargando...",
-    "error": "Error",
-    "success": "Éxito",
-    "actions": {
-      "save": "Guardar",
-      "cancel": "Cancelar",
-      "delete": "Eliminar",
-      "edit": "Editar",
-      "create": "Crear",
-      "update": "Actualizar",
-      "close": "Cerrar",
-      "confirm": "Confirmar",
-      "back": "Volver",
-      "next": "Siguiente",
-      "previous": "Anterior",
-      "submit": "Enviar",
-      "reset": "Restablecer",
-      "search": "Buscar",
-      "filter": "Filtrar",
-      "export": "Exportar",
-      "import": "Importar",
-      "print": "Imprimir",
-      "download": "Descargar",
-      "upload": "Subir",
-      "view": "Ver",
-      "details": "Detalles",
-      "refresh": "Actualizar",
-      "add": "Agregar",
-      "remove": "Quitar",
-      "select": "Seleccionar",
-      "selectAll": "Seleccionar todo",
-      "deselectAll": "Deseleccionar todo",
-      "apply": "Aplicar",
-      "clear": "Limpiar"
-    },
-    "status": {
-      "loading": "Cargando...",
-      "saving": "Guardando...",
-      "deleting": "Eliminando...",
-      "processing": "Procesando...",
-      "uploading": "Subiendo...",
-      "downloading": "Descargando...",
-      "updating": "Actualizando...",
-      "creating": "Creando...",
-      "sending": "Enviando...",
-      "connecting": "Conectando...",
-      "searching": "Buscando..."
-    },
-    "confirmation": {
-      "areYouSure": "¿Estás seguro?",
-      "cannotUndo": "Esta acción no se puede deshacer",
-      "confirmDelete": "¿Confirmar eliminación?",
-      "unsavedChanges": "Tienes cambios sin guardar",
-      "loseChanges": "Perderás los cambios si continúas",
-      "confirmAction": "¿Confirmar esta acción?",
-      "permanentAction": "Esta acción es permanente"
-    },
-    "empty": {
-      "noData": "No hay datos disponibles",
-      "noResults": "No se encontraron resultados",
-      "noItems": "No hay elementos",
-      "tryDifferentSearch": "Intenta con una búsqueda diferente",
-      "noResultsFor": "No se encontraron resultados para \"{query}\"",
-      "startByAdding": "Comienza agregando un nuevo elemento",
-      "nothingHere": "No hay nada aquí todavía"
-    },
-    "messages": {
-      "selectOption": "Selecciona una opción",
-      "optional": "Opcional",
-      "required": "Requerido",
-      "all": "Todos",
-      "none": "Ninguno",
-      "yes": "Sí",
-      "no": "No",
-      "ok": "OK",
-      "done": "Listo",
-      "continue": "Continuar",
-      "skip": "Omitir",
-      "finish": "Finalizar"
-    }
-  },
   "validation": {
     "required": "Este campo es requerido",
     "requiredField": "El campo {field} es requerido",
@@ -1403,5 +1325,120 @@
     "networkError": "Error de red",
     "timeoutError": "Tiempo de espera agotado",
     "tryAgain": "Inténtalo de nuevo"
+  },
+  "quotes": {
+    "title": "Cotizaciones",
+    "subtitle": "Gestiona las cotizaciones para tus clientes",
+    "newQuote": "Nueva Cotización",
+    "editQuote": "Editar Cotización",
+    "quoteDetails": "Detalles de Cotización",
+    "stats": {
+      "totalQuotes": "Total Cotizaciones",
+      "pendingQuotes": "Pendientes",
+      "acceptedQuotes": "Aceptadas",
+      "convertedQuotes": "Convertidas a Venta"
+    },
+    "filters": {
+      "title": "Filtros",
+      "search": "Buscar",
+      "searchPlaceholder": "Buscar por número, cliente...",
+      "status": "Estado",
+      "allStatuses": "Todos los estados",
+      "dateRange": "Rango de fechas",
+      "refresh": "Actualizar"
+    },
+    "table": {
+      "number": "Número",
+      "date": "Fecha",
+      "customer": "Cliente",
+      "total": "Total",
+      "status": "Estado",
+      "expiry": "Vence",
+      "actions": "Acciones"
+    },
+    "status": {
+      "draft": "Borrador",
+      "pending": "Pendiente",
+      "sent": "Enviada",
+      "accepted": "Aceptada",
+      "rejected": "Rechazada",
+      "expired": "Vencida",
+      "converted": "Convertida"
+    },
+    "form": {
+      "customer": "Cliente",
+      "selectCustomer": "Seleccionar cliente",
+      "date": "Fecha de emisión",
+      "expiryDate": "Fecha de vencimiento",
+      "items": "Items de la cotización",
+      "addItem": "Agregar producto",
+      "notes": "Notas",
+      "notesPlaceholder": "Notas visibles para el cliente...",
+      "internalNotes": "Notas internas",
+      "internalNotesPlaceholder": "Notas solo para uso interno...",
+      "terms": "Términos y condiciones",
+      "termsPlaceholder": "Términos específicos para esta cotización...",
+      "subtotal": "Subtotal",
+      "tax": "Impuestos",
+      "discount": "Descuento",
+      "total": "Total",
+      "saveDraft": "Guardar Borrador",
+      "create": "Crear Cotización",
+      "update": "Actualizar Cotización",
+      "cancel": "Cancelar"
+    },
+    "actions": {
+      "view": "Ver detalles",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "convertToSale": "Convertir a Venta",
+      "markAccepted": "Marcar como Aceptada",
+      "markRejected": "Marcar como Rechazada",
+      "markSent": "Marcar como Enviada",
+      "downloadPdf": "Descargar PDF",
+      "sendEmail": "Enviar por Correo"
+    },
+    "messages": {
+      "created": "Cotización creada exitosamente",
+      "updated": "Cotización actualizada exitosamente",
+      "deleted": "Cotización eliminada exitosamente",
+      "statusChanged": "Estado actualizado correctamente",
+      "converted": "Cotización convertida a venta exitosamente",
+      "confirmDelete": "¿Estás seguro de eliminar esta cotización?",
+      "confirmConvert": "¿Estás seguro de convertir esta cotización en una venta? Esto creará una nueva venta con los mismos items.",
+      "noItems": "Debes agregar al menos un item a la cotización",
+      "customerRequired": "Debes seleccionar un cliente",
+      "notFound": "Cotización no encontrada",
+      "noQuotesFound": "No se encontraron cotizaciones",
+      "loadError": "Error al cargar cotizaciones",
+      "loadDetailError": "Error al cargar detalles de la cotización",
+      "createError": "Error al crear la cotización",
+      "updateError": "Error al actualizar la cotización",
+      "deleteError": "Error al eliminar la cotización",
+      "statusChangeError": "Error al actualizar el estado",
+      "convertError": "Error al convertir a venta",
+      "loadDataError": "Error al cargar clientes o productos",
+      "deleting": "Eliminando..."
+    },
+    "labels": {
+      "created": "Creada",
+      "unknownCustomer": "Cliente Desconocido",
+      "deliveryTime": "Tiempo de entrega",
+      "conversion": "conversión",
+      "quotesCount": "cotizaciones"
+    },
+    "items": {
+      "product": "Producto",
+      "quantity": "Cantidad",
+      "price": "Precio",
+      "discount": "Desc.",
+      "tax": "Imp.",
+      "total": "Total",
+      "actions": "Acciones",
+      "searchProduct": "Buscar producto...",
+      "unknownProduct": "Producto Desconocido",
+      "noItems": "No hay productos en esta cotización",
+      "noProducts": "No se encontraron productos"
+    }
   }
 }
