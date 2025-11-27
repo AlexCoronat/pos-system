@@ -243,6 +243,8 @@ class AuthService {
           state: data.locationState || null,
           postal_code: data.locationPostalCode || null,
           phone: data.locationPhone || null,
+          email: data.email || null, // Use registration email for main location
+          main_location: 1, // Mark as main location
           is_active: true
         })
         .select()

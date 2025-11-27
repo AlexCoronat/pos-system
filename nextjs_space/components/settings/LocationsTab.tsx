@@ -34,7 +34,7 @@ export function LocationsTab({
     onDeleteLocation
 }: LocationsTabProps) {
 
-    // Format company address
+    //Format company address
     const formatAddress = () => {
         const parts = []
         if (companyInfo.address) parts.push(companyInfo.address)
@@ -139,7 +139,14 @@ export function LocationsTab({
                                                 <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
                                                     <MapPin className="h-5 w-5 text-green-600" />
                                                 </div>
-                                                <span className="font-medium">{location.name}</span>
+                                                <div>
+                                                    <div className="font-medium">{location.name}</div>
+                                                    {location.mainLocation === 1 && (
+                                                        <Badge variant="secondary" className="mt-1 text-xs">
+                                                            Principal
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </div>
                                         </TableCell>
                                         <TableCell>

@@ -82,7 +82,7 @@ export interface LegalData {
 
 class CompanyService {
     /**
-     * Get current business information
+     * Get current business information with main location address
      */
     async getCompanyInfo(): Promise<CompanyInfo> {
         const { data, error } = await supabase
@@ -93,15 +93,20 @@ class CompanyService {
         if (error) throw new Error('Error al obtener información de la empresa: ' + error.message)
         if (!data) throw new Error('No se encontró información de la empresa')
 
-        // DEBUG: Log the raw database response to check address fields
-        console.log('🔍 DEBUG - Raw business data from database:', {
-            id: data.id,
-            name: data.name,
-            address: data.address,
-            city: data.city,
-            state: data.state,
-            postal_code: data.postal_code,
-            country: data.country
+        // Get main location for address information
+        const mainLocation = await import('@/lib/services/location.service').then(m => m.locationService.getMainLocation())
+
+        // DEBUG: Log the main location data
+        console.log('🔍 DEBUG - Main location data:', {
+            mainLocation: mainLocation ? {
+                address: mainLocation.address,
+                city: mainLocation.city,
+                state: mainLocation.state,
+                postalCode: mainLocation.postalCode,
+                country: mainLocation.country,
+                email: mainLocation.email,
+                phone: mainLocation.phone
+            } : null
         })
 
         // Parse metadata JSONB
@@ -114,13 +119,15 @@ class CompanyService {
             taxId: data.tax_id,
             logoUrl: data.logo_url,
             website: data.website,
-            email: data.email,
-            phone: data.phone,
-            address: data.address,
-            city: data.city,
-            state: data.state,
-            postalCode: data.postal_code,
-            country: data.country || 'Mexico',
+            // Get email and phone from main location
+            email: mainLocation?.email || data.email || null,
+            phone: mainLocation?.phone || data.phone || null,
+            // Get address from main location
+            address: mainLocation?.address || null,
+            city: mainLocation?.city || null,
+            state: mainLocation?.state || null,
+            postalCode: mainLocation?.postalCode || null,
+            country: mainLocation?.country || data.country || 'Mexico',
             timezone: data.timezone || 'America/Mexico_City',
             currency: data.currency || 'MXN',
             branding: metadata.branding,
@@ -134,28 +141,25 @@ class CompanyService {
             city: companyInfo.city,
             state: companyInfo.state,
             postalCode: companyInfo.postalCode,
-            country: companyInfo.country
+            country: companyInfo.country,
+            email: companyInfo.email,
+            phone: companyInfo.phone
         })
 
         return companyInfo
     }
 
     /**
-     * Update basic company information
+     * Update basic company information (including main location address)
      */
     async updateCompanyInfo(data: UpdateCompanyData): Promise<void> {
         const updateData: any = {}
 
+        // Basic business info
         if (data.name !== undefined) updateData.name = data.name
         if (data.legalName !== undefined) updateData.legal_name = data.legalName
         if (data.taxId !== undefined) updateData.tax_id = data.taxId
         if (data.website !== undefined) updateData.website = data.website
-        if (data.email !== undefined) updateData.email = data.email
-        if (data.phone !== undefined) updateData.phone = data.phone
-        if (data.address !== undefined) updateData.address = data.address
-        if (data.city !== undefined) updateData.city = data.city
-        if (data.state !== undefined) updateData.state = data.state
-        if (data.postalCode !== undefined) updateData.postal_code = data.postalCode
         if (data.country !== undefined) updateData.country = data.country
         if (data.timezone !== undefined) updateData.timezone = data.timezone
         if (data.currency !== undefined) updateData.currency = data.currency
@@ -168,6 +172,42 @@ class CompanyService {
             .eq('id', await this.getCurrentBusinessId())
 
         if (error) throw new Error('Error al actualizar información: ' + error.message)
+
+        // Update main location with address, email, and phone if any are provided
+        if (data.address !== undefined || data.city !== undefined || data.state !== undefined ||
+            data.postalCode !== undefined || data.email !== undefined || data.phone !== undefined) {
+            const locationService = await import('@/lib/services/location.service').then(m => m.locationService)
+            const mainLocation = await locationService.getMainLocation()
+
+            if (mainLocation) {
+                // Update existing main location
+                await locationService.updateLocation(mainLocation.id, {
+                    address: data.address,
+                    city: data.city,
+                    state: data.state,
+                    postalCode: data.postalCode,
+                    country: data.country,
+                    email: data.email,
+                    phone: data.phone
+                })
+            } else {
+                // Create a new main location if it doesn't exist
+                const businessData = await supabase.from('businesses').select('name').eq('id', await this.getCurrentBusinessId()).single()
+                await locationService.createLocation({
+                    name: (businessData.data?.name || 'Principal') + ' - Oficina Principal',
+                    code: 'MAIN',
+                    address: data.address,
+                    city: data.city,
+                    state: data.state,
+                    postalCode: data.postalCode,
+                    country: data.country || 'Mexico',
+                    email: data.email,
+                    phone: data.phone,
+                    mainLocation: 1,
+                    isActive: true
+                })
+            }
+        }
     }
 
     /**

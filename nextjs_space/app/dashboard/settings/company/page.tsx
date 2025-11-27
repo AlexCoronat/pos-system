@@ -100,7 +100,8 @@ export default function CompanySettingsPage() {
         country: 'Mexico',
         phone: '',
         email: '',
-        isActive: true
+        isActive: true,
+        isMainLocation: false
     })
 
     useEffect(() => {
@@ -284,7 +285,8 @@ export default function CompanySettingsPage() {
             country: 'Mexico',
             phone: '',
             email: '',
-            isActive: true
+            isActive: true,
+            isMainLocation: false
         })
         setEditingLocation(null)
     }
@@ -308,7 +310,8 @@ export default function CompanySettingsPage() {
                 country: fullLocation.country || 'Mexico',
                 phone: fullLocation.phone || '',
                 email: fullLocation.email || '',
-                isActive: fullLocation.isActive
+                isActive: fullLocation.isActive,
+                isMainLocation: fullLocation.mainLocation === 1
             })
             setLocationDialogOpen(true)
         } catch (error: any) {
@@ -349,7 +352,8 @@ export default function CompanySettingsPage() {
                     country: locationFormData.country.trim() || undefined,
                     phone: locationFormData.phone.trim() || undefined,
                     email: locationFormData.email.trim() || undefined,
-                    isActive: locationFormData.isActive
+                    isActive: locationFormData.isActive,
+                    mainLocation: locationFormData.isMainLocation ? 1 : null
                 })
                 toast({
                     title: 'Éxito',
@@ -366,7 +370,8 @@ export default function CompanySettingsPage() {
                     country: locationFormData.country.trim() || undefined,
                     phone: locationFormData.phone.trim() || undefined,
                     email: locationFormData.email.trim() || undefined,
-                    isActive: locationFormData.isActive
+                    isActive: locationFormData.isActive,
+                    mainLocation: locationFormData.isMainLocation ? 1 : null
                 })
                 toast({
                     title: 'Éxito',
@@ -376,6 +381,8 @@ export default function CompanySettingsPage() {
             setLocationDialogOpen(false)
             resetLocationForm()
             loadLocations()
+            // Reload company info to refresh main location address
+            loadCompanyInfo()
         } catch (error: any) {
             toast({
                 title: 'Error',
@@ -868,6 +875,19 @@ export default function CompanySettingsPage() {
                             <Switch
                                 checked={locationFormData.isActive}
                                 onCheckedChange={(checked) => setLocationFormData({ ...locationFormData, isActive: checked })}
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between pt-4 border-t">
+                            <div className="space-y-0.5">
+                                <Label>Ubicación Principal</Label>
+                                <p className="text-sm text-muted-foreground">
+                                    Marca esta ubicación como la dirección principal del negocio
+                                </p>
+                            </div>
+                            <Switch
+                                checked={locationFormData.isMainLocation}
+                                onCheckedChange={(checked) => setLocationFormData({ ...locationFormData, isMainLocation: checked })}
                             />
                         </div>
 

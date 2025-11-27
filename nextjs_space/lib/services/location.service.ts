@@ -39,6 +39,7 @@ class LocationService {
         state: item.state,
         phone: item.phone,
         isActive: item.is_active ?? true,
+        mainLocation: item.main_location,
         userCount: item.user_locations?.length || 0,
         createdAt: new Date(item.created_at)
       }))
@@ -75,6 +76,7 @@ class LocationService {
         phone: data.phone,
         email: data.email,
         isActive: data.is_active ?? true,
+        mainLocation: data.main_location,
         metadata: data.metadata,
         createdAt: new Date(data.created_at),
         updatedAt: new Date(data.updated_at),
@@ -108,6 +110,7 @@ class LocationService {
           phone: data.phone,
           email: data.email,
           is_active: data.isActive ?? true,
+          main_location: data.mainLocation,
           metadata: data.metadata
         })
         .select()
@@ -140,6 +143,25 @@ class LocationService {
       if (data.email !== undefined) updateData.email = data.email
       if (data.isActive !== undefined) updateData.is_active = data.isActive
       if (data.metadata !== undefined) updateData.metadata = data.metadata
+
+      // Special handling for main_location to avoid unique constraint violation
+      // If setting this location as main, first clear all other main locations
+      if (data.mainLocation === 1) {
+        const { businessId } = await getBusinessContext()
+
+        // Clear all main_location flags for this business first
+        await supabase
+          .from('locations')
+          .update({ main_location: null })
+          .eq('business_id', businessId)
+          .eq('main_location', 1)
+
+        // Now we can safely set this location as main
+        updateData.main_location = 1
+      } else if (data.mainLocation !== undefined) {
+        // If explicitly setting to null or other value
+        updateData.main_location = data.mainLocation
+      }
 
       const { error } = await supabase
         .from('locations')
@@ -402,12 +424,55 @@ class LocationService {
         phone: data.phone,
         email: data.email,
         isActive: data.is_active ?? true,
+        mainLocation: data.main_location,
         metadata: data.metadata,
         createdAt: new Date(data.created_at),
         updatedAt: new Date(data.updated_at)
       }
     } catch (error: any) {
       console.error('Error getting first location:', error)
+      return null
+    }
+  }
+
+  /**
+   * Get the main/primary location for the business
+   */
+  async getMainLocation(): Promise<Location | null> {
+    try {
+      // Get business context to filter by business_id
+      const { businessId } = await getBusinessContext()
+
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('business_id', businessId)
+        .eq('main_location', 1)
+        .is('deleted_at', null)
+        .single()
+
+      if (error && error.code !== 'PGRST116') throw error
+      if (!data) return null
+
+      return {
+        id: data.id,
+        name: data.name,
+        code: data.code,
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        postalCode: data.postal_code,
+        country: data.country,
+        phone: data.phone,
+        email: data.email,
+        isActive: data.is_active ?? true,
+        mainLocation: data.main_location,
+        metadata: data.metadata,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      }
+    } catch (error: any) {
+      console.error('Error getting main location:', error)
       return null
     }
   }

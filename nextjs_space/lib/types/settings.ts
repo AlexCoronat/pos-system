@@ -14,6 +14,7 @@ export interface Location {
   phone?: string
   email?: string
   isActive: boolean
+  mainLocation?: number | null  // 1 = main location, null = secondary location
   metadata?: Record<string, any>
   createdAt: Date
   updatedAt: Date
@@ -28,6 +29,7 @@ export interface LocationListItem {
   state?: string
   phone?: string
   isActive: boolean
+  mainLocation?: number | null
   userCount?: number
   createdAt: Date
 }
@@ -43,6 +45,7 @@ export interface CreateLocationData {
   phone?: string
   email?: string
   isActive?: boolean
+  mainLocation?: number | null
   metadata?: Record<string, any>
 }
 
@@ -57,6 +60,7 @@ export interface UpdateLocationData {
   phone?: string
   email?: string
   isActive?: boolean
+  mainLocation?: number | null
   metadata?: Record<string, any>
 }
 
