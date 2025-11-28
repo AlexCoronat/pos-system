@@ -12,6 +12,7 @@ import { useCartStore } from '@/lib/stores/cart-store'
 import { salesService } from '@/lib/services/sales.service'
 import type { CreatePaymentData } from '@/lib/types/sales'
 import { toast } from 'sonner'
+import { useEscapeKey } from '@/lib/hooks/use-keyboard-shortcuts'
 
 interface PaymentModalProps {
     isOpen: boolean
@@ -27,6 +28,13 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
     const [amountPaid, setAmountPaid] = useState('')
     const [isProcessing, setIsProcessing] = useState(false)
     const [showSuccess, setShowSuccess] = useState(false)
+
+    // ESC to close modal
+    useEscapeKey(() => {
+        if (isOpen && !isProcessing && !showSuccess) {
+            handleClose()
+        }
+    }, isOpen && !isProcessing && !showSuccess)
 
     if (!isOpen) return null
 

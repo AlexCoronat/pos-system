@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { ProductSearch } from '@/components/pos/ProductSearch'
 import { CategoryTabs } from '@/components/pos/CategoryTabs'
 import { QuickProducts } from '@/components/pos/QuickProducts'
@@ -18,9 +18,12 @@ import { CloseShiftModal } from '@/components/pos/CloseShiftModal'
 import { AddMovementModal } from '@/components/pos/AddMovementModal'
 import { ShiftReport } from '@/components/pos/ShiftReport'
 import { useShiftStore } from '@/lib/stores/shift-store'
+import { useCartStore } from '@/lib/stores/cart-store'
+import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts'
 
 export default function POSPage() {
     const { currentShift } = useShiftStore()
+    const { items, clearCart } = useCartStore()
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
     const [showPaymentModal, setShowPaymentModal] = useState(false)
     const [showOpenShiftModal, setShowOpenShiftModal] = useState(false)
@@ -39,6 +42,25 @@ export default function POSPage() {
         setReportShiftId(shiftId)
         setShowShiftReport(true)
     }
+
+    // Global POS shortcuts
+    useKeyboardShortcuts({
+        shortcuts: [
+            {
+                key: 'Escape',
+                handler: () => {
+                    // Clear cart if no modals are open
+                    if (!showPaymentModal && !showOpenShiftModal && !showCloseShiftModal && !showMovementModal && !showShiftReport) {
+                        if (items.length > 0 && confirm('¿Limpiar el carrito?')) {
+                            clearCart()
+                        }
+                    }
+                },
+                description: 'Limpiar carrito'
+            }
+        ],
+        enabled: true
+    })
 
     return (
         <div className="-m-6 h-[calc(100vh-4rem)] flex flex-col lg:flex-row overflow-hidden bg-gray-50">

@@ -10,6 +10,7 @@ import { X, DollarSign, AlertCircle } from 'lucide-react'
 import { useShiftStore } from '@/lib/stores/shift-store'
 import { cashRegisterService, type CashRegister } from '@/lib/services/cash-register.service'
 import { toast } from 'sonner'
+import { useEscapeKey } from '@/lib/hooks/use-keyboard-shortcuts'
 
 interface OpenShiftModalProps {
     isOpen: boolean
@@ -24,6 +25,13 @@ export function OpenShiftModal({ isOpen, onClose, onSuccess }: OpenShiftModalPro
     const [openingAmount, setOpeningAmount] = useState('')
     const [notes, setNotes] = useState('')
     const [isLoadingRegisters, setIsLoadingRegisters] = useState(true)
+
+    // ESC to close modal
+    useEscapeKey(() => {
+        if (isOpen && !shiftLoading) {
+            handleClose()
+        }
+    }, isOpen && !shiftLoading)
 
     useEffect(() => {
         if (isOpen) {

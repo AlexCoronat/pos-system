@@ -10,6 +10,7 @@ import { X, DollarSign, TrendingUp, Loader2, AlertTriangle } from 'lucide-react'
 import { useShiftStore } from '@/lib/stores/shift-store'
 import { shiftService, type Shift } from '@/lib/services/shift.service'
 import { toast } from 'sonner'
+import { useEscapeKey } from '@/lib/hooks/use-keyboard-shortcuts'
 
 interface CloseShiftModalProps {
     isOpen: boolean
@@ -23,6 +24,13 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }: CloseShiftModalP
     const [actualAmount, setActualAmount] = useState('')
     const [notes, setNotes] = useState('')
     const [isLoadingSummary, setIsLoadingSummary] = useState(false)
+
+    // ESC to close modal
+    useEscapeKey(() => {
+        if (isOpen && !shiftLoading) {
+            handleClose()
+        }
+    }, isOpen && !shiftLoading)
 
     useEffect(() => {
         if (isOpen && currentShift) {
