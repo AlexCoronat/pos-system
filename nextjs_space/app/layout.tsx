@@ -6,6 +6,7 @@ import { Toaster as SonnerToaster } from 'sonner'
 import { ThemeProvider } from '@/components/theme-provider'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
+import { ViewProvider } from '@/lib/providers/ViewProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -87,9 +88,11 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
-            <Toaster />
-            <SonnerToaster position="top-right" richColors />
+            <ViewProvider>
+              {children}
+              <Toaster />
+              <SonnerToaster position="top-right" richColors />
+            </ViewProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

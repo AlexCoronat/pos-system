@@ -335,6 +335,65 @@ $$;
 ALTER FUNCTION "public"."cleanup_orphan_auth_users"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."ensure_single_main_location"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    -- If setting a location as main (main_location = 1)
+    IF NEW.main_location = 1 THEN
+        -- Set all other locations for this business to NULL
+        UPDATE public.locations
+        SET main_location = NULL
+        WHERE business_id = NEW.business_id
+          AND id != NEW.id
+          AND main_location = 1;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."ensure_single_main_location"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."generate_shift_number"("p_cash_register_id" bigint) RETURNS character varying
+    LANGUAGE "plpgsql"
+    AS $_$
+DECLARE
+    v_code VARCHAR(20);
+    v_date VARCHAR(8);
+    v_sequence INT;
+    v_shift_number VARCHAR(30);
+BEGIN
+    -- Get cash register code
+    SELECT code INTO v_code
+    FROM public.cash_registers
+    WHERE id = p_cash_register_id;
+    
+    -- Get current date in YYYYMMDD format
+    v_date := TO_CHAR(CURRENT_DATE, 'YYYYMMDD');
+    
+    -- Get next sequence number for this register and date
+    SELECT COALESCE(MAX(
+        CAST(SUBSTRING(shift_number FROM '[0-9]+$') AS INT)
+    ), 0) + 1
+    INTO v_sequence
+    FROM public.cash_register_shifts
+    WHERE cash_register_id = p_cash_register_id
+    AND shift_number LIKE v_code || '-' || v_date || '%';
+    
+    -- Format: CAJA-20231127-001
+    v_shift_number := v_code || '-' || v_date || '-' || LPAD(v_sequence::TEXT, 3, '0');
+    
+    RETURN v_shift_number;
+END;
+$_$;
+
+
+ALTER FUNCTION "public"."generate_shift_number"("p_cash_register_id" bigint) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_archived_users"("p_business_id" integer DEFAULT NULL::integer) RETURNS TABLE("id" "uuid", "email" character varying, "first_name" character varying, "last_name" character varying, "phone" character varying, "role_name" character varying, "archived_at" timestamp with time zone, "archived_by_email" character varying, "removal_reason" "text", "assigned_locations" "jsonb", "original_created_at" timestamp with time zone)
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -392,6 +451,38 @@ ALTER FUNCTION "public"."get_enabled_payment_methods"("p_business_id" integer) O
 
 
 COMMENT ON FUNCTION "public"."get_enabled_payment_methods"("p_business_id" integer) IS 'Returns enabled payment methods for a business with their configuration';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."get_main_location"("p_business_id" integer) RETURNS TABLE("id" integer, "code" character varying, "name" character varying, "address" "text", "city" character varying, "state" character varying, "postal_code" character varying, "country" character varying, "phone" character varying, "email" character varying)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        l.id,
+        l.code,
+        l.name,
+        l.address,
+        l.city,
+        l.state,
+        l.postal_code,
+        l.country,
+        l.phone,
+        l.email
+    FROM public.locations l
+    WHERE l.business_id = p_business_id
+      AND l.main_location = 1
+      AND l.deleted_at IS NULL
+    LIMIT 1;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_main_location"("p_business_id" integer) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."get_main_location"("p_business_id" integer) IS 'Returns the main/primary location for a business';
 
 
 
@@ -550,6 +641,27 @@ $$;
 
 
 ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."increment_product_sale_frequency"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE public.products
+        SET sale_frequency = sale_frequency + NEW.quantity
+        WHERE id = NEW.product_id;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."increment_product_sale_frequency"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."increment_product_sale_frequency"() IS 'Increments product sale frequency counter when sold';
+
 
 
 CREATE OR REPLACE FUNCTION "public"."is_admin"() RETURNS boolean
@@ -1017,14 +1129,6 @@ CREATE TABLE IF NOT EXISTS "public"."businesses" (
     "business_type" character varying(100),
     "logo_url" "text",
     "website" character varying(255),
-    "email" character varying(255),
-    "phone" character varying(50),
-    "address" "text",
-    "city" character varying(100),
-    "state" character varying(100),
-    "postal_code" character varying(20),
-    "country" character varying(100) DEFAULT 'Mexico'::character varying,
-    "timezone" character varying(50) DEFAULT 'America/Mexico_City'::character varying,
     "currency" character varying(3) DEFAULT 'MXN'::character varying,
     "is_active" boolean DEFAULT true,
     "trial_ends_at" timestamp with time zone,
@@ -1053,6 +1157,123 @@ ALTER SEQUENCE "public"."businesses_id_seq" OWNER TO "postgres";
 
 
 ALTER SEQUENCE "public"."businesses_id_seq" OWNED BY "public"."businesses"."id";
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."cash_register_movements" (
+    "id" bigint NOT NULL,
+    "shift_id" bigint NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "movement_type" character varying(30) NOT NULL,
+    "amount" numeric(12,2) NOT NULL,
+    "payment_method_id" integer,
+    "sale_id" bigint,
+    "description" "text",
+    "metadata" "jsonb" DEFAULT '{}'::"jsonb",
+    "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT "cash_register_movements_movement_type_check" CHECK ((("movement_type")::"text" = ANY ((ARRAY['opening'::character varying, 'sale'::character varying, 'refund'::character varying, 'deposit'::character varying, 'withdrawal'::character varying, 'closing'::character varying])::"text"[])))
+);
+
+
+ALTER TABLE "public"."cash_register_movements" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."cash_register_movements" IS 'Logs all cash movements during cash register shifts';
+
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."cash_register_movements_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."cash_register_movements_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."cash_register_movements_id_seq" OWNED BY "public"."cash_register_movements"."id";
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."cash_register_shifts" (
+    "id" bigint NOT NULL,
+    "cash_register_id" bigint NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "shift_number" character varying(30) NOT NULL,
+    "status" character varying(20) DEFAULT 'open'::character varying NOT NULL,
+    "opening_amount" numeric(12,2) DEFAULT 0.00 NOT NULL,
+    "expected_amount" numeric(12,2),
+    "actual_amount" numeric(12,2),
+    "difference" numeric(12,2),
+    "opened_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "closed_at" timestamp with time zone,
+    "opening_notes" "text",
+    "closing_notes" "text",
+    "summary" "jsonb" DEFAULT '{}'::"jsonb",
+    "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT "cash_register_shifts_status_check" CHECK ((("status")::"text" = ANY ((ARRAY['open'::character varying, 'suspended'::character varying, 'closed'::character varying])::"text"[])))
+);
+
+
+ALTER TABLE "public"."cash_register_shifts" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."cash_register_shifts" IS 'Tracks cash register shift sessions with opening/closing amounts';
+
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."cash_register_shifts_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."cash_register_shifts_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."cash_register_shifts_id_seq" OWNED BY "public"."cash_register_shifts"."id";
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."cash_registers" (
+    "id" bigint NOT NULL,
+    "business_id" integer NOT NULL,
+    "location_id" bigint,
+    "name" character varying(100) NOT NULL,
+    "code" character varying(20) NOT NULL,
+    "description" "text",
+    "is_active" boolean DEFAULT true NOT NULL,
+    "is_main" boolean DEFAULT false NOT NULL,
+    "hardware_config" "jsonb" DEFAULT '{}'::"jsonb",
+    "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE "public"."cash_registers" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."cash_registers" IS 'Defines cash registers/terminals per business location';
+
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."cash_registers_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."cash_registers_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."cash_registers_id_seq" OWNED BY "public"."cash_registers"."id";
 
 
 
@@ -1430,7 +1651,8 @@ CREATE TABLE IF NOT EXISTS "public"."locations" (
     "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     "updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     "deleted_at" timestamp with time zone,
-    "business_id" integer
+    "business_id" integer,
+    "main_location" integer
 );
 
 
@@ -1446,6 +1668,10 @@ COMMENT ON COLUMN "public"."locations"."code" IS 'Código único identificador d
 
 
 COMMENT ON COLUMN "public"."locations"."opening_hours" IS 'Horarios de apertura por día de la semana';
+
+
+
+COMMENT ON COLUMN "public"."locations"."main_location" IS 'Marks the main/primary location of the business. 1 = main location, NULL = secondary location. Only one location per business should have value 1.';
 
 
 
@@ -1490,6 +1716,9 @@ CREATE TABLE IF NOT EXISTS "public"."sales" (
     "updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     "deleted_at" timestamp with time zone,
     "business_id" integer,
+    "shift_id" bigint,
+    "is_offline" boolean DEFAULT false,
+    "offline_id" character varying(100),
     CONSTRAINT "positive_amounts" CHECK ((("subtotal" >= (0)::numeric) AND ("tax_amount" >= (0)::numeric) AND ("discount_amount" >= (0)::numeric) AND ("total_amount" >= (0)::numeric) AND ("amount_paid" >= (0)::numeric) AND ("change_amount" >= (0)::numeric)))
 );
 
@@ -1510,6 +1739,18 @@ COMMENT ON COLUMN "public"."sales"."quote_id" IS 'ID de cotización origen si ap
 
 
 COMMENT ON COLUMN "public"."sales"."sale_type" IS 'Tipo: regular, return, exchange';
+
+
+
+COMMENT ON COLUMN "public"."sales"."shift_id" IS 'Reference to cash register shift';
+
+
+
+COMMENT ON COLUMN "public"."sales"."is_offline" IS 'Indicates if sale was created offline';
+
+
+
+COMMENT ON COLUMN "public"."sales"."offline_id" IS 'Temporary ID used when created offline';
 
 
 
@@ -1591,6 +1832,8 @@ CREATE TABLE IF NOT EXISTS "public"."products" (
     "updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     "deleted_at" timestamp with time zone,
     "business_id" integer,
+    "sale_frequency" integer DEFAULT 0 NOT NULL,
+    "is_favorite" boolean DEFAULT false,
     CONSTRAINT "positive_prices" CHECK ((("selling_price" >= (0)::numeric) AND ("cost_price" >= (0)::numeric))),
     CONSTRAINT "valid_tax_rate" CHECK ((("tax_rate" >= (0)::numeric) AND ("tax_rate" <= (100)::numeric)))
 );
@@ -1616,6 +1859,14 @@ COMMENT ON COLUMN "public"."products"."cost_price" IS 'Precio de costo del prove
 
 
 COMMENT ON COLUMN "public"."products"."selling_price" IS 'Precio de venta al cliente';
+
+
+
+COMMENT ON COLUMN "public"."products"."sale_frequency" IS 'Counter for how many times product has been sold';
+
+
+
+COMMENT ON COLUMN "public"."products"."is_favorite" IS 'Marks product as favorite for quick access';
 
 
 
@@ -1792,6 +2043,9 @@ CREATE TABLE IF NOT EXISTS "public"."user_details" (
     "temporary_password_hash" "text",
     "force_password_change" boolean DEFAULT false,
     "password_changed_at" timestamp with time zone,
+    "preferred_view" character varying(20),
+    "default_cash_register_id" bigint,
+    CONSTRAINT "user_details_preferred_view_check" CHECK ((("preferred_view")::"text" = ANY ((ARRAY['auto'::character varying, 'admin'::character varying, 'seller'::character varying])::"text"[]))),
     CONSTRAINT "username_format_check" CHECK ((("username" IS NULL) OR (("username")::"text" ~ '^[a-zA-Z0-9_-]{3,50}$'::"text")))
 );
 
@@ -1820,6 +2074,14 @@ COMMENT ON COLUMN "public"."user_details"."force_password_change" IS 'Set to tru
 
 
 COMMENT ON COLUMN "public"."user_details"."password_changed_at" IS 'Timestamp of last password change by user.';
+
+
+
+COMMENT ON COLUMN "public"."user_details"."preferred_view" IS 'User preferred view mode';
+
+
+
+COMMENT ON COLUMN "public"."user_details"."default_cash_register_id" IS 'Default cash register assigned to user';
 
 
 
@@ -2096,6 +2358,43 @@ ALTER SEQUENCE "public"."notifications_id_seq" OWNER TO "postgres";
 
 
 ALTER SEQUENCE "public"."notifications_id_seq" OWNED BY "public"."notifications"."id";
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."offline_sync_queue" (
+    "id" bigint NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "device_id" character varying(100) NOT NULL,
+    "operation_type" character varying(50) NOT NULL,
+    "payload" "jsonb" NOT NULL,
+    "status" character varying(20) DEFAULT 'pending'::character varying NOT NULL,
+    "attempts" integer DEFAULT 0 NOT NULL,
+    "error_message" "text",
+    "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "synced_at" timestamp with time zone,
+    CONSTRAINT "offline_sync_queue_status_check" CHECK ((("status")::"text" = ANY ((ARRAY['pending'::character varying, 'processing'::character varying, 'completed'::character varying, 'failed'::character varying])::"text"[])))
+);
+
+
+ALTER TABLE "public"."offline_sync_queue" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."offline_sync_queue" IS 'Queue for synchronizing offline operations';
+
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."offline_sync_queue_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."offline_sync_queue_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."offline_sync_queue_id_seq" OWNED BY "public"."offline_sync_queue"."id";
 
 
 
@@ -3088,6 +3387,47 @@ ALTER SEQUENCE "public"."user_locations_id_seq" OWNED BY "public"."user_location
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."user_preferences" (
+    "id" bigint NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "business_id" integer NOT NULL,
+    "default_view" character varying(20) DEFAULT 'auto'::character varying,
+    "sidebar_collapsed" boolean DEFAULT false,
+    "theme" character varying(20) DEFAULT 'system'::character varying,
+    "accent_color" character varying(7) DEFAULT '#10b981'::character varying,
+    "quick_products" "jsonb" DEFAULT '[]'::"jsonb",
+    "keyboard_shortcuts" "jsonb" DEFAULT '{"cancel": "Escape", "search": "F2", "checkout": "F12", "discount": "F8", "addCustomer": "F3"}'::"jsonb",
+    "auto_print_receipt" boolean DEFAULT false,
+    "sound_enabled" boolean DEFAULT true,
+    "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT "user_preferences_default_view_check" CHECK ((("default_view")::"text" = ANY ((ARRAY['auto'::character varying, 'admin'::character varying, 'seller'::character varying])::"text"[]))),
+    CONSTRAINT "user_preferences_theme_check" CHECK ((("theme")::"text" = ANY ((ARRAY['light'::character varying, 'dark'::character varying, 'system'::character varying])::"text"[])))
+);
+
+
+ALTER TABLE "public"."user_preferences" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."user_preferences" IS 'Stores user-specific UI preferences and settings';
+
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."user_preferences_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."user_preferences_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."user_preferences_id_seq" OWNED BY "public"."user_preferences"."id";
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."user_sessions" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
@@ -3120,6 +3460,18 @@ ALTER TABLE ONLY "public"."businesses" ALTER COLUMN "id" SET DEFAULT "nextval"('
 
 
 
+ALTER TABLE ONLY "public"."cash_register_movements" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."cash_register_movements_id_seq"'::"regclass");
+
+
+
+ALTER TABLE ONLY "public"."cash_register_shifts" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."cash_register_shifts_id_seq"'::"regclass");
+
+
+
+ALTER TABLE ONLY "public"."cash_registers" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."cash_registers_id_seq"'::"regclass");
+
+
+
 ALTER TABLE ONLY "public"."categories" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."categories_id_seq"'::"regclass");
 
 
@@ -3149,6 +3501,10 @@ ALTER TABLE ONLY "public"."locations" ALTER COLUMN "id" SET DEFAULT "nextval"('"
 
 
 ALTER TABLE ONLY "public"."notifications" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."notifications_id_seq"'::"regclass");
+
+
+
+ALTER TABLE ONLY "public"."offline_sync_queue" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."offline_sync_queue_id_seq"'::"regclass");
 
 
 
@@ -3260,6 +3616,10 @@ ALTER TABLE ONLY "public"."user_locations" ALTER COLUMN "id" SET DEFAULT "nextva
 
 
 
+ALTER TABLE ONLY "public"."user_preferences" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."user_preferences_id_seq"'::"regclass");
+
+
+
 ALTER TABLE ONLY "public"."audit_log"
     ADD CONSTRAINT "audit_log_pkey" PRIMARY KEY ("id");
 
@@ -3272,6 +3632,36 @@ ALTER TABLE ONLY "public"."business_payment_settings"
 
 ALTER TABLE ONLY "public"."businesses"
     ADD CONSTRAINT "businesses_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."cash_register_movements"
+    ADD CONSTRAINT "cash_register_movements_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."cash_register_shifts"
+    ADD CONSTRAINT "cash_register_shifts_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."cash_register_shifts"
+    ADD CONSTRAINT "cash_register_shifts_shift_number_key" UNIQUE ("shift_number");
+
+
+
+ALTER TABLE ONLY "public"."cash_registers"
+    ADD CONSTRAINT "cash_registers_business_id_code_key" UNIQUE ("business_id", "code");
+
+
+
+ALTER TABLE ONLY "public"."cash_registers"
+    ADD CONSTRAINT "cash_registers_location_id_code_key" UNIQUE ("location_id", "code");
+
+
+
+ALTER TABLE ONLY "public"."cash_registers"
+    ADD CONSTRAINT "cash_registers_pkey" PRIMARY KEY ("id");
 
 
 
@@ -3347,6 +3737,11 @@ ALTER TABLE ONLY "public"."notification_settings"
 
 ALTER TABLE ONLY "public"."notifications"
     ADD CONSTRAINT "notifications_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."offline_sync_queue"
+    ADD CONSTRAINT "offline_sync_queue_pkey" PRIMARY KEY ("id");
 
 
 
@@ -3590,6 +3985,16 @@ ALTER TABLE ONLY "public"."user_locations"
 
 
 
+ALTER TABLE ONLY "public"."user_preferences"
+    ADD CONSTRAINT "user_preferences_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."user_preferences"
+    ADD CONSTRAINT "user_preferences_user_id_business_id_key" UNIQUE ("user_id", "business_id");
+
+
+
 ALTER TABLE ONLY "public"."user_sessions"
     ADD CONSTRAINT "user_sessions_pkey" PRIMARY KEY ("id");
 
@@ -3643,6 +4048,18 @@ CREATE INDEX "idx_businesses_owner" ON "public"."businesses" USING "btree" ("own
 
 
 
+CREATE INDEX "idx_cash_registers_business_id" ON "public"."cash_registers" USING "btree" ("business_id");
+
+
+
+CREATE INDEX "idx_cash_registers_is_active" ON "public"."cash_registers" USING "btree" ("is_active") WHERE ("is_active" = true);
+
+
+
+CREATE INDEX "idx_cash_registers_location_id" ON "public"."cash_registers" USING "btree" ("location_id");
+
+
+
 CREATE INDEX "idx_categories_business" ON "public"."categories" USING "btree" ("business_id");
 
 
@@ -3684,6 +4101,30 @@ CREATE INDEX "idx_inventory_movements_business" ON "public"."inventory_movements
 
 
 CREATE INDEX "idx_locations_business" ON "public"."locations" USING "btree" ("business_id");
+
+
+
+CREATE UNIQUE INDEX "idx_locations_main_per_business" ON "public"."locations" USING "btree" ("business_id", "main_location") WHERE ("main_location" = 1);
+
+
+
+CREATE INDEX "idx_movements_created_at" ON "public"."cash_register_movements" USING "btree" ("created_at" DESC);
+
+
+
+CREATE INDEX "idx_movements_sale_id" ON "public"."cash_register_movements" USING "btree" ("sale_id") WHERE ("sale_id" IS NOT NULL);
+
+
+
+CREATE INDEX "idx_movements_shift_id" ON "public"."cash_register_movements" USING "btree" ("shift_id");
+
+
+
+CREATE INDEX "idx_movements_type" ON "public"."cash_register_movements" USING "btree" ("movement_type");
+
+
+
+CREATE INDEX "idx_movements_user_id" ON "public"."cash_register_movements" USING "btree" ("user_id");
 
 
 
@@ -3739,7 +4180,27 @@ CREATE INDEX "idx_notifications_user" ON "public"."notifications" USING "btree" 
 
 
 
+CREATE INDEX "idx_offline_queue_created_at" ON "public"."offline_sync_queue" USING "btree" ("created_at");
+
+
+
+CREATE INDEX "idx_offline_queue_status" ON "public"."offline_sync_queue" USING "btree" ("status") WHERE (("status")::"text" = ANY ((ARRAY['pending'::character varying, 'failed'::character varying])::"text"[]));
+
+
+
+CREATE INDEX "idx_offline_queue_user_id" ON "public"."offline_sync_queue" USING "btree" ("user_id");
+
+
+
 CREATE INDEX "idx_products_business" ON "public"."products" USING "btree" ("business_id");
+
+
+
+CREATE INDEX "idx_products_is_favorite" ON "public"."products" USING "btree" ("is_favorite") WHERE ("is_favorite" = true);
+
+
+
+CREATE INDEX "idx_products_sale_frequency" ON "public"."products" USING "btree" ("sale_frequency" DESC);
 
 
 
@@ -3780,6 +4241,30 @@ CREATE INDEX "idx_quotes_status" ON "public"."quotes" USING "btree" ("status");
 
 
 CREATE INDEX "idx_sales_business" ON "public"."sales" USING "btree" ("business_id");
+
+
+
+CREATE INDEX "idx_sales_offline_id" ON "public"."sales" USING "btree" ("offline_id") WHERE ("offline_id" IS NOT NULL);
+
+
+
+CREATE INDEX "idx_sales_shift_id" ON "public"."sales" USING "btree" ("shift_id");
+
+
+
+CREATE INDEX "idx_shifts_cash_register_id" ON "public"."cash_register_shifts" USING "btree" ("cash_register_id");
+
+
+
+CREATE INDEX "idx_shifts_opened_at" ON "public"."cash_register_shifts" USING "btree" ("opened_at" DESC);
+
+
+
+CREATE INDEX "idx_shifts_status" ON "public"."cash_register_shifts" USING "btree" ("status");
+
+
+
+CREATE INDEX "idx_shifts_user_id" ON "public"."cash_register_shifts" USING "btree" ("user_id");
 
 
 
@@ -3848,6 +4333,14 @@ CREATE UNIQUE INDEX "idx_user_details_username" ON "public"."user_details" USING
 
 
 CREATE INDEX "idx_user_details_username_lookup" ON "public"."user_details" USING "btree" ("username") WHERE (("username" IS NOT NULL) AND ("deleted_at" IS NULL));
+
+
+
+CREATE INDEX "idx_user_preferences_business_id" ON "public"."user_preferences" USING "btree" ("business_id");
+
+
+
+CREATE INDEX "idx_user_preferences_user_id" ON "public"."user_preferences" USING "btree" ("user_id");
 
 
 
@@ -3963,6 +4456,22 @@ CREATE OR REPLACE TRIGGER "tr_user_details_updated_at" BEFORE UPDATE ON "public"
 
 
 
+CREATE OR REPLACE TRIGGER "trigger_increment_product_sale_frequency" AFTER INSERT ON "public"."sale_items" FOR EACH ROW EXECUTE FUNCTION "public"."increment_product_sale_frequency"();
+
+
+
+CREATE OR REPLACE TRIGGER "update_cash_register_shifts_updated_at" BEFORE UPDATE ON "public"."cash_register_shifts" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+
+
+
+CREATE OR REPLACE TRIGGER "update_cash_registers_updated_at" BEFORE UPDATE ON "public"."cash_registers" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+
+
+
+CREATE OR REPLACE TRIGGER "update_user_preferences_updated_at" BEFORE UPDATE ON "public"."user_preferences" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+
+
+
 ALTER TABLE ONLY "public"."audit_log"
     ADD CONSTRAINT "audit_log_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."user_details"("id") ON DELETE SET NULL;
 
@@ -3985,6 +4494,46 @@ ALTER TABLE ONLY "public"."businesses"
 
 ALTER TABLE ONLY "public"."businesses"
     ADD CONSTRAINT "businesses_plan_id_fkey" FOREIGN KEY ("plan_id") REFERENCES "public"."subscription_plans"("id");
+
+
+
+ALTER TABLE ONLY "public"."cash_register_movements"
+    ADD CONSTRAINT "cash_register_movements_payment_method_id_fkey" FOREIGN KEY ("payment_method_id") REFERENCES "public"."payment_methods"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."cash_register_movements"
+    ADD CONSTRAINT "cash_register_movements_sale_id_fkey" FOREIGN KEY ("sale_id") REFERENCES "public"."sales"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."cash_register_movements"
+    ADD CONSTRAINT "cash_register_movements_shift_id_fkey" FOREIGN KEY ("shift_id") REFERENCES "public"."cash_register_shifts"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."cash_register_movements"
+    ADD CONSTRAINT "cash_register_movements_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."cash_register_shifts"
+    ADD CONSTRAINT "cash_register_shifts_cash_register_id_fkey" FOREIGN KEY ("cash_register_id") REFERENCES "public"."cash_registers"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."cash_register_shifts"
+    ADD CONSTRAINT "cash_register_shifts_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."cash_registers"
+    ADD CONSTRAINT "cash_registers_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."cash_registers"
+    ADD CONSTRAINT "cash_registers_location_id_fkey" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE SET NULL;
 
 
 
@@ -4080,6 +4629,11 @@ ALTER TABLE ONLY "public"."notification_settings"
 
 ALTER TABLE ONLY "public"."notifications"
     ADD CONSTRAINT "notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."user_details"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."offline_sync_queue"
+    ADD CONSTRAINT "offline_sync_queue_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
@@ -4269,6 +4823,11 @@ ALTER TABLE ONLY "public"."sales"
 
 
 ALTER TABLE ONLY "public"."sales"
+    ADD CONSTRAINT "sales_shift_id_fkey" FOREIGN KEY ("shift_id") REFERENCES "public"."cash_register_shifts"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."sales"
     ADD CONSTRAINT "sales_sold_by_fkey" FOREIGN KEY ("sold_by") REFERENCES "public"."user_details"("id") ON DELETE RESTRICT;
 
 
@@ -4388,6 +4947,11 @@ ALTER TABLE ONLY "public"."user_details"
 
 
 ALTER TABLE ONLY "public"."user_details"
+    ADD CONSTRAINT "user_details_default_cash_register_id_fkey" FOREIGN KEY ("default_cash_register_id") REFERENCES "public"."cash_registers"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."user_details"
     ADD CONSTRAINT "user_details_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
@@ -4412,6 +4976,16 @@ ALTER TABLE ONLY "public"."user_locations"
 
 
 
+ALTER TABLE ONLY "public"."user_preferences"
+    ADD CONSTRAINT "user_preferences_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."user_preferences"
+    ADD CONSTRAINT "user_preferences_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."user_sessions"
     ADD CONSTRAINT "user_sessions_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
 
@@ -4432,7 +5006,24 @@ ALTER TABLE ONLY "public"."user_details"
 
 
 
+CREATE POLICY "Admins can manage cash registers" ON "public"."cash_registers" USING ((("business_id" = "public"."get_user_business_id"()) AND "public"."is_admin"()));
+
+
+
 CREATE POLICY "Enable read access for authenticated users on locations" ON "public"."locations" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "Users can create movements" ON "public"."cash_register_movements" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
+   FROM ("public"."cash_register_shifts" "crs"
+     JOIN "public"."cash_registers" "cr" ON (("cr"."id" = "crs"."cash_register_id")))
+  WHERE (("crs"."id" = "cash_register_movements"."shift_id") AND ("cr"."business_id" = "public"."get_user_business_id"())))));
+
+
+
+CREATE POLICY "Users can create shifts" ON "public"."cash_register_shifts" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."cash_registers" "cr"
+  WHERE (("cr"."id" = "cash_register_shifts"."cash_register_id") AND ("cr"."business_id" = "public"."get_user_business_id"())))));
 
 
 
@@ -4442,13 +5033,25 @@ CREATE POLICY "Users can delete location assignments" ON "public"."user_location
 
 
 
+CREATE POLICY "Users can delete own preferences" ON "public"."user_preferences" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
 CREATE POLICY "Users can insert location assignments" ON "public"."user_locations" FOR INSERT WITH CHECK (("user_id" IN ( SELECT "user_details"."id"
    FROM "public"."user_details"
   WHERE ("user_details"."business_id" = "public"."get_user_business_id"()))));
 
 
 
+CREATE POLICY "Users can insert own preferences" ON "public"."user_preferences" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
 CREATE POLICY "Users can insert their own location assignments" ON "public"."user_locations" FOR INSERT TO "authenticated" WITH CHECK (("user_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "Users can insert to their sync queue" ON "public"."offline_sync_queue" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
 
 
 
@@ -4472,7 +5075,30 @@ CREATE POLICY "Users can update location assignments" ON "public"."user_location
 
 
 
+CREATE POLICY "Users can update own preferences" ON "public"."user_preferences" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can update their own shifts" ON "public"."cash_register_shifts" FOR UPDATE USING ((("user_id" = "auth"."uid"()) OR "public"."is_admin"()));
+
+
+
+CREATE POLICY "Users can update their sync queue" ON "public"."offline_sync_queue" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+
+
+
 CREATE POLICY "Users can view archived members from their business" ON "public"."user_details_archive" FOR SELECT USING (("business_id" = "public"."get_user_business_id"()));
+
+
+
+CREATE POLICY "Users can view cash registers in their business" ON "public"."cash_registers" FOR SELECT USING (("business_id" = "public"."get_user_business_id"()));
+
+
+
+CREATE POLICY "Users can view movements in their business" ON "public"."cash_register_movements" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM ("public"."cash_register_shifts" "crs"
+     JOIN "public"."cash_registers" "cr" ON (("cr"."id" = "crs"."cash_register_id")))
+  WHERE (("crs"."id" = "cash_register_movements"."shift_id") AND ("cr"."business_id" = "public"."get_user_business_id"())))));
 
 
 
@@ -4486,9 +5112,23 @@ CREATE POLICY "Users can view own location assignments" ON "public"."user_locati
 
 
 
+CREATE POLICY "Users can view own preferences" ON "public"."user_preferences" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can view shifts in their business" ON "public"."cash_register_shifts" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM "public"."cash_registers" "cr"
+  WHERE (("cr"."id" = "cash_register_shifts"."cash_register_id") AND ("cr"."business_id" = "public"."get_user_business_id"())))));
+
+
+
 CREATE POLICY "Users can view system roles and own business roles" ON "public"."roles" FOR SELECT USING ((("business_id" IS NULL) OR ("business_id" = ( SELECT "user_details"."business_id"
    FROM "public"."user_details"
   WHERE ("user_details"."id" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "Users can view their own sync queue" ON "public"."offline_sync_queue" FOR SELECT USING (("auth"."uid"() = "user_id"));
 
 
 
@@ -4536,6 +5176,15 @@ CREATE POLICY "businesses_select" ON "public"."businesses" FOR SELECT USING ((("
 
 CREATE POLICY "businesses_update" ON "public"."businesses" FOR UPDATE USING ((("owner_id" = "auth"."uid"()) OR ("id" = "public"."get_user_business_id"())));
 
+
+
+ALTER TABLE "public"."cash_register_movements" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."cash_register_shifts" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."cash_registers" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."categories" ENABLE ROW LEVEL SECURITY;
@@ -4613,6 +5262,9 @@ CREATE POLICY "locations_update" ON "public"."locations" FOR UPDATE USING (("bus
 
 
 ALTER TABLE "public"."notification_settings" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."offline_sync_queue" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."products" ENABLE ROW LEVEL SECURITY;
@@ -4718,6 +5370,9 @@ CREATE POLICY "user_details_username_lookup" ON "public"."user_details" FOR SELE
 ALTER TABLE "public"."user_locations" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."user_preferences" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."user_sessions" ENABLE ROW LEVEL SECURITY;
 
 
@@ -4780,6 +5435,18 @@ GRANT ALL ON FUNCTION "public"."cleanup_orphan_auth_users"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."ensure_single_main_location"() TO "anon";
+GRANT ALL ON FUNCTION "public"."ensure_single_main_location"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."ensure_single_main_location"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."generate_shift_number"("p_cash_register_id" bigint) TO "anon";
+GRANT ALL ON FUNCTION "public"."generate_shift_number"("p_cash_register_id" bigint) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."generate_shift_number"("p_cash_register_id" bigint) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_archived_users"("p_business_id" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_archived_users"("p_business_id" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_archived_users"("p_business_id" integer) TO "service_role";
@@ -4789,6 +5456,12 @@ GRANT ALL ON FUNCTION "public"."get_archived_users"("p_business_id" integer) TO 
 GRANT ALL ON FUNCTION "public"."get_enabled_payment_methods"("p_business_id" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_enabled_payment_methods"("p_business_id" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_enabled_payment_methods"("p_business_id" integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_main_location"("p_business_id" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_main_location"("p_business_id" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_main_location"("p_business_id" integer) TO "service_role";
 
 
 
@@ -4807,6 +5480,12 @@ GRANT ALL ON FUNCTION "public"."get_user_business_id"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "anon";
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."increment_product_sale_frequency"() TO "anon";
+GRANT ALL ON FUNCTION "public"."increment_product_sale_frequency"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."increment_product_sale_frequency"() TO "service_role";
 
 
 
@@ -4915,6 +5594,42 @@ GRANT ALL ON TABLE "public"."businesses" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."businesses_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."businesses_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."businesses_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."cash_register_movements" TO "anon";
+GRANT ALL ON TABLE "public"."cash_register_movements" TO "authenticated";
+GRANT ALL ON TABLE "public"."cash_register_movements" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."cash_register_movements_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."cash_register_movements_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."cash_register_movements_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."cash_register_shifts" TO "anon";
+GRANT ALL ON TABLE "public"."cash_register_shifts" TO "authenticated";
+GRANT ALL ON TABLE "public"."cash_register_shifts" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."cash_register_shifts_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."cash_register_shifts_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."cash_register_shifts_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."cash_registers" TO "anon";
+GRANT ALL ON TABLE "public"."cash_registers" TO "authenticated";
+GRANT ALL ON TABLE "public"."cash_registers" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."cash_registers_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."cash_registers_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."cash_registers_id_seq" TO "service_role";
 
 
 
@@ -5119,6 +5834,18 @@ GRANT ALL ON TABLE "public"."notifications" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."notifications_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."notifications_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."notifications_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."offline_sync_queue" TO "anon";
+GRANT ALL ON TABLE "public"."offline_sync_queue" TO "authenticated";
+GRANT ALL ON TABLE "public"."offline_sync_queue" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."offline_sync_queue_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."offline_sync_queue_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."offline_sync_queue_id_seq" TO "service_role";
 
 
 
@@ -5407,6 +6134,18 @@ GRANT ALL ON TABLE "public"."user_locations" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."user_locations_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."user_locations_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."user_locations_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."user_preferences" TO "anon";
+GRANT ALL ON TABLE "public"."user_preferences" TO "authenticated";
+GRANT ALL ON TABLE "public"."user_preferences" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."user_preferences_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."user_preferences_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."user_preferences_id_seq" TO "service_role";
 
 
 

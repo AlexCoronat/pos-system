@@ -1,5 +1,10 @@
-import DashboardLayout from '@/components/layout/DashboardLayout'
+/**
+ * Updated Dashboard Layout
+ * Uses the new AdminLayout component
+ */
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <DashboardLayout>{children}</DashboardLayout>
+import { AdminLayout } from '@/components/admin/AdminLayout'
+
+export default function DashboardLayoutPage({ children }: { children: React.ReactNode }) {
+  return <AdminLayout>{children}</AdminLayout>
 }

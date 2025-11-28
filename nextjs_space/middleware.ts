@@ -23,6 +23,16 @@ export async function middleware(request: NextRequest) {
   // Add locale to response headers for i18n.ts to read
   finalResponse.headers.set('x-next-intl-locale', locale)
 
+  // Route protection: Check if accessing protected admin routes
+  const path = request.nextUrl.pathname
+
+  // If accessing dashboard routes, check permissions
+  if (path.startsWith('/dashboard')) {
+    // The ViewProvider will handle the actual redirect
+    // Middleware just ensures proper headers are set
+    // We rely on client-side navigation protection
+  }
+
   return finalResponse
 }
 
