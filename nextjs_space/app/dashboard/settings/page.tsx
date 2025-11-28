@@ -10,7 +10,8 @@ import {
   CreditCard,
   Bell,
   Shield,
-  ChevronRight
+  ChevronRight,
+  Keyboard
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
@@ -38,6 +39,13 @@ export default function SettingsPage() {
       href: '/dashboard/settings/company',
       icon: Building2,
       color: 'text-purple-600 bg-purple-100'
+    },
+    {
+      title: 'Atajos de Teclado',
+      description: 'Personaliza los atajos de teclado del sistema',
+      href: '/dashboard/settings/shortcuts',
+      icon: Keyboard,
+      color: 'text-blue-600 bg-blue-100'
     },
     {
       titleKey: 'sections.payments.title',
@@ -112,8 +120,8 @@ export default function SettingsPage() {
                     </div>
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <CardTitle className="mt-4">{t(section.titleKey)}</CardTitle>
-                  <CardDescription>{t(section.descriptionKey)}</CardDescription>
+                  <CardTitle className="mt-4">{section.titleKey ? t(section.titleKey) : section.title}</CardTitle>
+                  <CardDescription>{section.descriptionKey ? t(section.descriptionKey) : section.description}</CardDescription>
                 </CardHeader>
               </Link>
             )}

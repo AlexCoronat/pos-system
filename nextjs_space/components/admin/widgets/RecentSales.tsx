@@ -41,9 +41,6 @@ export function RecentSales({ sales }: RecentSalesProps) {
                     <Clock className="w-5 h-5 text-blue-600" />
                     <h3 className="text-lg font-semibold text-gray-900">Ventas Recientes</h3>
                 </div>
-                <Link href="/dashboard/sales" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                    Ver todas
-                </Link>
             </div>
 
             {recentSales.length === 0 ? (
@@ -60,7 +57,6 @@ export function RecentSales({ sales }: RecentSalesProps) {
                                 <th className="text-left py-3 px-2 text-xs font-semibold text-gray-500 uppercase">Fecha</th>
                                 <th className="text-left py-3 px-2 text-xs font-semibold text-gray-500 uppercase">Monto</th>
                                 <th className="text-left py-3 px-2 text-xs font-semibold text-gray-500 uppercase">Estado</th>
-                                <th className="text-right py-3 px-2 text-xs font-semibold text-gray-500 uppercase">Acción</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -76,15 +72,6 @@ export function RecentSales({ sales }: RecentSalesProps) {
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[sale.status]}`}>
                                             {statusLabels[sale.status]}
                                         </span>
-                                    </td>
-                                    <td className="py-3 px-2 text-right">
-                                        <Link
-                                            href={`/dashboard/sales/${sale.id}`}
-                                            className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm"
-                                        >
-                                            <Eye className="w-4 h-4" />
-                                            Ver
-                                        </Link>
                                     </td>
                                 </tr>
                             ))}

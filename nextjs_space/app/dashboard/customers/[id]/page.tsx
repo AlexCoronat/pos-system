@@ -799,8 +799,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                     {purchaseHistory.map((purchase) => (
                       <TableRow
                         key={purchase.saleId}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => router.push(`/dashboard/sales/${purchase.saleId}`)}
+                        className="hover:bg-muted/50"
                       >
                         <TableCell className="font-medium">
                           {purchase.saleNumber}

@@ -36,7 +36,6 @@ interface NavItem {
 
 const navigationItems: NavItem[] = [
   { nameKey: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { nameKey: 'sales', href: '/dashboard/sales', icon: ShoppingCart, permissions: ['sales:read'], roles: ['Admin', 'Manager', 'Seller'] },
   { nameKey: 'inventory', href: '/dashboard/inventory', icon: Package, permissions: ['inventory:read'], roles: ['Admin', 'Manager', 'Inventory Manager'] },
   { nameKey: 'customers', href: '/dashboard/customers', icon: Users, permissions: ['customers:read'], roles: ['Admin', 'Manager', 'Seller'] },
   { nameKey: 'quotes', href: '/dashboard/quotes', icon: FileText, permissions: ['quotes:read'], roles: ['Admin', 'Manager', 'Seller'] },
