@@ -12,25 +12,50 @@ import { QuickProducts } from '@/components/pos/QuickProducts'
 import { ProductGrid } from '@/components/pos/ProductGrid'
 import { CartPanel } from '@/components/pos/CartPanel'
 import { PaymentModal } from '@/components/pos/PaymentModal'
+import { ShiftStatus } from '@/components/pos/ShiftStatus'
+import { OpenShiftModal } from '@/components/pos/OpenShiftModal'
+import { CloseShiftModal } from '@/components/pos/CloseShiftModal'
+import { AddMovementModal } from '@/components/pos/AddMovementModal'
+import { ShiftReport } from '@/components/pos/ShiftReport'
+import { useShiftStore } from '@/lib/stores/shift-store'
 
 export default function POSPage() {
+    const { currentShift } = useShiftStore()
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
     const [showPaymentModal, setShowPaymentModal] = useState(false)
+    const [showOpenShiftModal, setShowOpenShiftModal] = useState(false)
+    const [showCloseShiftModal, setShowCloseShiftModal] = useState(false)
+    const [showMovementModal, setShowMovementModal] = useState(false)
+    const [showShiftReport, setShowShiftReport] = useState(false)
+    const [reportShiftId, setReportShiftId] = useState<number | null>(null)
     const [refreshKey, setRefreshKey] = useState(0)
 
     const handlePaymentSuccess = () => {
         setShowPaymentModal(false)
-        // Trigger products reload by changing key
         setRefreshKey(prev => prev + 1)
     }
 
+    const handleShiftClosed = (shiftId: number) => {
+        setReportShiftId(shiftId)
+        setShowShiftReport(true)
+    }
+
     return (
-        <div className="h-screen flex flex-col lg:flex-row overflow-hidden bg-gray-50">
+        <div className="-m-6 h-[calc(100vh-4rem)] flex flex-col lg:flex-row overflow-hidden bg-gray-50">
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Top Bar with Search */}
-                <div className="bg-white border-b border-gray-200 p-4">
-                    <ProductSearch />
+                {/* Top Bar with Search and Shift Status */}
+                <div className="flex-shrink-0 bg-white border-b border-gray-200 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1">
+                            <ProductSearch />
+                        </div>
+                        <ShiftStatus
+                            onOpenShift={() => setShowOpenShiftModal(true)}
+                            onCloseShift={() => setShowCloseShiftModal(true)}
+                            onAddMovement={() => setShowMovementModal(true)}
+                        />
+                    </div>
                 </div>
 
                 {/* Scrollable Content */}
@@ -60,7 +85,7 @@ export default function POSPage() {
             </div>
 
             {/* Cart Panel - Fixed on Desktop, Modal on Mobile */}
-            <div className="hidden lg:block">
+            <div className="hidden lg:block flex-shrink-0">
                 <CartPanel onCheckout={() => setShowPaymentModal(true)} />
             </div>
 
@@ -80,6 +105,40 @@ export default function POSPage() {
                 onClose={() => setShowPaymentModal(false)}
                 onSuccess={handlePaymentSuccess}
             />
+
+            {/* Shift Modals */}
+            <OpenShiftModal
+                isOpen={showOpenShiftModal}
+                onClose={() => setShowOpenShiftModal(false)}
+                onSuccess={() => setRefreshKey(prev => prev + 1)}
+            />
+            <CloseShiftModal
+                isOpen={showCloseShiftModal}
+                onClose={() => setShowCloseShiftModal(false)}
+                onSuccess={handleShiftClosed}
+            />
+
+            {/* Cash Movement Modal */}
+            {currentShift && (
+                <AddMovementModal
+                    isOpen={showMovementModal}
+                    onClose={() => setShowMovementModal(false)}
+                    onSuccess={() => setRefreshKey(prev => prev + 1)}
+                    shiftId={currentShift.id}
+                />
+            )}
+
+            {/* Shift Report */}
+            {reportShiftId && (
+                <ShiftReport
+                    isOpen={showShiftReport}
+                    onClose={() => {
+                        setShowShiftReport(false)
+                        setReportShiftId(null)
+                    }}
+                    shiftId={reportShiftId}
+                />
+            )}
         </div>
     )
 }

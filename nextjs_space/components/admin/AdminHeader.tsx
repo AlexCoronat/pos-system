@@ -6,8 +6,7 @@
 'use client'
 
 import { useAuth } from '@/lib/hooks/use-auth'
-import { Button } from '@/components/ui/button'
-import { Plus, Bell, Settings } from 'lucide-react'
+import { Bell, Settings } from 'lucide-react'
 import Link from 'next/link'
 
 export function AdminHeader() {
@@ -33,14 +32,6 @@ export function AdminHeader() {
             </div>
 
             <div className="flex items-center gap-3">
-                {/* Nueva Venta button */}
-                <Link href="/dashboard/sales/new">
-                    <Button className="gap-2 bg-blue-600 hover:bg-blue-700">
-                        <Plus className="w-4 h-4" />
-                        Nueva Venta
-                    </Button>
-                </Link>
-
                 {/* Notifications */}
                 <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg relative transition-colors">
                     <Bell className="w-5 h-5" />

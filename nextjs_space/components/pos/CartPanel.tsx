@@ -37,9 +37,9 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
     if (!mounted) return null
 
     return (
-        <div className="w-full lg:w-96 bg-white border-l border-gray-200 flex flex-col h-full">
-            {/* Header */}
-            <div className="p-4 border-b border-gray-200">
+        <div className="w-full lg:w-96 bg-white border-l border-gray-200 flex flex-col h-screen">
+            {/* Header - Fixed */}
+            <div className="flex-shrink-0 p-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <ShoppingCart className="w-5 h-5 text-blue-600" />
@@ -61,36 +61,38 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
                 </div>
             </div>
 
-            {/* Items */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {cart.items.length === 0 ? (
-                    <div className="text-center py-12">
-                        <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-500">El carrito está vacío</p>
-                    </div>
-                ) : (
-                    cart.items.map((item) => (
-                        <CartItem
-                            key={`${item.productId}-${item.variantId}`}
-                            productId={item.productId}
-                            productName={item.productName}
-                            sku={item.productSku}
-                            quantity={item.quantity}
-                            unitPrice={item.unitPrice}
-                            discount={item.discountPercentage || 0}
-                            total={item.total}
-                            availableStock={item.availableStock}
-                            onQuantityChange={(qty) => cart.updateItemQuantity(item.productId, qty, item.variantId)}
-                            onRemove={() => cart.removeItem(item.productId, item.variantId)}
-                            onDiscountChange={(disc) => cart.updateItemDiscount(item.productId, disc, item.variantId, true)}
-                        />
-                    ))
-                )}
+            {/* Items - Scrollable */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+                <div className="p-4 space-y-3">
+                    {cart.items.length === 0 ? (
+                        <div className="text-center py-12">
+                            <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                            <p className="text-gray-500">El carrito está vacío</p>
+                        </div>
+                    ) : (
+                        cart.items.map((item) => (
+                            <CartItem
+                                key={`${item.productId}-${item.variantId}`}
+                                productId={item.productId}
+                                productName={item.productName}
+                                sku={item.productSku}
+                                quantity={item.quantity}
+                                unitPrice={item.unitPrice}
+                                discount={item.discountPercentage || 0}
+                                total={item.total}
+                                availableStock={item.availableStock}
+                                onQuantityChange={(qty) => cart.updateItemQuantity(item.productId, qty, item.variantId)}
+                                onRemove={() => cart.removeItem(item.productId, item.variantId)}
+                                onDiscountChange={(disc) => cart.updateItemDiscount(item.productId, disc, item.variantId, true)}
+                            />
+                        ))
+                    )}
+                </div>
             </div>
 
-            {/* Totals */}
+            {/* Totals - Fixed at bottom */}
             {cart.items.length > 0 && (
-                <div className="border-t p-4 bg-gray-50">
+                <div className="flex-shrink-0 border-t p-4 bg-gray-50">
                     <div className="space-y-2 mb-4">
                         <div className="flex justify-between text-sm">
                             <span>Subtotal:</span>

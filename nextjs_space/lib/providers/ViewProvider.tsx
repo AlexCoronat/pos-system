@@ -42,12 +42,12 @@ export function ViewProvider({ children }: ViewProviderProps) {
 
         // Route protection
         if (!canSwitch && effectiveView === 'seller' && pathname?.startsWith('/dashboard')) {
-            router.replace('/pos')
+            router.replace('/dashboard/pos')
         }
 
         // Auto-navigate from root
         if (pathname === '/') {
-            router.replace(effectiveView === 'admin' ? '/dashboard' : '/pos')
+            router.replace(effectiveView === 'admin' ? '/dashboard' : '/dashboard/pos')
         }
     }, [initialized, loading, user?.id]) // Only re-run when init state or user changes
 
@@ -64,11 +64,10 @@ export function ViewProvider({ children }: ViewProviderProps) {
             effectiveView = ['Admin', 'Manager', 'Supervisor'].includes(userRole) ? 'admin' : 'seller'
         }
 
-        // Navigate based on effective view
-        if (effectiveView === 'seller' && pathname?.startsWith('/dashboard')) {
-            router.push('/pos')
-        } else if (effectiveView === 'admin' && pathname?.startsWith('/pos')) {
-            router.push('/dashboard')
+        // Only redirect sellers away from non-POS dashboard routes
+        // Allow admins to access all dashboard routes including /dashboard/pos
+        if (effectiveView === 'seller' && pathname?.startsWith('/dashboard') && !pathname.startsWith('/dashboard/pos')) {
+            router.push('/dashboard/pos')
         }
     }, [currentView, pathname]) // Only when view mode or path changes
 

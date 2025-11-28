@@ -10,7 +10,6 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useSidebarCollapsed, useViewStore } from '@/lib/stores/view-store'
-import { ViewSwitcher } from '@/components/shared/ViewSwitcher'
 import {
     LayoutDashboard,
     ShoppingCart,
@@ -42,7 +41,7 @@ const navigationItems: NavItem[] = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, section: 'main' },
     {
         name: 'Ventas',
-        href: '/dashboard/sales',
+        href: '/dashboard/pos',
         icon: ShoppingCart,
         section: 'main',
         permissions: ['sales:read']
@@ -226,10 +225,7 @@ export function AdminSidebar() {
                 )}
             </nav>
 
-            {/* ViewSwitcher */}
-            <div className={`px-3 py-2 border-t border-gray-200 ${collapsed ? 'hidden' : 'block'}`}>
-                <ViewSwitcher variant="sidebar" />
-            </div>
+
 
             {/* User section */}
             <div className="p-3 border-t border-gray-200">
