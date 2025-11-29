@@ -9,7 +9,8 @@ const ROUTE_CONFIG = {
   public: ['/', '/auth/login', '/auth/register', '/auth/recover-password', '/auth/reset-password', '/auth/verify-email', '/auth/callback', '/privacy', '/terms', '/test-env'],
   auth: ['/auth/login', '/auth/register', '/auth/recover-password', '/auth/reset-password'],
   protected: {
-    '/dashboard': { roles: ['Admin', 'Manager', 'Seller', 'Support', 'Inventory Manager'] },
+    '/dashboard': { roles: ['Admin', 'Manager', 'Seller', 'Support', 'Inventory Manager', 'Cashier'] },
+    '/dashboard/pos': { roles: ['Admin', 'Manager', 'Seller', 'Cashier'] },
     '/dashboard/sales': { roles: ['Admin', 'Manager', 'Seller'], permissions: ['sales:read'] },
     '/dashboard/inventory': { roles: ['Admin', 'Manager', 'Inventory Manager'], permissions: ['inventory:read'] },
     '/dashboard/customers': { roles: ['Admin', 'Manager', 'Seller'], permissions: ['customers:read'] },

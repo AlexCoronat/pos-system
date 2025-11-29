@@ -32,6 +32,7 @@ export function ViewProvider({ children }: ViewProviderProps) {
         if (currentView === 'admin' || currentView === 'seller') {
             effectiveView = currentView
         } else {
+            // Admin, Manager, Supervisor get admin view; Seller and Cashier get seller view
             effectiveView = ['Admin', 'Manager', 'Supervisor'].includes(roleName) ? 'admin' : 'seller'
         }
 
@@ -40,8 +41,8 @@ export function ViewProvider({ children }: ViewProviderProps) {
         setCanSwitchView(canSwitch)
         setEffectiveView(effectiveView)
 
-        // Route protection
-        if (!canSwitch && effectiveView === 'seller' && pathname?.startsWith('/dashboard')) {
+        // Route protection - Sellers and Cashiers should go to POS
+        if (!canSwitch && effectiveView === 'seller' && pathname?.startsWith('/dashboard') && !pathname?.startsWith('/dashboard/pos')) {
             router.replace('/dashboard/pos')
         }
 

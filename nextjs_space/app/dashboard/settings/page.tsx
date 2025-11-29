@@ -11,7 +11,8 @@ import {
   Bell,
   Shield,
   ChevronRight,
-  Keyboard
+  Keyboard,
+  Wallet
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
@@ -39,6 +40,13 @@ export default function SettingsPage() {
       href: '/dashboard/settings/company',
       icon: Building2,
       color: 'text-purple-600 bg-purple-100'
+    },
+    {
+      title: 'Cajas Registradoras',
+      description: 'Gestiona las cajas del punto de venta',
+      href: '/dashboard/settings/cash-registers',
+      icon: Wallet,
+      color: 'text-emerald-600 bg-emerald-100'
     },
     {
       title: 'Atajos de Teclado',
