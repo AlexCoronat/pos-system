@@ -118,6 +118,20 @@ class LocationService {
 
       if (error) throw error
 
+      // Auto-create cash register for this location
+      try {
+        const { cashRegisterService } = await import('@/lib/services/cash-register.service')
+        await cashRegisterService.autoCreateCashRegister(
+          location.id,
+          data.name,
+          data.mainLocation === 1 // If this is the main location, make it the main cash register too
+        )
+        console.log(`✅ Auto-created cash register for location: ${data.name}`)
+      } catch (cashRegError) {
+        console.error('Failed to auto-create cash register:', cashRegError)
+        // Don't fail the location creation if cash register fails
+      }
+
       return await this.getLocationById(location.id)
     } catch (error: any) {
       console.error('Error creating location:', error)

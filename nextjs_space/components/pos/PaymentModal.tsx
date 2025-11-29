@@ -1,13 +1,13 @@
 /**
  * Payment Modal Component
- * Checkout interface with multiple payment methods
- * Uses salesService (same as old working view)
+ * Checkout interface with MULTIPLE payment methods
+ * Allows split payments (e.g., partial cash + partial card)
  */
 
 'use client'
 
 import { useState } from 'react'
-import { X, CreditCard, DollarSign, Smartphone, Loader2, CheckCircle } from 'lucide-react'
+import { X, CreditCard, DollarSign, Smartphone, Loader2, CheckCircle, Plus, Trash2 } from 'lucide-react'
 import { useCartStore } from '@/lib/stores/cart-store'
 import { salesService } from '@/lib/services/sales.service'
 import type { CreatePaymentData } from '@/lib/types/sales'
@@ -22,10 +22,17 @@ interface PaymentModalProps {
 
 type PaymentMethod = 'cash' | 'card' | 'transfer'
 
+interface Payment {
+    id: string
+    method: PaymentMethod
+    amount: number
+}
+
 export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) {
     const cart = useCartStore()
-    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
-    const [amountPaid, setAmountPaid] = useState('')
+    const [payments, setPayments] = useState<Payment[]>([])
+    const [currentMethod, setCurrentMethod] = useState<PaymentMethod>('cash')
+    const [currentAmount, setCurrentAmount] = useState('')
     const [isProcessing, setIsProcessing] = useState(false)
     const [showSuccess, setShowSuccess] = useState(false)
 
@@ -39,34 +46,63 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
     if (!isOpen) return null
 
     const total = cart.total
-    const paid = parseFloat(amountPaid) || 0
-    const change = Math.max(0, paid - total)
-    const isValid = paid >= total
+    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0)
+    const remaining = Math.max(0, total - totalPaid)
+    const change = Math.max(0, totalPaid - total)
+    const isFullyPaid = totalPaid >= total
+
+    const handleAddPayment = () => {
+        const amount = parseFloat(currentAmount)
+
+        if (!amount || amount <= 0) {
+            toast.error('Ingresa un monto válido')
+            return
+        }
+
+        if (amount > remaining && payments.length > 0) {
+            toast.error(`El monto no puede exceder el restante ($${remaining.toFixed(2)})`)
+            return
+        }
+
+        const newPayment: Payment = {
+            id: Date.now().toString(),
+            method: currentMethod,
+            amount: amount
+        }
+
+        setPayments(prev => [...prev, newPayment])
+        setCurrentAmount('')
+
+        toast.success(`Pago de $${amount.toFixed(2)} añadido`)
+    }
+
+    const handleRemovePayment = (id: string) => {
+        setPayments(prev => prev.filter(p => p.id !== id))
+        toast.info('Pago eliminado')
+    }
 
     const handleCompleteSale = async () => {
-        if (!isValid) {
-            toast.error('El monto pagado debe ser mayor o igual al total')
+        if (!isFullyPaid) {
+            toast.error('Debes cubrir el total antes de completar la venta')
             return
         }
 
         setIsProcessing(true)
 
         try {
-            // Map payment method string to paymentMethodId number
             const paymentMethodMap: Record<PaymentMethod, number> = {
-                'cash': 1,      // Efectivo
-                'card': 2,      // Tarjeta
-                'transfer': 3   // Transferencia
+                'cash': 1,
+                'card': 2,
+                'transfer': 3
             }
 
-            // Prepare sale data with same structure as payment-dialog
-            const payments: CreatePaymentData[] = [{
-                paymentMethodId: paymentMethodMap[paymentMethod],
-                amount: paid
-            }]
+            const paymentsData: CreatePaymentData[] = payments.map(p => ({
+                paymentMethodId: paymentMethodMap[p.method],
+                amount: p.amount
+            }))
 
             const saleData = {
-                locationId: 1, // TODO: Get from user context/settings
+                locationId: 1,
                 customerId: cart.customerId,
                 items: cart.items.map(item => ({
                     productId: item.productId,
@@ -77,10 +113,9 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                     taxAmount: item.taxAmount,
                     taxRate: item.taxPercentage
                 })),
-                payments
+                payments: paymentsData
             }
 
-            // Create sale using salesService (same as old view)
             const sale = await salesService.createSale(saleData)
 
             toast.success(`Venta ${sale.saleNumber} creada exitosamente!`)
@@ -89,9 +124,9 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
             setTimeout(() => {
                 cart.clearCart()
                 setShowSuccess(false)
-                setAmountPaid('')
-                setPaymentMethod('cash')
-                // Call onSuccess callback to refresh products
+                setPayments([])
+                setCurrentAmount('')
+                setCurrentMethod('cash')
                 if (onSuccess) {
                     onSuccess()
                 } else {
@@ -109,19 +144,35 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
     const handleClose = () => {
         if (!isProcessing) {
             onClose()
-            setAmountPaid('')
+            setPayments([])
+            setCurrentAmount('')
         }
     }
 
     const paymentMethods = [
-        { id: 'cash' as PaymentMethod, label: 'Efectivo', icon: DollarSign },
-        { id: 'card' as PaymentMethod, label: 'Tarjeta', icon: CreditCard },
-        { id: 'transfer' as PaymentMethod, label: 'Transferencia', icon: Smartphone }
+        { id: 'cash' as PaymentMethod, label: 'Efectivo', icon: DollarSign, color: 'green' },
+        { id: 'card' as PaymentMethod, label: 'Tarjeta', icon: CreditCard, color: 'blue' },
+        { id: 'transfer' as PaymentMethod, label: 'Transferencia', icon: Smartphone, color: 'purple' }
     ]
+
+    const getMethodLabel = (method: PaymentMethod) => {
+        return paymentMethods.find(m => m.id === method)?.label || method
+    }
+
+    const getMethodColor = (method: PaymentMethod) => {
+        const color = paymentMethods.find(m => m.id === method)?.color || 'gray'
+        const colors = {
+            green: 'bg-green-100 text-green-700 border-green-300',
+            blue: 'bg-blue-100 text-blue-700 border-blue-300',
+            purple: 'bg-purple-100 text-purple-700 border-purple-300',
+            gray: 'bg-gray-100 text-gray-700 border-gray-300'
+        }
+        return colors[color as keyof typeof colors]
+    }
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
                 {/* Success State */}
                 {showSuccess ? (
                     <div className="p-12 text-center">
@@ -133,7 +184,10 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                     <>
                         {/* Header */}
                         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                            <h2 className="text-2xl font-bold text-gray-900">Procesar Pago</h2>
+                            <div>
+                                <h2 className="text-2xl font-bold text-gray-900">Procesar Pago</h2>
+                                <p className="text-sm text-gray-600 mt-1">Puedes dividir el pago en varios métodos</p>
+                            </div>
                             <button
                                 onClick={handleClose}
                                 disabled={isProcessing}
@@ -144,7 +198,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                         </div>
 
                         <div className="p-6 space-y-6">
-                            {/* Order Summary */}
+                            {/* Orden Summary */}
                             <div className="bg-gray-50 rounded-lg p-4">
                                 <h3 className="font-semibold text-gray-900 mb-3">Resumen de Compra</h3>
                                 <div className="space-y-2">
@@ -169,63 +223,146 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                                 </div>
                             </div>
 
-                            {/* Payment Method */}
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-900 mb-3">
-                                    Método de Pago
-                                </label>
-                                <div className="grid grid-cols-3 gap-3">
-                                    {paymentMethods.map((method) => {
-                                        const Icon = method.icon
-                                        const isSelected = paymentMethod === method.id
-                                        return (
-                                            <button
-                                                key={method.id}
-                                                onClick={() => setPaymentMethod(method.id)}
-                                                disabled={isProcessing}
-                                                className={`p-4 border-2 rounded-lg transition-all ${isSelected
-                                                    ? 'border-blue-600 bg-blue-50'
-                                                    : 'border-gray-200 hover:border-gray-300'
-                                                    }`}
-                                            >
-                                                <Icon className={`w-8 h-8 mx-auto mb-2 ${isSelected ? 'text-blue-600' : 'text-gray-400'}`} />
-                                                <p className={`text-sm font-medium ${isSelected ? 'text-blue-600' : 'text-gray-700'}`}>
-                                                    {method.label}
-                                                </p>
-                                            </button>
-                                        )
-                                    })}
+                            {/* Payment Status */}
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="bg-blue-50 rounded-lg p-3">
+                                    <p className="text-xs text-blue-600 font-medium mb-1">Total a Pagar</p>
+                                    <p className="text-lg font-bold text-blue-900">${total.toFixed(2)}</p>
+                                </div>
+                                <div className={`rounded-lg p-3 ${totalPaid > 0 ? 'bg-green-50' : 'bg-gray-50'}`}>
+                                    <p className={`text-xs font-medium mb-1 ${totalPaid > 0 ? 'text-green-600' : 'text-gray-600'}`}>Pagado</p>
+                                    <p className={`text-lg font-bold ${totalPaid > 0 ? 'text-green-900' : 'text-gray-900'}`}>${totalPaid.toFixed(2)}</p>
+                                </div>
+                                <div className={`rounded-lg p-3 ${remaining > 0 ? 'bg-amber-50' : 'bg-gray-50'}`}>
+                                    <p className={`text-xs font-medium mb-1 ${remaining > 0 ? 'text-amber-600' : 'text-gray-600'}`}>Restante</p>
+                                    <p className={`text-lg font-bold ${remaining > 0 ? 'text-amber-900' : 'text-gray-900'}`}>${remaining.toFixed(2)}</p>
                                 </div>
                             </div>
 
-                            {/* Amount Paid */}
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                                    Monto Recibido
-                                </label>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg">$</span>
-                                    <input
-                                        type="number"
-                                        value={amountPaid}
-                                        onChange={(e) => setAmountPaid(e.target.value)}
-                                        placeholder="0.00"
-                                        step="0.01"
-                                        min="0"
-                                        disabled={isProcessing}
-                                        className="w-full pl-8 pr-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        autoFocus
-                                    />
+                            {/* Payments Added */}
+                            {payments.length > 0 && (
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 mb-3">Pagos Registrados</h3>
+                                    <div className="space-y-2">
+                                        {payments.map((payment) => (
+                                            <div
+                                                key={payment.id}
+                                                className={`flex items-center justify-between p-3 rounded-lg border ${getMethodColor(payment.method)}`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <span className="font-medium">{getMethodLabel(payment.method)}</span>
+                                                    <span className="text-sm opacity-75">•</span>
+                                                    <span className="font-bold">${payment.amount.toFixed(2)}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleRemovePayment(payment.id)}
+                                                    disabled={isProcessing}
+                                                    className="p-1 hover:bg-red-100 rounded transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4 text-red-600" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                                {paid > 0 && (total - paid) > 0.01 && (
-                                    <p className="text-red-600 text-sm mt-1">
-                                        Falta: ${(total - paid).toFixed(2)}
-                                    </p>
-                                )}
-                            </div>
+                            )}
+
+                            {/* Add Payment Section */}
+                            {remaining > 0.01 && (
+                                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                                    <h3 className="font-semibold text-gray-900 mb-4">Agregar Pago</h3>
+
+                                    {/* Payment Method */}
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Método de Pago
+                                        </label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {paymentMethods.map((method) => {
+                                                const Icon = method.icon
+                                                const isSelected = currentMethod === method.id
+                                                return (
+                                                    <button
+                                                        key={method.id}
+                                                        onClick={() => setCurrentMethod(method.id)}
+                                                        disabled={isProcessing}
+                                                        className={`p-3 border-2 rounded-lg transition-all ${isSelected
+                                                                ? 'border-blue-600 bg-blue-50'
+                                                                : 'border-gray-200 hover:border-gray-300'
+                                                            }`}
+                                                    >
+                                                        <Icon className={`w-6 h-6 mx-auto mb-1 ${isSelected ? 'text-blue-600' : 'text-gray-400'}`} />
+                                                        <p className={`text-xs font-medium ${isSelected ? 'text-blue-600' : 'text-gray-700'}`}>
+                                                            {method.label}
+                                                        </p>
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Amount */}
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Monto
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                                            <input
+                                                type="number"
+                                                value={currentAmount}
+                                                onChange={(e) => setCurrentAmount(e.target.value)}
+                                                placeholder="0.00"
+                                                step="0.01"
+                                                min="0"
+                                                max={remaining}
+                                                disabled={isProcessing}
+                                                className="w-full pl-7 pr-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                onKeyPress={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault()
+                                                        handleAddPayment()
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Quick Amounts */}
+                                    <div className="grid grid-cols-5 gap-2 mb-4">
+                                        {[50, 100, 200, 500].map((amount) => (
+                                            <button
+                                                key={amount}
+                                                onClick={() => setCurrentAmount(String(Math.min(remaining, amount)))}
+                                                disabled={isProcessing}
+                                                className="px-2 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-xs font-medium transition-colors"
+                                            >
+                                                ${amount}
+                                            </button>
+                                        ))}
+                                        <button
+                                            onClick={() => setCurrentAmount(remaining.toFixed(2))}
+                                            disabled={isProcessing}
+                                            className="px-2 py-1.5 bg-blue-100 hover:bg-blue-200 rounded text-xs font-medium text-blue-700 transition-colors"
+                                        >
+                                            Exacto
+                                        </button>
+                                    </div>
+
+                                    {/* Add Button */}
+                                    <button
+                                        onClick={handleAddPayment}
+                                        disabled={!currentAmount || parseFloat(currentAmount) <= 0 || isProcessing}
+                                        className="w-full py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Agregar Pago
+                                    </button>
+                                </div>
+                            )}
 
                             {/* Change */}
-                            {paymentMethod === 'cash' && paid >= total && change > 0 && (
+                            {change > 0 && payments.some(p => p.method === 'cash') && (
                                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                                     <div className="flex justify-between items-center">
                                         <span className="text-green-900 font-semibold">Cambio a devolver:</span>
@@ -233,32 +370,6 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                                             ${change.toFixed(2)}
                                         </span>
                                     </div>
-                                </div>
-                            )}
-
-                            {/* Quick Amount Buttons (Cash only) */}
-                            {paymentMethod === 'cash' && (
-                                <div>
-                                    <p className="text-sm text-gray-600 mb-2">Montos rápidos:</p>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {[50, 100, 200, 500].map((amount) => (
-                                            <button
-                                                key={amount}
-                                                onClick={() => setAmountPaid(String(Math.max(total, amount)))}
-                                                disabled={isProcessing}
-                                                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-                                            >
-                                                ${amount}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <button
-                                        onClick={() => setAmountPaid(total.toFixed(2))}
-                                        disabled={isProcessing}
-                                        className="w-full mt-2 px-3 py-2 bg-blue-100 hover:bg-blue-200 rounded-lg text-sm font-medium text-blue-700 transition-colors"
-                                    >
-                                        Monto exacto (${total.toFixed(2)})
-                                    </button>
                                 </div>
                             )}
                         </div>
@@ -274,8 +385,8 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                             </button>
                             <button
                                 onClick={handleCompleteSale}
-                                disabled={!isValid || isProcessing}
-                                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                disabled={!isFullyPaid || isProcessing}
+                                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {isProcessing ? (
                                     <>
@@ -283,7 +394,10 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
                                         Procesando...
                                     </>
                                 ) : (
-                                    'Completar Venta'
+                                    <>
+                                        <CheckCircle className="w-5 h-5" />
+                                        Completar Venta
+                                    </>
                                 )}
                             </button>
                         </div>

@@ -187,6 +187,85 @@ class CashRegisterService {
             throw error
         }
     }
+
+    /**
+     * Generate next cash register code for a business
+     * Format: CAJA-001, CAJA-002, etc.
+     */
+    async generateNextCode(businessId: number): Promise<string> {
+        try {
+            const { data, error } = await this.supabase
+                .from('cash_registers')
+                .select('code')
+                .eq('business_id', businessId)
+                .order('code', { ascending: false })
+                .limit(1)
+
+            if (error) throw error
+
+            if (!data || data.length === 0) {
+                return 'CAJA-001'
+            }
+
+            const lastCode = data[0].code
+            const match = lastCode.match(/CAJA-(\d+)/)
+
+            if (match) {
+                const lastNumber = parseInt(match[1])
+                const nextNumber = lastNumber + 1
+                return `CAJA-${String(nextNumber).padStart(3, '0')}`
+            }
+
+            return 'CAJA-001'
+        } catch (error) {
+            console.error('Error generating code:', error)
+            return 'CAJA-001'
+        }
+    }
+
+    /**
+     * Auto-create a cash register for a location
+     * Used during registration and location creation
+     */
+    async autoCreateCashRegister(locationId: number, locationName: string, isMain: boolean = false): Promise<CashRegister> {
+        try {
+            const { data: { user } } = await this.supabase.auth.getUser()
+            if (!user) throw new Error('No authenticated user')
+
+            const { data: userData } = await this.supabase
+                .from('user_details')
+                .select('business_id')
+                .eq('id', user.id)
+                .single()
+
+            if (!userData) throw new Error('User data not found')
+
+            const code = await this.generateNextCode(userData.business_id)
+            const name = `Caja ${locationName}`
+
+            const { data, error } = await this.supabase
+                .from('cash_registers')
+                .insert({
+                    business_id: userData.business_id,
+                    location_id: locationId,
+                    name: name,
+                    code: code,
+                    description: `Caja principal de ${locationName}`,
+                    is_main: isMain,
+                    is_active: true
+                })
+                .select()
+                .single()
+
+            if (error) throw error
+            if (!data) throw new Error('Failed to create cash register')
+
+            return data
+        } catch (error) {
+            console.error('Error auto-creating cash register:', error)
+            throw error
+        }
+    }
 }
 
 export const cashRegisterService = new CashRegisterService()

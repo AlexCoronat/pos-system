@@ -205,6 +205,20 @@ export default function CompleteProfilePage() {
           is_primary: true
         })
 
+      // AUTO-CREATE cash register for this first location
+      try {
+        const { cashRegisterService } = await import('@/lib/services/cash-register.service')
+        await cashRegisterService.autoCreateCashRegister(
+          location.id,
+          formData.locationName || 'Principal',
+          true // First location's cash register is the main one
+        )
+        console.log('✅ Auto-created cash register for initial location')
+      } catch (cashRegErr) {
+        console.error('Failed to auto-create cash register:', cashRegErr)
+        // Don't fail registration if cash register creation fails
+      }
+
       // Reload user profile to get updated role and permissions
       await authService.completeOAuthProfile(userId, {
         firstName: formData.firstName,
@@ -281,9 +295,8 @@ export default function CompleteProfilePage() {
                   )}
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={`w-8 h-1 mx-1 rounded ${
-                    currentStep > step.number ? 'bg-blue-600' : 'bg-gray-200'
-                  }`} />
+                  <div className={`w-8 h-1 mx-1 rounded ${currentStep > step.number ? 'bg-blue-600' : 'bg-gray-200'
+                    }`} />
                 )}
               </div>
             ))}
