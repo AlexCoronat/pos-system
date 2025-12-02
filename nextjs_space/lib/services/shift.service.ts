@@ -181,17 +181,7 @@ class ShiftService {
         try {
             const { data: shift, error: shiftError } = await this.supabase
                 .from('cash_register_shifts')
-                .select(`
-          *,
-          cash_register:cash_registers (
-            name,
-            code
-          ),
-          user:user_details (
-            first_name,
-            last_name
-          )
-        `)
+                .select('*, cash_register:cash_registers(name, code)')
                 .eq('id', shiftId)
                 .single()
 
@@ -200,15 +190,7 @@ class ShiftService {
             // Get sales for this shift
             const { data: sales, error: salesError } = await this.supabase
                 .from('sales')
-                .select(`
-          total_amount,
-          sale_payments (
-            payment_method:payment_methods (
-              name
-            ),
-            amount
-          )
-        `)
+                .select('total_amount, payment_transactions(payment_method:payment_methods(name), amount)')
                 .eq('shift_id', shiftId)
 
             if (salesError) throw salesError
@@ -222,7 +204,7 @@ class ShiftService {
             sales?.forEach(sale => {
                 total_sales += Number(sale.total_amount)
 
-                sale.sale_payments?.forEach((payment: any) => {
+                sale.payment_transactions?.forEach((payment: any) => {
                     const amount = Number(payment.amount)
                     const method = payment.payment_method?.name?.toLowerCase() || ''
 
@@ -256,6 +238,10 @@ class ShiftService {
             }
         } catch (error) {
             console.error('Error getting shift summary:', error)
+            // Log detailed error info
+            if (error && typeof error === 'object') {
+                console.error('Error details:', JSON.stringify(error, null, 2))
+            }
             throw error
         }
     }
@@ -307,10 +293,6 @@ class ShiftService {
           cash_register:cash_registers (
             name,
             code
-          ),
-          user:user_details (
-            first_name,
-            last_name
           )
         `)
 

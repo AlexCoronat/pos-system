@@ -62,6 +62,24 @@ class SalesService {
         throw new Error(`Payment amount (${totalPayment}) does not match total (${total})`)
       }
 
+      // Get current shift to link sale
+      let shift_id = null
+      try {
+        const { data: currentShift } = await this.supabase
+          .from('cash_register_shifts')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('status', 'open')
+          .order('opened_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        shift_id = currentShift?.id || null
+      } catch (error) {
+        logger.warn('Could not get current shift for sale', { error })
+        // Continue without shift_id - not critical
+      }
+
       // Start transaction by inserting sale
       const { data: sale, error: saleError } = await this.supabase
         .from('sales')
@@ -71,6 +89,7 @@ class SalesService {
           location_id: data.locationId,
           customer_id: data.customerId,
           sold_by: userId,
+          shift_id: shift_id,
           status: 'completed',
           subtotal: subtotal,
           discount_amount: totalDiscount,
