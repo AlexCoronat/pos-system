@@ -16,8 +16,11 @@ import {
   Users,
   Building2,
   Mail,
-  Phone
+  Phone,
+  UserCheck,
+  CreditCard
 } from 'lucide-react'
+import { StatsCard, PageHeader, LoadingState, EmptyState } from '@/components/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -158,73 +161,48 @@ export default function CustomersPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{t('title')}</h1>
-          <p className="text-muted-foreground">
-            {t('subtitle')}
-          </p>
-        </div>
-        <Link href="/dashboard/customers/new">
-          <Button size="lg">
-            <Plus className="h-5 w-5 mr-2" />
-            {t('newCustomer')}
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        title={t('title')}
+        subtitle={t('subtitle')}
+        actions={
+          <Link href="/dashboard/customers/new">
+            <Button size="lg">
+              <Plus className="h-5 w-5 mr-2" />
+              {t('newCustomer')}
+            </Button>
+          </Link>
+        }
+      />
+
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('stats.totalCustomers')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalCustomers}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('stats.activeCustomers')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {activeCustomers}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('stats.businesses')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {businessCustomers}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('stats.withCredit')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {withCredit}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
+          title={t('stats.totalCustomers')}
+          value={totalCustomers}
+          icon={Users}
+          color="blue"
+        />
+        <StatsCard
+          title={t('stats.activeCustomers')}
+          value={activeCustomers}
+          icon={UserCheck}
+          color="emerald"
+        />
+        <StatsCard
+          title={t('stats.businesses')}
+          value={businessCustomers}
+          icon={Building2}
+          color="violet"
+        />
+        <StatsCard
+          title={t('stats.withCredit')}
+          value={withCredit}
+          icon={CreditCard}
+          color="orange"
+        />
       </div>
+
 
       {/* Filters */}
       <Card>
@@ -290,13 +268,21 @@ export default function CustomersPage() {
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground">
-              {t('loading')}
-            </div>
+            <LoadingState message={t('loading')} />
           ) : customers.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
-              {t('noCustomers')}
-            </div>
+            <EmptyState
+              icon={Users}
+              title={t('noCustomers')}
+              description="No hay clientes registrados aún"
+              action={
+                <Link href="/dashboard/customers/new">
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {t('newCustomer')}
+                  </Button>
+                </Link>
+              }
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>

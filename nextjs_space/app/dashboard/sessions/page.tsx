@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/lib/supabase/client'
 import { Laptop, Smartphone, Tablet, Globe, Clock, MapPin, XCircle, CheckCircle, RefreshCw, Users, User } from 'lucide-react'
+import { PageHeader, LoadingState } from '@/components/shared'
 
 interface Session {
   id: number
@@ -272,166 +273,160 @@ export default function SessionsPage() {
       </div>
 
       {/* Sessions List */}
-        {isLoading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">{tCommon('loading')}</p>
-          </div>
-        ) : sessions.length === 0 ? (
-          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
-            <p className="text-gray-600 dark:text-gray-400">{t('empty.noSessions')}</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {sessions.map((session) => {
-              const isCurrentSession = currentSessionId === session.id.toString()
+      {isLoading ? (
+        <LoadingState message={tCommon('loading')} />
+      ) : sessions.length === 0 ? (
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
+          <p className="text-gray-600 dark:text-gray-400">{t('empty.noSessions')}</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {sessions.map((session) => {
+            const isCurrentSession = currentSessionId === session.id.toString()
 
-              return (
-                <div
-                  key={session.id}
-                  className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 ${
-                    isCurrentSession ? 'border-2 border-blue-500 dark:border-blue-400' : ''
+            return (
+              <div
+                key={session.id}
+                className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 ${isCurrentSession ? 'border-2 border-blue-500 dark:border-blue-400' : ''
                   }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                      {/* Device Icon */}
-                      <div className="mt-1 text-gray-600 dark:text-gray-400">
-                        {getDeviceIcon(session.user_agent)}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4 flex-1">
+                    {/* Device Icon */}
+                    <div className="mt-1 text-gray-600 dark:text-gray-400">
+                      {getDeviceIcon(session.user_agent)}
+                    </div>
+
+                    {/* Session Info */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                          {getBrowserName(session.user_agent)} on {getOSName(session.user_agent)}
+                        </h3>
+                        {isCurrentSession && (
+                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium rounded-full">
+                            {t('session.currentSession')}
+                          </span>
+                        )}
+                        {session.is_active && !isCurrentSession && (
+                          <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                        )}
                       </div>
 
-                      {/* Session Info */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                            {getBrowserName(session.user_agent)} on {getOSName(session.user_agent)}
-                          </h3>
-                          {isCurrentSession && (
-                            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium rounded-full">
-                              {t('session.currentSession')}
-                            </span>
-                          )}
-                          {session.is_active && !isCurrentSession && (
-                            <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                          )}
+                      {/* User info for team view */}
+                      {activeTab === 'team-sessions' && session.user_details && (
+                        <div className="mb-2 flex items-center gap-2 text-sm">
+                          <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          <span className="font-medium text-blue-600 dark:text-blue-400">
+                            {session.user_details.first_name} {session.user_details.last_name}
+                          </span>
+                          <span className="text-gray-500 dark:text-gray-400">({session.user_details.email})</span>
                         </div>
+                      )}
 
-                        {/* User info for team view */}
-                        {activeTab === 'team-sessions' && session.user_details && (
-                          <div className="mb-2 flex items-center gap-2 text-sm">
-                            <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                            <span className="font-medium text-blue-600 dark:text-blue-400">
-                              {session.user_details.first_name} {session.user_details.last_name}
-                            </span>
-                            <span className="text-gray-500 dark:text-gray-400">({session.user_details.email})</span>
+                      <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                        {session.ip_address && (
+                          <div className="flex items-center gap-2">
+                            <Globe className="w-4 h-4" />
+                            <span>{t('session.ipAddress')}: {session.ip_address}</span>
                           </div>
                         )}
 
-                        <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                          {session.ip_address && (
-                            <div className="flex items-center gap-2">
-                              <Globe className="w-4 h-4" />
-                              <span>{t('session.ipAddress')}: {session.ip_address}</span>
-                            </div>
-                          )}
+                        {session.location_name && (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4" />
+                            <span>{t('session.location')}: {session.location_name}</span>
+                          </div>
+                        )}
 
-                          {session.location_name && (
-                            <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4" />
-                              <span>{t('session.location')}: {session.location_name}</span>
-                            </div>
-                          )}
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          <span>
+                            {t('session.startedAt')}: {formatDate(session.started_at)}
+                          </span>
+                        </div>
 
+                        {session.ended_at && (
                           <div className="flex items-center gap-2">
                             <Clock className="w-4 h-4" />
-                            <span>
-                              {t('session.startedAt')}: {formatDate(session.started_at)}
-                            </span>
+                            <span>{t('session.endedAt')}: {formatDate(session.ended_at)}</span>
                           </div>
+                        )}
 
-                          {session.ended_at && (
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4" />
-                              <span>{t('session.endedAt')}: {formatDate(session.ended_at)}</span>
-                            </div>
-                          )}
-
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">
-                              {t('session.duration')}: {getSessionDuration(session.started_at, session.ended_at)}
-                            </span>
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            {t('session.duration')}: {getSessionDuration(session.started_at, session.ended_at)}
+                          </span>
                         </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2">
-                      {session.is_active && (
-                        <>
-                          {isCurrentSession ? (
-                            <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
-                              {t('session.active')}
-                            </span>
-                          ) : (
-                            <Button
-                              onClick={() => terminateSession(session.id)}
-                              disabled={terminatingSession === session.id}
-                              variant="destructive"
-                              size="sm"
-                            >
-                              {terminatingSession === session.id ? (
-                                <div className="flex items-center gap-2">
-                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                                  <span>{t('actions.terminating')}</span>
-                                </div>
-                              ) : (
-                                t('actions.terminate')
-                              )}
-                            </Button>
-                          )}
-                        </>
-                      )}
+                  {/* Actions */}
+                  <div className="flex flex-col gap-2">
+                    {session.is_active && (
+                      <>
+                        {isCurrentSession ? (
+                          <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
+                            {t('session.active')}
+                          </span>
+                        ) : (
+                          <Button
+                            onClick={() => terminateSession(session.id)}
+                            disabled={terminatingSession === session.id}
+                            variant="destructive"
+                            size="sm"
+                          >
+                            {terminatingSession === session.id ? (
+                              <div className="flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                <span>{t('actions.terminating')}</span>
+                              </div>
+                            ) : (
+                              t('actions.terminate')
+                            )}
+                          </Button>
+                        )}
+                      </>
+                    )}
 
-                      {!session.is_active && (
-                        <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-medium rounded-full">
-                          {t('session.inactive')}
-                        </span>
-                      )}
-                    </div>
+                    {!session.is_active && (
+                      <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs font-medium rounded-full">
+                        {t('session.inactive')}
+                      </span>
+                    )}
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Security Notice */}
-        <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <h3 className="font-medium text-blue-900 dark:text-blue-400 mb-2">{t('securityNotice.title')}</h3>
-          <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-            <li>• {t('securityNotice.point1')}</li>
-            <li>• {t('securityNotice.point2')}</li>
-            <li>• {t('securityNotice.point3')}</li>
-            <li>• {t('securityNotice.point4')}</li>
-            {activeTab === 'team-sessions' && (
-              <li className="font-medium">• {t('securityNotice.point5')}</li>
-            )}
-          </ul>
+              </div>
+            )
+          })}
         </div>
-      </>
+      )}
+
+      {/* Security Notice */}
+      <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <h3 className="font-medium text-blue-900 dark:text-blue-400 mb-2">{t('securityNotice.title')}</h3>
+        <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+          <li>• {t('securityNotice.point1')}</li>
+          <li>• {t('securityNotice.point2')}</li>
+          <li>• {t('securityNotice.point3')}</li>
+          <li>• {t('securityNotice.point4')}</li>
+          {activeTab === 'team-sessions' && (
+            <li className="font-medium">• {t('securityNotice.point5')}</li>
+          )}
+        </ul>
+      </div>
+    </>
   )
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('title')}</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {t('subtitle')}
-          </p>
-        </div>
+        <PageHeader
+          title={t('title')}
+          subtitle={t('subtitle')}
+        />
 
         {/* Tabs */}
         <Tabs

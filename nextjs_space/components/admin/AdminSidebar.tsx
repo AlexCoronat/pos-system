@@ -10,6 +10,7 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useSidebarCollapsed, useViewStore } from '@/lib/stores/view-store'
+import { CompanyLogo } from '@/components/shared'
 import {
     LayoutDashboard,
     ShoppingCart,
@@ -127,18 +128,13 @@ export function AdminSidebar() {
             <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
                 {!collapsed && (
                     <Link href="/dashboard" className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                            <ShoppingCart className="w-6 h-6 text-white" />
-                        </div>
-                        <span className="font-bold text-xl text-gray-900">POS</span>
+                        <CompanyLogo size="sm" showName={true} />
                     </Link>
                 )}
 
                 {collapsed && (
                     <div className="w-full flex justify-center">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                            <ShoppingCart className="w-6 h-6 text-white" />
-                        </div>
+                        <CompanyLogo size="sm" showName={false} />
                     </div>
                 )}
             </div>
@@ -176,14 +172,14 @@ export function AdminSidebar() {
                                 className={`
                   flex items-center gap-3 px-3 py-3 rounded-xl transition-all
                   ${isActive
-                                        ? 'bg-blue-50 text-blue-600 font-medium'
+                                        ? 'bg-brand-primary/10 text-brand-primary font-medium border-l-4 border-brand-primary'
                                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                     }
                   ${collapsed ? 'justify-center' : ''}
                 `}
                                 title={collapsed ? item.name : undefined}
                             >
-                                <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-blue-600' : ''}`} />
+                                <item.icon className="w-5 h-5 flex-shrink-0" />
                                 {!collapsed && <span className="text-sm">{item.name}</span>}
                             </Link>
                         )
@@ -208,14 +204,14 @@ export function AdminSidebar() {
                                         className={`
                       flex items-center gap-3 px-3 py-3 rounded-xl transition-all
                       ${isActive
-                                                ? 'bg-blue-50 text-blue-600 font-medium'
+                                                ? 'bg-brand-primary/10 text-brand-primary font-medium border-l-4 border-brand-primary'
                                                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                             }
                       ${collapsed ? 'justify-center' : ''}
                     `}
                                         title={collapsed ? item.name : undefined}
                                     >
-                                        <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-blue-600' : ''}`} />
+                                        <item.icon className="w-5 h-5 flex-shrink-0" />
                                         {!collapsed && <span className="text-sm">{item.name}</span>}
                                     </Link>
                                 )

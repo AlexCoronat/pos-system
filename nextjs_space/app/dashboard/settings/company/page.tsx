@@ -40,9 +40,12 @@ import { companyService, type CompanyInfo } from '@/lib/services/company.service
 import { locationService } from '@/lib/services/location.service'
 import type { Location, LocationListItem } from '@/lib/types/settings'
 import { LocationsTab } from '@/components/settings/LocationsTab'
+import { useBranding } from '@/lib/contexts/BrandingContext'
+import { BrandButton } from '@/components/shared'
 
 export default function CompanySettingsPage() {
     const { toast } = useToast()
+    const { refreshBranding } = useBranding()
     const [isLoading, setIsLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
     const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null)
@@ -238,6 +241,10 @@ export default function CompanySettingsPage() {
         try {
             setIsSaving(true)
             await companyService.updateBranding(branding)
+
+            // Refresh branding context to update UI immediately
+            await refreshBranding()
+
             toast({
                 title: 'Éxito',
                 description: 'Branding actualizado correctamente'

@@ -28,7 +28,7 @@ export default function DashboardPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" />
+          <Loader2 className="w-8 h-8 animate-spin text-brand-primary mx-auto mb-3" />
           <p className="text-gray-500">Cargando Dashboard...</p>
         </div>
       </div>

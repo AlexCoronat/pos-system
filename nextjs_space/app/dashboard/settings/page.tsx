@@ -15,6 +15,7 @@ import {
   Wallet
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { PageHeader } from '@/components/shared'
 
 export default function SettingsPage() {
   const t = useTranslations('settings')
@@ -84,24 +85,19 @@ export default function SettingsPage() {
   return (
     <div className="p-6 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-3 text-gray-900 dark:text-gray-100">
-          <Settings className="h-8 w-8" />
-          {t('title')}
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          {t('subtitle')}
-        </p>
-      </div>
+      <PageHeader
+        title={t('title')}
+        subtitle={t('subtitle')}
+      />
 
       {/* Settings Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {settingsSections.map((section) => (
           <Card
-            key={section.titleKey}
-            className={`transition-all ${section.disabled
-              ? 'opacity-50 cursor-not-allowed'
-              : 'hover:shadow-md cursor-pointer'
+            key={section.titleKey || section.title}
+            className={`transition-all rounded-xl border shadow-sm hover:shadow-md ${section.disabled
+                ? 'opacity-50 cursor-not-allowed'
+                : 'cursor-pointer hover:border-blue-300 dark:hover:border-blue-700'
               }`}
           >
             {section.disabled ? (

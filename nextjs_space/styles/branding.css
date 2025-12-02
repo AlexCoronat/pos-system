@@ -1,0 +1,63 @@
+/* Custom Branding Variables */
+:root {
+  /* Default colors - will be overridden by BrandingContext */
+  --color-primary: #3B82F6;
+  --color-primary-rgb: 59, 130, 246;
+  --color-secondary: #10B981;
+  --color-secondary-rgb: 16, 185, 129;
+}
+
+/* Utility classes for branding colors */
+.text-brand-primary {
+  color: var(--color-primary);
+}
+
+.bg-brand-primary {
+  background-color: var(--color-primary);
+}
+
+.border-brand-primary {
+  border-color: var(--color-primary);
+}
+
+.text-brand-secondary {
+  color: var(--color-secondary);
+}
+
+.bg-brand-secondary {
+  background-color: var(--color-secondary);
+}
+
+.border-brand-secondary {
+  border-color: var(--color-secondary);
+}
+
+/* With opacity variants */
+.bg-brand-primary\/10 {
+  background-color: rgba(var(--color-primary-rgb), 0.1);
+}
+
+.bg-brand-primary\/20 {
+  background-color: rgba(var(--color-primary-rgb), 0.2);
+}
+
+.bg-brand-secondary\/10 {
+  background-color: rgba(var(--color-secondary-rgb), 0.1);
+}
+
+.bg-brand-secondary\/20 {
+  background-color: rgba(var(--color-secondary-rgb), 0.2);
+}
+
+/* Hover variants */
+.hover\:bg-brand-primary:hover {
+  background-color: var(--color-primary);
+}
+
+.hover\:text-brand-primary:hover {
+  color: var(--color-primary);
+}
+
+.hover\:border-brand-primary:hover {
+  border-color: var(--color-primary);
+}

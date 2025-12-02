@@ -8,9 +8,10 @@ import { SalesTrendChart } from "@/components/reports/SalesTrendChart"
 import { TopProductsChart } from "@/components/reports/TopProductsChart"
 import { reportsService, DailySalesData, TopProductData } from "@/lib/services/reports.service"
 import { useAuth } from "@/lib/hooks/use-auth"
-import { Loader2, DollarSign, CreditCard, TrendingUp, Calendar } from "lucide-react"
+import { Loader2, DollarSign, CreditCard, TrendingUp, Calendar, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
+import { StatsCard, PageHeader, LoadingState } from '@/components/shared'
 
 export default function ReportsPage() {
     const t = useTranslations('reports')
@@ -72,73 +73,47 @@ export default function ReportsPage() {
     }, [user?.businessId, toast])
 
     if (loading) {
-        return (
-            <div className="flex h-full items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-        )
+        return <LoadingState message={t('messages.loading')} minHeight="h-full" />
     }
 
     return (
         <div className="flex-1 space-y-4 p-8 pt-6">
-            <div className="flex items-center justify-between space-y-2">
-                <h2 className="text-3xl font-bold tracking-tight">{t('title')}</h2>
-                <div className="flex items-center space-x-2">
-                    <Button variant="outline" disabled>
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {t('filters.last30Days')}
-                    </Button>
-                    <Button>{t('export.pdf')}</Button>
-                </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            {t('summary.totalSales')}
-                        </CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">
-                            {formatCurrency(summary.totalSales)}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
+            <PageHeader
+                title={t('title')}
+                actions={
+                    <>
+                        <Button variant="outline" disabled>
+                            <Calendar className="mr-2 h-4 w-4" />
                             {t('filters.last30Days')}
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            {t('summary.transactions')}
-                        </CardTitle>
-                        <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{summary.totalTransactions}</div>
-                        <p className="text-xs text-muted-foreground">
-                            {t('summary.completedSales')}
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            {t('summary.avgTicket')}
-                        </CardTitle>
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">
-                            {formatCurrency(summary.avgTicket)}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                            {t('summary.perTransaction')}
-                        </p>
-                    </CardContent>
-                </Card>
+                        </Button>
+                        <Button>{t('export.pdf')}</Button>
+                    </>
+                }
+            />
+
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <StatsCard
+                    title={t('summary.totalSales')}
+                    value={formatCurrency(summary.totalSales)}
+                    icon={DollarSign}
+                    color="blue"
+                    subtitle={t('filters.last30Days')}
+                />
+                <StatsCard
+                    title={t('summary.transactions')}
+                    value={summary.totalTransactions}
+                    icon={ShoppingCart}
+                    color="emerald"
+                    subtitle={t('summary.completedSales')}
+                />
+                <StatsCard
+                    title={t('summary.avgTicket')}
+                    value={formatCurrency(summary.avgTicket)}
+                    icon={TrendingUp}
+                    color="violet"
+                    subtitle={t('summary.perTransaction')}
+                />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">

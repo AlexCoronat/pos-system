@@ -33,6 +33,7 @@ import {
   Save,
   X
 } from 'lucide-react'
+import { PageHeader, LoadingState } from '@/components/shared'
 
 interface ProfileData {
   firstName: string
@@ -252,10 +253,7 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">{tCommon('loading')}</p>
-          </div>
+          <LoadingState message={tCommon('loading')} />
         </div>
       </div>
     )
@@ -265,12 +263,10 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('title')}</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {t('subtitle')}
-          </p>
-        </div>
+        <PageHeader
+          title={t('title')}
+          subtitle={t('subtitle')}
+        />
 
         <div className="space-y-6">
           {/* Profile Overview Card */}

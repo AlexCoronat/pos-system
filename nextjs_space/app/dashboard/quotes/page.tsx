@@ -14,9 +14,14 @@ import {
     Trash2,
     MoreHorizontal,
     FileText,
-    Calendar as CalendarIcon
+    Calendar as CalendarIcon,
+    DollarSign,
+    Clock,
+    CheckCircle,
+    TrendingUp
 } from "lucide-react";
 import { format } from "date-fns";
+import { StatsCard, PageHeader, LoadingState, EmptyState } from '@/components/shared';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -164,78 +169,47 @@ export default function QuotesPage() {
     return (
         <div className="p-6 space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold">{t("title")}</h1>
-                    <p className="text-muted-foreground">
-                        {t("subtitle")}
-                    </p>
-                </div>
-                <Link href="/dashboard/quotes/new">
-                    <Button size="lg">
-                        <Plus className="h-5 w-5 mr-2" />
-                        {t("newQuote")}
-                    </Button>
-                </Link>
-            </div>
+            <PageHeader
+                title={t("title")}
+                subtitle={t("subtitle")}
+                actions={
+                    <Link href="/dashboard/quotes/new">
+                        <Button size="lg">
+                            <Plus className="h-5 w-5 mr-2" />
+                            {t("newQuote")}
+                        </Button>
+                    </Link>
+                }
+            />
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">
-                            {t("stats.totalQuotes")}
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.total}</div>
-                        <p className="text-xs text-muted-foreground">
-                            {formatCurrency(stats.totalValue)}
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">
-                            {t("stats.pendingQuotes")}
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-yellow-600">
-                            {stats.pending}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">
-                            {t("stats.acceptedQuotes")}
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-green-600">
-                            {stats.accepted}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">
-                            {t("stats.convertedQuotes")}
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-blue-600">
-                            {stats.converted}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                            {stats.conversionRate}% {t("labels.conversion")}
-                        </p>
-                    </CardContent>
-                </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatsCard
+                    title={t("stats.totalQuotes")}
+                    value={stats.total}
+                    icon={FileText}
+                    color="blue"
+                    subtitle={formatCurrency(stats.totalValue)}
+                />
+                <StatsCard
+                    title={t("stats.pendingQuotes")}
+                    value={stats.pending}
+                    icon={Clock}
+                    color="yellow"
+                />
+                <StatsCard
+                    title={t("stats.acceptedQuotes")}
+                    value={stats.accepted}
+                    icon={CheckCircle}
+                    color="emerald"
+                />
+                <StatsCard
+                    title={t("stats.convertedQuotes")}
+                    value={stats.converted}
+                    icon={TrendingUp}
+                    color="violet"
+                    subtitle={`${stats.conversionRate}% ${t("labels.conversion")}`}
+                />
             </div>
 
             {/* Filters */}
@@ -296,13 +270,21 @@ export default function QuotesPage() {
             <Card>
                 <CardContent className="p-0">
                     {isLoading ? (
-                        <div className="p-8 text-center text-muted-foreground">
-                            {tCommon("loading")}
-                        </div>
+                        <LoadingState message={tCommon("loading")} />
                     ) : quotes.length === 0 ? (
-                        <div className="p-8 text-center text-muted-foreground">
-                            {t("messages.noQuotesFound")}
-                        </div>
+                        <EmptyState
+                            icon={FileText}
+                            title={t("messages.noQuotesFound")}
+                            description="No hay cotizaciones registradas aún"
+                            action={
+                                <Link href="/dashboard/quotes/new">
+                                    <Button>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        {t("newQuote")}
+                                    </Button>
+                                </Link>
+                            }
+                        />
                     ) : (
                         <div className="overflow-x-auto">
                             <Table>
@@ -333,11 +315,11 @@ export default function QuotesPage() {
                                                 {quote.customer ? (
                                                     <div className="flex flex-col">
                                                         <span className="font-medium">
-                                                            {quote.customer.first_name} {quote.customer.last_name}
+                                                            {quote.customer.firstName} {quote.customer.lastName}
                                                         </span>
-                                                        {quote.customer.business_name && (
+                                                        {quote.customer.businessName && (
                                                             <span className="text-xs text-muted-foreground">
-                                                                {quote.customer.business_name}
+                                                                {quote.customer.businessName}
                                                             </span>
                                                         )}
                                                     </div>

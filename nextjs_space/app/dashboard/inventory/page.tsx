@@ -15,8 +15,11 @@ import {
   Eye,
   ArrowUpDown,
   MoreHorizontal,
-  FolderTree
+  FolderTree,
+  PackageCheck,
+  PackageX
 } from 'lucide-react'
+import { StatsCard, PageHeader, LoadingState, EmptyState } from '@/components/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -191,83 +194,58 @@ export default function InventoryPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Inventario</h1>
-          <p className="text-muted-foreground">
-            Gestiona productos y controla el stock de tu negocio
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => setCategoryDialogOpen(true)}
-          >
-            <FolderTree className="h-5 w-5 mr-2" />
-            Categorías
-          </Button>
-          <Link href="/dashboard/inventory/products/new">
-            <Button size="lg">
-              <Plus className="h-5 w-5 mr-2" />
-              Nuevo Producto
+      <PageHeader
+        title="Inventario"
+        subtitle="Gestiona productos y controla el stock de tu negocio"
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setCategoryDialogOpen(true)}
+            >
+              <FolderTree className="h-5 w-5 mr-2" />
+              Categorías
             </Button>
-          </Link>
-        </div>
-      </div>
+            <Link href="/dashboard/inventory/products/new">
+              <Button size="lg">
+                <Plus className="h-5 w-5 mr-2" />
+                Nuevo Producto
+              </Button>
+            </Link>
+          </>
+        }
+      />
+
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Productos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalProducts}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Productos Activos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {products.filter(p => p.isActive).length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Bajo Stock
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {lowStockItems.length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Sin Stock
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {inventory.filter(i => i.quantity <= 0).length}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
+          title="Total Productos"
+          value={totalProducts}
+          icon={Package}
+          color="blue"
+        />
+        <StatsCard
+          title="Productos Activos"
+          value={products.filter(p => p.isActive).length}
+          icon={PackageCheck}
+          color="emerald"
+        />
+        <StatsCard
+          title="Bajo Stock"
+          value={lowStockItems.length}
+          icon={AlertTriangle}
+          color="yellow"
+        />
+        <StatsCard
+          title="Sin Stock"
+          value={inventory.filter(i => i.quantity <= 0).length}
+          icon={PackageX}
+          color="red"
+        />
       </div>
+
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -346,13 +324,21 @@ export default function InventoryPage() {
           <Card>
             <CardContent className="p-0">
               {isLoadingProducts ? (
-                <div className="p-8 text-center text-muted-foreground">
-                  Cargando productos...
-                </div>
+                <LoadingState message="Cargando productos..." />
               ) : products.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">
-                  No se encontraron productos
-                </div>
+                <EmptyState
+                  icon={Package}
+                  title="No se encontraron productos"
+                  description="Comienza agregando tu primer producto al inventario"
+                  action={
+                    <Link href="/dashboard/inventory/products/new">
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nuevo Producto
+                      </Button>
+                    </Link>
+                  }
+                />
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
@@ -469,13 +455,13 @@ export default function InventoryPage() {
             </CardHeader>
             <CardContent className="p-0">
               {isLoadingInventory ? (
-                <div className="p-8 text-center text-muted-foreground">
-                  Cargando inventario...
-                </div>
+                <LoadingState message="Cargando inventario..." />
               ) : inventory.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">
-                  No hay registros de inventario
-                </div>
+                <EmptyState
+                  icon={Package}
+                  title="No hay registros de inventario"
+                  description="El inventario se creará automáticamente al agregar productos"
+                />
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
@@ -551,13 +537,13 @@ export default function InventoryPage() {
             </CardHeader>
             <CardContent className="p-0">
               {isLoadingInventory ? (
-                <div className="p-8 text-center text-muted-foreground">
-                  Cargando alertas...
-                </div>
+                <LoadingState message="Cargando alertas..." />
               ) : lowStockItems.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">
-                  No hay productos con bajo stock
-                </div>
+                <EmptyState
+                  icon={PackageCheck}
+                  title="¡Todo en orden!"
+                  description="No hay productos con bajo stock en este momento"
+                />
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
