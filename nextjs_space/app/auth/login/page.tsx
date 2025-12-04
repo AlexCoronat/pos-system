@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -184,23 +184,15 @@ export default function LoginPage() {
         </div>
 
         {/* Login Button */}
-        <Button
+        <BrandButton
           type="submit"
-          className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-          disabled={isLoading}
+          className="w-full h-12"
+          isLoading={isLoading}
+          loadingText={tCommon('loading')}
         >
-          {isLoading ? (
-            <div className="flex items-center space-x-2">
-              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-              <span>{tCommon('loading')}</span>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <LogIn className="h-5 w-5" />
-              <span>{t('signIn')}</span>
-            </div>
-          )}
-        </Button>
+          <LogIn className="h-5 w-5 mr-2" />
+          {t('signIn')}
+        </BrandButton>
       </form>
 
       {/* Divider */}

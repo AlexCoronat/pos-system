@@ -11,6 +11,7 @@ import { shiftService, type Shift } from '@/lib/services/shift.service'
 import { cashMovementService, type CashMovement } from '@/lib/services/cash-movement.service'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { BrandButton } from '@/components/shared'
 
 interface ShiftReportProps {
     isOpen: boolean
@@ -85,13 +86,14 @@ export function ShiftReport({ isOpen, onClose, shiftId }: ShiftReportProps) {
                         <h2 className="text-2xl font-bold text-gray-900">Reporte de Turno</h2>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button
+                        <BrandButton
                             onClick={handlePrint}
-                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+                            variant="outline"
+                            className="flex items-center gap-2"
                         >
                             <Printer className="w-4 h-4" />
                             Imprimir
-                        </button>
+                        </BrandButton>
                         <button
                             onClick={onClose}
                             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"

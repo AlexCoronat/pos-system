@@ -11,6 +11,7 @@ import { useShiftStore } from '@/lib/stores/shift-store'
 import { cashRegisterService, type CashRegister } from '@/lib/services/cash-register.service'
 import { toast } from 'sonner'
 import { useEscapeKey } from '@/lib/hooks/use-keyboard-shortcuts'
+import { BrandButton } from '@/components/shared'
 
 interface OpenShiftModalProps {
     isOpen: boolean
@@ -196,7 +197,8 @@ export function OpenShiftModal({ isOpen, onClose, onSuccess }: OpenShiftModalPro
                         <button
                             type="submit"
                             disabled={shiftLoading || cashRegisters.length === 0}
-                            className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="flex-1 px-4 py-3 text-white rounded-lg font-semibold hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            style={{ backgroundColor: 'var(--color-primary, #3B82F6)' }}
                         >
                             {shiftLoading ? (
                                 'Abriendo...'

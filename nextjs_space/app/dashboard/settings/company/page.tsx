@@ -10,7 +10,6 @@ import {
     Palette,
     Loader2
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -441,9 +440,9 @@ export default function CompanySettingsPage() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Link href="/dashboard/settings">
-                        <Button variant="ghost" size="icon">
+                        <BrandButton variant="ghost" size="sm">
                             <ArrowLeft className="h-5 w-5" />
-                        </Button>
+                        </BrandButton>
                     </Link>
                     <div>
                         <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -574,19 +573,14 @@ export default function CompanySettingsPage() {
                             </div>
 
                             <div className="flex justify-end">
-                                <Button onClick={handleSaveBasicInfo} disabled={isSaving}>
-                                    {isSaving ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Guardando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save className="mr-2 h-4 w-4" />
-                                            Guardar Cambios
-                                        </>
-                                    )}
-                                </Button>
+                                <BrandButton
+                                    onClick={handleSaveBasicInfo}
+                                    isLoading={isSaving}
+                                    loadingText="Guardando..."
+                                >
+                                    <Save className="mr-2 h-4 w-4" />
+                                    Guardar Cambios
+                                </BrandButton>
                             </div>
                         </CardContent>
                     </Card>
@@ -627,19 +621,15 @@ export default function CompanySettingsPage() {
                                         onChange={handleLogoChange}
                                     />
                                     {logoFile && (
-                                        <Button onClick={handleUploadLogo} disabled={isSaving} size="sm">
-                                            {isSaving ? (
-                                                <>
-                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                    Subiendo...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Upload className="mr-2 h-4 w-4" />
-                                                    Subir Logo
-                                                </>
-                                            )}
-                                        </Button>
+                                        <BrandButton
+                                            onClick={handleUploadLogo}
+                                            size="sm"
+                                            isLoading={isSaving}
+                                            loadingText="Subiendo..."
+                                        >
+                                            <Upload className="mr-2 h-4 w-4" />
+                                            Subir Logo
+                                        </BrandButton>
                                     )}
                                 </div>
                             </div>
@@ -705,19 +695,14 @@ export default function CompanySettingsPage() {
                             </div>
 
                             <div className="flex justify-end">
-                                <Button onClick={handleSaveBranding} disabled={isSaving}>
-                                    {isSaving ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Guardando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save className="mr-2 h-4 w-4" />
-                                            Guardar Branding
-                                        </>
-                                    )}
-                                </Button>
+                                <BrandButton
+                                    onClick={handleSaveBranding}
+                                    isLoading={isSaving}
+                                    loadingText="Guardando..."
+                                >
+                                    <Save className="mr-2 h-4 w-4" />
+                                    Guardar Branding
+                                </BrandButton>
                             </div>
                         </CardContent>
                     </Card>
@@ -766,19 +751,14 @@ export default function CompanySettingsPage() {
                             </div>
 
                             <div className="flex justify-end">
-                                <Button onClick={handleSaveLegal} disabled={isSaving}>
-                                    {isSaving ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Guardando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save className="mr-2 h-4 w-4" />
-                                            Guardar Información Legal
-                                        </>
-                                    )}
-                                </Button>
+                                <BrandButton
+                                    onClick={handleSaveLegal}
+                                    isLoading={isSaving}
+                                    loadingText="Guardando..."
+                                >
+                                    <Save className="mr-2 h-4 w-4" />
+                                    Guardar Información Legal
+                                </BrandButton>
                             </div>
                         </CardContent>
                     </Card>
@@ -899,22 +879,17 @@ export default function CompanySettingsPage() {
                         </div>
 
                         <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setLocationDialogOpen(false)}>
+                            <BrandButton type="button" variant="outline" onClick={() => setLocationDialogOpen(false)}>
                                 Cancelar
-                            </Button>
-                            <Button type="submit" disabled={isSaving}>
-                                {isSaving ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Guardando...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save className="h-4 w-4 mr-2" />
-                                        {editingLocation ? 'Guardar' : 'Crear'}
-                                    </>
-                                )}
-                            </Button>
+                            </BrandButton>
+                            <BrandButton
+                                type="submit"
+                                isLoading={isSaving}
+                                loadingText="Guardando..."
+                            >
+                                <Save className="h-4 w-4 mr-2" />
+                                {editingLocation ? 'Guardar' : 'Crear'}
+                            </BrandButton>
                         </DialogFooter>
                     </form>
                 </DialogContent>

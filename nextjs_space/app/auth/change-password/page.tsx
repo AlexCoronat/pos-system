@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { authService } from '@/lib/services/auth.service'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -188,13 +188,15 @@ export default function ChangePasswordPage() {
                             </Alert>
                         )}
 
-                        <Button
+                        <BrandButton
                             type="submit"
-                            disabled={loading || !data.current || !data.new || !data.confirm || data.new !== data.confirm}
+                            disabled={!data.current || !data.new || !data.confirm || data.new !== data.confirm}
                             className="w-full"
+                            isLoading={loading}
+                            loadingText="Cambiando contraseña..."
                         >
-                            {loading ? 'Cambiando contraseña...' : 'Cambiar Contraseña'}
-                        </Button>
+                            Cambiar Contraseña
+                        </BrandButton>
                     </form>
                 </CardContent>
             </Card>

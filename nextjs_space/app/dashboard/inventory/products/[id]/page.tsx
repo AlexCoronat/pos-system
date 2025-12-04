@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save, Loader2, Package, History } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -285,9 +285,9 @@ export default function ProductDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/dashboard/inventory">
-          <Button variant="ghost" size="icon">
+          <BrandButton variant="ghost" size="icon">
             <ArrowLeft className="h-5 w-5" />
-          </Button>
+          </BrandButton>
         </Link>
         <div className="flex-1">
           <h1 className="text-3xl font-bold">{product.name}</h1>
@@ -574,11 +574,11 @@ export default function ProductDetailPage() {
             {/* Actions */}
             <div className="flex justify-end gap-4">
               <Link href="/dashboard/inventory">
-                <Button type="button" variant="outline">
+                <BrandButton type="button" variant="outline">
                   Cancelar
-                </Button>
+                </BrandButton>
               </Link>
-              <Button type="submit" disabled={isSaving}>
+              <BrandButton type="submit" disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -590,7 +590,7 @@ export default function ProductDetailPage() {
                     Guardar Cambios
                   </>
                 )}
-              </Button>
+              </BrandButton>
             </div>
           </form>
         </TabsContent>

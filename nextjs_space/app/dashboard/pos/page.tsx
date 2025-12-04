@@ -20,6 +20,7 @@ import { ShiftReport } from '@/components/pos/ShiftReport'
 import { useShiftStore } from '@/lib/stores/shift-store'
 import { useCartStore } from '@/lib/stores/cart-store'
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts'
+import { BrandButton } from '@/components/shared'
 
 export default function POSPage() {
     const { currentShift } = useShiftStore()
@@ -111,11 +112,11 @@ export default function POSPage() {
                 <CartPanel onCheckout={() => setShowPaymentModal(true)} />
             </div>
 
-            {/* Mobile Cart Button */}
             <div className="lg:hidden fixed bottom-4 right-4">
                 <button
                     onClick={() => setShowPaymentModal(true)}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg hover:bg-blue-700 transition-all"
+                    className="px-6 py-3 rounded-full shadow-lg text-white font-medium hover:opacity-90 transition-colors"
+                    style={{ backgroundColor: 'var(--color-primary, #3B82F6)' }}
                 >
                     Ver Carrito
                 </button>

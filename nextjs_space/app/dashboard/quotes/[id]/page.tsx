@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, XCircle, Send, ShoppingCart, Download } from "lucide-react";
 import { format } from "date-fns";
 
-import { Button } from "@/components/ui/button";
+import { BrandButton } from "@/components/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -221,9 +221,9 @@ export default function QuoteDetailPage() {
         return (
             <div className="p-6 space-y-6">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/quotes/${id}`)}>
+                    <BrandButton variant="ghost" size="sm" onClick={() => router.push(`/dashboard/quotes/${id}`)}>
                         <ArrowLeft className="h-4 w-4" />
-                    </Button>
+                    </BrandButton>
                     <h1 className="text-3xl font-bold">{t("editQuote")}</h1>
                 </div>
 
@@ -247,9 +247,9 @@ export default function QuoteDetailPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard/quotes")}>
+                    <BrandButton variant="ghost" size="sm" onClick={() => router.push("/dashboard/quotes")}>
                         <ArrowLeft className="h-4 w-4" />
-                    </Button>
+                    </BrandButton>
                     <div>
                         <div className="flex items-center gap-3">
                             <h1 className="text-3xl font-bold">{quote.quote_number}</h1>
@@ -263,47 +263,47 @@ export default function QuoteDetailPage() {
 
                 <div className="flex flex-wrap gap-2">
                     {['draft', 'pending', 'sent'].includes(quote.status) && (
-                        <Button variant="outline" onClick={() => router.push(`/dashboard/quotes/${id}?edit=true`)}>
+                        <BrandButton variant="outline" onClick={() => router.push(`/dashboard/quotes/${id}?edit=true`)}>
                             <Edit className="h-4 w-4 mr-2" />
                             {t("actions.edit")}
-                        </Button>
+                        </BrandButton>
                     )}
 
                     {quote.status === 'draft' && (
-                        <Button onClick={() => handleStatusChange('sent')}>
+                        <BrandButton onClick={() => handleStatusChange('sent')}>
                             <Send className="h-4 w-4 mr-2" />
                             {t("actions.markSent")}
-                        </Button>
+                        </BrandButton>
                     )}
 
                     {quote.status === 'sent' && (
                         <>
-                            <Button variant="outline" className="text-green-600 border-green-200 hover:bg-green-50" onClick={() => handleStatusChange('accepted')}>
+                            <BrandButton variant="outline" className="text-green-600 border-green-200 hover:bg-green-50" onClick={() => handleStatusChange('accepted')}>
                                 <CheckCircle className="h-4 w-4 mr-2" />
                                 {t("actions.markAccepted")}
-                            </Button>
-                            <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleStatusChange('rejected')}>
+                            </BrandButton>
+                            <BrandButton variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleStatusChange('rejected')}>
                                 <XCircle className="h-4 w-4 mr-2" />
                                 {t("actions.markRejected")}
-                            </Button>
+                            </BrandButton>
                         </>
                     )}
 
                     {quote.status === 'accepted' && (
-                        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setConvertDialogOpen(true)}>
+                        <BrandButton onClick={() => setConvertDialogOpen(true)}>
                             <ShoppingCart className="h-4 w-4 mr-2" />
                             {t("actions.convertToSale")}
-                        </Button>
+                        </BrandButton>
                     )}
 
-                    <Button variant="outline">
+                    <BrandButton variant="outline">
                         <Download className="h-4 w-4 mr-2" />
                         {t("actions.downloadPdf")}
-                    </Button>
+                    </BrandButton>
 
-                    <Button variant="destructive" size="icon" onClick={() => setDeleteDialogOpen(true)}>
+                    <BrandButton variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)}>
                         <Trash2 className="h-4 w-4" />
-                    </Button>
+                    </BrandButton>
                 </div>
             </div>
 

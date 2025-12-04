@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { createClient } from '@/lib/supabase/client'
 import { ROUTES } from '@/lib/constants'
 import { CheckCircle, XCircle, Mail, Loader2 } from 'lucide-react'
@@ -142,9 +142,9 @@ export default function VerifyEmailPage() {
               </div>
 
               <Link href={ROUTES.DASHBOARD}>
-                <Button className="w-full h-12 bg-green-600 hover:bg-green-700">
+                <BrandButton className="w-full h-12">
                   {t('goToDashboard')}
-                </Button>
+                </BrandButton>
               </Link>
             </div>
           )}
@@ -168,9 +168,9 @@ export default function VerifyEmailPage() {
 
               <div className="flex flex-col space-y-3">
                 <Link href={ROUTES.AUTH.LOGIN}>
-                  <Button className="w-full h-12 bg-blue-600 hover:bg-blue-700">
+                  <BrandButton className="w-full h-12">
                     {t('backToLogin')}
-                  </Button>
+                  </BrandButton>
                 </Link>
               </div>
             </div>
@@ -194,25 +194,19 @@ export default function VerifyEmailPage() {
               </div>
 
               <div className="flex flex-col space-y-3">
-                <Button
+                <BrandButton
                   onClick={handleResendVerification}
-                  disabled={resendLoading}
-                  className="w-full h-12 bg-orange-600 hover:bg-orange-700"
+                  className="w-full h-12"
+                  isLoading={resendLoading}
+                  loadingText={t('sending')}
                 >
-                  {resendLoading ? (
-                    <div className="flex items-center space-x-2">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>{t('sending')}</span>
-                    </div>
-                  ) : (
-                    <span>{t('resendButton')}</span>
-                  )}
-                </Button>
+                  {t('resendButton')}
+                </BrandButton>
 
                 <Link href={ROUTES.AUTH.LOGIN}>
-                  <Button variant="outline" className="w-full h-12">
+                  <BrandButton variant="outline" className="w-full h-12">
                     {t('backToLogin')}
-                  </Button>
+                  </BrandButton>
                 </Link>
               </div>
             </div>

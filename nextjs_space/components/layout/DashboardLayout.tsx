@@ -5,7 +5,6 @@ import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { Button } from '@/components/ui/button'
 import {
   LayoutDashboard,
   ShoppingCart,

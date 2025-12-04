@@ -96,19 +96,6 @@ class CompanyService {
         // Get main location for address information
         const mainLocation = await import('@/lib/services/location.service').then(m => m.locationService.getMainLocation())
 
-        // DEBUG: Log the main location data
-        console.log('🔍 DEBUG - Main location data:', {
-            mainLocation: mainLocation ? {
-                address: mainLocation.address,
-                city: mainLocation.city,
-                state: mainLocation.state,
-                postalCode: mainLocation.postalCode,
-                country: mainLocation.country,
-                email: mainLocation.email,
-                phone: mainLocation.phone
-            } : null
-        })
-
         // Parse metadata JSONB
         const metadata = data.metadata || {}
 
@@ -134,17 +121,6 @@ class CompanyService {
             legal: metadata.legal,
             regional: metadata.regional
         }
-
-        // DEBUG: Log the mapped company info to verify transformation
-        console.log('🔍 DEBUG - Mapped company info:', {
-            address: companyInfo.address,
-            city: companyInfo.city,
-            state: companyInfo.state,
-            postalCode: companyInfo.postalCode,
-            country: companyInfo.country,
-            email: companyInfo.email,
-            phone: companyInfo.phone
-        })
 
         return companyInfo
     }

@@ -19,8 +19,7 @@ import {
   PackageCheck,
   PackageX
 } from 'lucide-react'
-import { StatsCard, PageHeader, LoadingState, EmptyState } from '@/components/shared'
-import { Button } from '@/components/ui/button'
+import { StatsCard, PageHeader, LoadingState, EmptyState, BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -199,19 +198,19 @@ export default function InventoryPage() {
         subtitle="Gestiona productos y controla el stock de tu negocio"
         actions={
           <>
-            <Button
+            <BrandButton
               variant="outline"
               size="lg"
               onClick={() => setCategoryDialogOpen(true)}
             >
               <FolderTree className="h-5 w-5 mr-2" />
               Categorías
-            </Button>
+            </BrandButton>
             <Link href="/dashboard/inventory/products/new">
-              <Button size="lg">
+              <BrandButton size="lg">
                 <Plus className="h-5 w-5 mr-2" />
                 Nuevo Producto
-              </Button>
+              </BrandButton>
             </Link>
           </>
         }
@@ -303,19 +302,19 @@ export default function InventoryPage() {
                   </SelectContent>
                 </Select>
 
-                <Button type="submit">
+                <BrandButton type="submit">
                   <Search className="h-4 w-4 mr-2" />
                   Buscar
-                </Button>
+                </BrandButton>
 
-                <Button
+                <BrandButton
                   type="button"
                   variant="outline"
                   onClick={loadProducts}
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Actualizar
-                </Button>
+                </BrandButton>
               </form>
             </CardContent>
           </Card>
@@ -332,10 +331,10 @@ export default function InventoryPage() {
                   description="Comienza agregando tu primer producto al inventario"
                   action={
                     <Link href="/dashboard/inventory/products/new">
-                      <Button>
+                      <BrandButton>
                         <Plus className="h-4 w-4 mr-2" />
                         Nuevo Producto
-                      </Button>
+                      </BrandButton>
                     </Link>
                   }
                 />
@@ -389,9 +388,9 @@ export default function InventoryPage() {
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
+                                <BrandButton variant="ghost" size="sm">
                                   <MoreHorizontal className="h-4 w-4" />
-                                </Button>
+                                </BrandButton>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
@@ -424,22 +423,22 @@ export default function InventoryPage() {
                     Pagina {currentPage} de {totalPages} ({totalProducts} productos en total)
                   </div>
                   <div className="flex gap-2">
-                    <Button
+                    <BrandButton
                       variant="outline"
                       size="sm"
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
                     >
                       Anterior
-                    </Button>
-                    <Button
+                    </BrandButton>
+                    <BrandButton
                       variant="outline"
                       size="sm"
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
                     >
                       Siguiente
-                    </Button>
+                    </BrandButton>
                   </div>
                 </div>
               )}
@@ -508,13 +507,13 @@ export default function InventoryPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Button
+                            <BrandButton
                               size="sm"
                               variant="ghost"
                               onClick={() => handleAdjustStock(item)}
                             >
                               Ajustar
-                            </Button>
+                            </BrandButton>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -576,13 +575,13 @@ export default function InventoryPage() {
                             {item.reorderPoint - item.quantity}
                           </TableCell>
                           <TableCell>
-                            <Button
+                            <BrandButton
                               size="sm"
                               variant="outline"
                               onClick={() => handleAdjustStock(item)}
                             >
                               Reabastecer
-                            </Button>
+                            </BrandButton>
                           </TableCell>
                         </TableRow>
                       ))}

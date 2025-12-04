@@ -8,7 +8,7 @@ import {
   Shield, Plus, Pencil, Trash2, Copy, Users,
   ChevronDown, ChevronRight, Check, X, Loader2, Lock, ArrowLeft
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -322,7 +322,7 @@ export default function RolesPage() {
                     </Badge>
                   )}
                   <CollapsibleTrigger asChild>
-                    <Button
+                    <BrandButton
                       variant="ghost"
                       size="sm"
                       onClick={() => toggleModuleExpanded(module.id)}
@@ -332,7 +332,7 @@ export default function RolesPage() {
                       ) : (
                         <ChevronRight className="h-4 w-4" />
                       )}
-                    </Button>
+                    </BrandButton>
                   </CollapsibleTrigger>
                 </div>
               </div>
@@ -377,9 +377,9 @@ export default function RolesPage() {
         <div>
           <div className="flex items-center gap-3 mb-2">
             <Link href="/dashboard/settings">
-              <Button variant="ghost" size="icon">
+              <BrandButton variant="ghost" size="icon">
                 <ArrowLeft className="h-5 w-5" />
-              </Button>
+              </BrandButton>
             </Link>
             <h1 className="text-3xl font-bold flex items-center gap-3">
               <Shield className="h-8 w-8" />
@@ -391,10 +391,10 @@ export default function RolesPage() {
           </p>
         </div>
         {canCreate && (
-          <Button onClick={openCreateDialog}>
+          <BrandButton onClick={openCreateDialog}>
             <Plus className="h-4 w-4 mr-2" />
             {t('newRole')}
-          </Button>
+          </BrandButton>
         )}
       </div>
 
@@ -421,27 +421,27 @@ export default function RolesPage() {
                   {!role.isSystem && (
                     <>
                       {canUpdate && (
-                        <Button
+                        <BrandButton
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => openEditDialog(role)}
                         >
                           <Pencil className="h-4 w-4" />
-                        </Button>
+                        </BrandButton>
                       )}
                       {canCreate && (
-                        <Button
+                        <BrandButton
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => handleDuplicate(role)}
                         >
                           <Copy className="h-4 w-4" />
-                        </Button>
+                        </BrandButton>
                       )}
                       {canDelete && (
-                        <Button
+                        <BrandButton
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
@@ -449,19 +449,19 @@ export default function RolesPage() {
                           disabled={role.userCount > 0}
                         >
                           <Trash2 className="h-4 w-4" />
-                        </Button>
+                        </BrandButton>
                       )}
                     </>
                   )}
                   {role.isSystem && canCreate && (
-                    <Button
+                    <BrandButton
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => handleDuplicate(role)}
                     >
                       <Copy className="h-4 w-4" />
-                    </Button>
+                    </BrandButton>
                   )}
                 </div>
               </div>
@@ -491,10 +491,10 @@ export default function RolesPage() {
           <p className="text-muted-foreground mb-4">
             {t('empty.description')}
           </p>
-          <Button onClick={openCreateDialog}>
+          <BrandButton onClick={openCreateDialog}>
             <Plus className="h-4 w-4 mr-2" />
             {t('empty.createRole')}
-          </Button>
+          </BrandButton>
         </Card>
       )}
 
@@ -536,10 +536,10 @@ export default function RolesPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+            <BrandButton variant="outline" onClick={() => setIsCreateOpen(false)}>
               {t('createDialog.cancel')}
-            </Button>
-            <Button onClick={handleCreate} disabled={isSaving}>
+            </BrandButton>
+            <BrandButton onClick={handleCreate} disabled={isSaving}>
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -551,7 +551,7 @@ export default function RolesPage() {
                   {t('createDialog.create')}
                 </>
               )}
-            </Button>
+            </BrandButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -594,10 +594,10 @@ export default function RolesPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+            <BrandButton variant="outline" onClick={() => setIsEditOpen(false)}>
               {t('editDialog.cancel')}
-            </Button>
-            <Button onClick={handleUpdate} disabled={isSaving}>
+            </BrandButton>
+            <BrandButton onClick={handleUpdate} disabled={isSaving}>
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -609,7 +609,7 @@ export default function RolesPage() {
                   {t('editDialog.save')}
                 </>
               )}
-            </Button>
+            </BrandButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>

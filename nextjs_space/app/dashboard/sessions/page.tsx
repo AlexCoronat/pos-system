@@ -3,13 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/lib/supabase/client'
 import { Laptop, Smartphone, Tablet, Globe, Clock, MapPin, XCircle, CheckCircle, RefreshCw, Users, User } from 'lucide-react'
-import { PageHeader, LoadingState } from '@/components/shared'
+import { PageHeader, LoadingState, BrandButton } from '@/components/shared'
 
 interface Session {
   id: number
@@ -253,23 +252,23 @@ export default function SessionsPage() {
     <>
       {/* Actions */}
       <div className="mb-6 flex justify-between items-center">
-        <Button
+        <BrandButton
           onClick={() => loadSessions(activeTab)}
           variant="outline"
           className="flex items-center gap-2"
         >
           <RefreshCw className="w-4 h-4" />
           {t('actions.refresh')}
-        </Button>
+        </BrandButton>
 
-        <Button
+        <BrandButton
           onClick={terminateAllSessions}
           variant="destructive"
           className="flex items-center gap-2"
         >
           <XCircle className="w-4 h-4" />
           {activeTab === 'my-sessions' ? t('actions.terminateAllMine') : t('actions.terminateAllTeam')}
-        </Button>
+        </BrandButton>
       </div>
 
       {/* Sessions List */}
@@ -371,21 +370,15 @@ export default function SessionsPage() {
                             {t('session.active')}
                           </span>
                         ) : (
-                          <Button
+                          <BrandButton
                             onClick={() => terminateSession(session.id)}
-                            disabled={terminatingSession === session.id}
                             variant="destructive"
                             size="sm"
+                            isLoading={terminatingSession === session.id}
+                            loadingText={t('actions.terminating')}
                           >
-                            {terminatingSession === session.id ? (
-                              <div className="flex items-center gap-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                                <span>{t('actions.terminating')}</span>
-                              </div>
-                            ) : (
-                              t('actions.terminate')
-                            )}
-                          </Button>
+                            {t('actions.terminate')}
+                          </BrandButton>
                         )}
                       </>
                     )}

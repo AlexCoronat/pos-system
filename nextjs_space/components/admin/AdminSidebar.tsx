@@ -172,7 +172,7 @@ export function AdminSidebar() {
                                 className={`
                   flex items-center gap-3 px-3 py-3 rounded-xl transition-all
                   ${isActive
-                                        ? 'bg-brand-primary/10 text-brand-primary font-medium border-l-4 border-brand-primary'
+                                        ? 'bg-brand-primary/10 text-brand-primary font-medium border-l-4'
                                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                     }
                   ${collapsed ? 'justify-center' : ''}
@@ -204,7 +204,7 @@ export function AdminSidebar() {
                                         className={`
                       flex items-center gap-3 px-3 py-3 rounded-xl transition-all
                       ${isActive
-                                                ? 'bg-brand-primary/10 text-brand-primary font-medium border-l-4 border-brand-primary'
+                                                ? 'bg-brand-primary/10 text-brand-primary font-medium border-l-4'
                                                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                             }
                       ${collapsed ? 'justify-center' : ''}

@@ -6,7 +6,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { MESSAGES } from '@/lib/constants'
@@ -39,25 +39,19 @@ export function GoogleOAuthButton({ mode = 'login', className }: GoogleOAuthButt
   const buttonText = mode === 'login' ? 'Sign in with Google' : 'Sign up with Google'
 
   return (
-    <Button
+    <BrandButton
       type="button"
       variant="outline"
       className={`w-full h-12 border-gray-300 hover:bg-gray-50 transition-colors ${className}`}
       onClick={handleGoogleAuth}
-      disabled={isLoading}
+      isLoading={isLoading}
+      loadingText="Connecting..."
     >
-      {isLoading ? (
-        <div className="flex items-center space-x-2">
-          <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-600 border-t-transparent"></div>
-          <span>Connecting...</span>
-        </div>
-      ) : (
-        <div className="flex items-center space-x-3">
-          <GoogleIcon />
-          <span className="text-gray-700 font-medium">{buttonText}</span>
-        </div>
-      )}
-    </Button>
+      <div className="flex items-center space-x-3">
+        <GoogleIcon />
+        <span className="text-gray-700 font-medium">{buttonText}</span>
+      </div>
+    </BrandButton>
   )
 }
 

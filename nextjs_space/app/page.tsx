@@ -4,7 +4,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth/use-auth'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { 
   Store, 
@@ -97,14 +97,14 @@ export default function HomePage() {
             </div>
             <div className="flex items-center space-x-4">
               <Link href="/auth/login">
-                <Button variant="outline">
+                <BrandButton variant="outline">
                   Sign In
-                </Button>
+                </BrandButton>
               </Link>
               <Link href="/auth/register">
-                <Button>
+                <BrandButton>
                   Get Started
-                </Button>
+                </BrandButton>
               </Link>
             </div>
           </div>
@@ -130,16 +130,16 @@ export default function HomePage() {
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/auth/register">
-                  <Button size="lg" className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white">
+                  <BrandButton size="lg" className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white">
                     <Zap className="w-5 h-5 mr-2" />
                     Start Free Trial
-                  </Button>
+                  </BrandButton>
                 </Link>
                 <Link href="/auth/login">
-                  <Button size="lg" variant="outline" className="w-full sm:w-auto bg-white/10 border-white/30 text-white hover:bg-white/20">
+                  <BrandButton size="lg" variant="outline" className="w-full sm:w-auto bg-white/10 border-white/30 text-white hover:bg-white/20">
                     <ArrowRight className="w-5 h-5 mr-2" />
                     Sign In
-                  </Button>
+                  </BrandButton>
                 </Link>
               </div>
 
@@ -237,10 +237,10 @@ export default function HomePage() {
 
               <div className="pt-4">
                 <Link href="/auth/register">
-                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+                  <BrandButton size="lg" className="bg-blue-600 hover:bg-blue-700">
                     Get Started Today
                     <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
+                  </BrandButton>
                 </Link>
               </div>
             </div>
@@ -287,15 +287,15 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth/register">
-              <Button size="lg" className="w-full sm:w-auto bg-white text-blue-600 hover:bg-gray-100">
+              <BrandButton size="lg" className="w-full sm:w-auto bg-white text-blue-600 hover:bg-gray-100">
                 Start Free Trial
                 <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
+              </BrandButton>
             </Link>
             <Link href="/auth/login">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-white/10">
+              <BrandButton size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-white/10">
                 Sign In
-              </Button>
+              </BrandButton>
             </Link>
           </div>
         </div>

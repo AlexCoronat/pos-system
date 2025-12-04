@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { ShieldX, Home, ArrowLeft, LogOut } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/lib/hooks/use-auth'
 
@@ -37,32 +37,32 @@ export default function AccessDeniedPage() {
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
+              <BrandButton
                 variant="outline"
                 onClick={() => window.history.back()}
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Volver
-              </Button>
+              </BrandButton>
               <Link href="/dashboard">
-                <Button className="flex items-center gap-2 w-full">
+                <BrandButton className="flex items-center gap-2 w-full">
                   <Home className="h-4 w-4" />
                   Ir al inicio
-                </Button>
+                </BrandButton>
               </Link>
             </div>
 
             {/* Sign out option */}
             <div className="pt-4 border-t">
-              <Button
+              <BrandButton
                 variant="ghost"
                 onClick={handleSignOut}
                 className="text-muted-foreground hover:text-red-600"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Cerrar sesión e iniciar con otra cuenta
-              </Button>
+              </BrandButton>
             </div>
           </div>
         </CardContent>

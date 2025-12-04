@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -140,9 +140,9 @@ export default function NewCustomerPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/dashboard/customers">
-          <Button variant="ghost" size="icon">
+          <BrandButton variant="ghost" size="icon">
             <ArrowLeft className="h-5 w-5" />
-          </Button>
+          </BrandButton>
         </Link>
         <div>
           <h1 className="text-3xl font-bold">{t('form.title')}</h1>
@@ -409,11 +409,11 @@ export default function NewCustomerPage() {
         {/* Actions */}
         <div className="flex justify-end gap-4">
           <Link href="/dashboard/customers">
-            <Button type="button" variant="outline">
+            <BrandButton type="button" variant="outline">
               {t('actions.cancel')}
-            </Button>
+            </BrandButton>
           </Link>
-          <Button type="submit" disabled={isLoading}>
+          <BrandButton type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -425,7 +425,7 @@ export default function NewCustomerPage() {
                 {t('actions.save')}
               </>
             )}
-          </Button>
+          </BrandButton>
         </div>
       </form>
     </div>

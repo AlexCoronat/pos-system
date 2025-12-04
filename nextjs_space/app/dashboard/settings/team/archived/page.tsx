@@ -13,7 +13,7 @@ import {
     User,
     FileText
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
     Table,
@@ -77,9 +77,9 @@ export default function ArchivedUsersPage() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Link href="/dashboard/settings/team">
-                        <Button variant="ghost" size="icon">
+                        <BrandButton variant="ghost" size="icon">
                             <ArrowLeft className="h-5 w-5" />
-                        </Button>
+                        </BrandButton>
                     </Link>
                     <div>
                         <h1 className="text-3xl font-bold flex items-center gap-2">

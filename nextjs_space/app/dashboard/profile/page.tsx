@@ -7,7 +7,6 @@ import { useTranslations } from 'next-intl'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -33,7 +32,7 @@ import {
   Save,
   X
 } from 'lucide-react'
-import { PageHeader, LoadingState } from '@/components/shared'
+import { PageHeader, LoadingState, BrandButton } from '@/components/shared'
 
 interface ProfileData {
   firstName: string
@@ -313,14 +312,14 @@ export default function ProfilePage() {
                   <CardDescription>{t('personalInfo.subtitle')}</CardDescription>
                 </div>
                 {!isEditingProfile && (
-                  <Button
+                  <BrandButton
                     onClick={() => setIsEditingProfile(true)}
                     variant="outline"
                     size="sm"
                   >
                     <Edit className="w-4 h-4 mr-2" />
                     {t('personalInfo.edit')}
-                  </Button>
+                  </BrandButton>
                 )}
               </div>
             </CardHeader>
@@ -372,14 +371,15 @@ export default function ProfilePage() {
 
               {isEditingProfile && (
                 <div className="flex gap-2 pt-4">
-                  <Button
+                  <BrandButton
                     onClick={handleSaveProfile}
-                    disabled={isSavingProfile}
+                    isLoading={isSavingProfile}
+                    loadingText={t('personalInfo.saving')}
                   >
                     <Save className="w-4 h-4 mr-2" />
-                    {isSavingProfile ? t('personalInfo.saving') : t('personalInfo.saveChanges')}
-                  </Button>
-                  <Button
+                    {t('personalInfo.saveChanges')}
+                  </BrandButton>
+                  <BrandButton
                     onClick={() => {
                       setIsEditingProfile(false)
                       setProfileData({
@@ -393,7 +393,7 @@ export default function ProfilePage() {
                   >
                     <X className="w-4 h-4 mr-2" />
                     {t('personalInfo.cancel')}
-                  </Button>
+                  </BrandButton>
                 </div>
               )}
             </CardContent>
@@ -453,9 +453,9 @@ export default function ProfilePage() {
                     </div>
                     <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
+                        <BrandButton variant="outline" size="sm">
                           {t('security.changePassword')}
-                        </Button>
+                        </BrandButton>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
@@ -494,12 +494,16 @@ export default function ProfilePage() {
                           </div>
                         </div>
                         <DialogFooter>
-                          <Button
+                          <BrandButton variant="outline" onClick={() => setPasswordDialogOpen(false)}>
+                            {t('common.cancel')}
+                          </BrandButton>
+                          <BrandButton
                             onClick={handleChangePassword}
-                            disabled={isChangingPassword}
+                            isLoading={isChangingPassword}
+                            loadingText={t('security.changing')}
                           >
-                            {isChangingPassword ? t('personalInfo.saving') : t('security.changePassword')}
-                          </Button>
+                            {t('security.changePassword')}
+                          </BrandButton>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
@@ -513,14 +517,14 @@ export default function ProfilePage() {
                   <p className="font-medium">{t('security.activeSessions')}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{t('security.activeSessionsSubtitle')}</p>
                 </div>
-                <Button
+                <BrandButton
                   variant="outline"
                   size="sm"
                   onClick={() => router.push('/dashboard/sessions')}
                 >
                   <Clock className="w-4 h-4 mr-2" />
                   {t('security.viewSessions')}
-                </Button>
+                </BrandButton>
               </div>
 
               {isOAuthUser && (

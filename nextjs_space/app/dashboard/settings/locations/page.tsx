@@ -16,7 +16,7 @@ import {
   Save,
   X
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -220,9 +220,9 @@ export default function LocationsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/settings">
-            <Button variant="ghost" size="icon">
+            <BrandButton variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
-            </Button>
+            </BrandButton>
           </Link>
           <div>
             <h1 className="text-3xl font-bold">{t('title')}</h1>
@@ -231,10 +231,10 @@ export default function LocationsPage() {
             </p>
           </div>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
+        <BrandButton onClick={() => handleOpenDialog()}>
           <Plus className="h-4 w-4 mr-2" />
           {t('newLocation')}
-        </Button>
+        </BrandButton>
       </div>
 
       {/* Locations Table */}
@@ -248,10 +248,10 @@ export default function LocationsPage() {
             <div className="p-8 text-center text-muted-foreground">
               <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>{t('empty.title')}</p>
-              <Button className="mt-4" onClick={() => handleOpenDialog()}>
+              <BrandButton className="mt-4" onClick={() => handleOpenDialog()}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t('empty.create')}
-              </Button>
+              </BrandButton>
             </div>
           ) : (
             <Table>
@@ -308,9 +308,9 @@ export default function LocationsPage() {
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
+                          <BrandButton variant="ghost" size="sm">
                             <MoreHorizontal className="h-4 w-4" />
-                          </Button>
+                          </BrandButton>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleOpenDialog(location)}>
@@ -458,10 +458,10 @@ export default function LocationsPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              <BrandButton type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 {t('dialog.cancel')}
-              </Button>
-              <Button type="submit" disabled={isSaving}>
+              </BrandButton>
+              <BrandButton type="submit" disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -473,7 +473,7 @@ export default function LocationsPage() {
                     {editingLocation ? t('dialog.save') : t('dialog.create')}
                   </>
                 )}
-              </Button>
+              </BrandButton>
             </DialogFooter>
           </form>
         </DialogContent>

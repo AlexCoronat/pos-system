@@ -1,6 +1,6 @@
 
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, FileText } from 'lucide-react'
 
@@ -16,10 +16,10 @@ export default function TermsPage() {
         {/* Header */}
         <div className="mb-8">
           <Link href="/auth/register">
-            <Button variant="ghost" className="mb-4">
+            <BrandButton variant="ghost" className="mb-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Registration
-            </Button>
+            </BrandButton>
           </Link>
           
           <div className="flex items-center space-x-3 mb-4">

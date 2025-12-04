@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save, Loader2, RefreshCw, Wand2, Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -259,9 +259,9 @@ export default function NewProductPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/dashboard/inventory">
-          <Button variant="ghost" size="icon">
+          <BrandButton variant="ghost" size="icon">
             <ArrowLeft className="h-5 w-5" />
-          </Button>
+          </BrandButton>
         </Link>
         <div>
           <h1 className="text-3xl font-bold">Nuevo Producto</h1>
@@ -328,14 +328,14 @@ export default function NewProductPage() {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button
+                        <BrandButton
                           type="button"
-                          variant="outline"
+                          variant="ghost"
                           size="icon"
                           onClick={() => setCategoryDialogOpen(true)}
                         >
                           <Plus className="h-4 w-4" />
-                        </Button>
+                        </BrandButton>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Crear nueva categoría si no existe en la lista</p>
@@ -367,9 +367,9 @@ export default function NewProductPage() {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button
+                        <BrandButton
                           type="button"
-                          variant="outline"
+                          variant="ghost"
                           size="icon"
                           onClick={handleRegenerateSKU}
                           disabled={isGeneratingSKU || !formData.categoryId}
@@ -379,7 +379,7 @@ export default function NewProductPage() {
                           ) : (
                             <RefreshCw className="h-4 w-4" />
                           )}
-                        </Button>
+                        </BrandButton>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>
@@ -414,9 +414,9 @@ export default function NewProductPage() {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button
+                        <BrandButton
                           type="button"
-                          variant="outline"
+                          variant="ghost"
                           size="icon"
                           onClick={handleRegenerateBarcode}
                           disabled={isGeneratingBarcode}
@@ -426,7 +426,7 @@ export default function NewProductPage() {
                           ) : (
                             <RefreshCw className="h-4 w-4" />
                           )}
-                        </Button>
+                        </BrandButton>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Generar nuevo código de barras interno</p>
@@ -589,7 +589,43 @@ export default function NewProductPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="reorderPoint">Punto de Reorden</Label>
+                    <div className="flex items-center gap-1.5">
+                      <Label htmlFor="reorderPoint">Punto de Reorden</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M12 16v-4" />
+                                <path d="M12 8h.01" />
+                              </svg>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="font-semibold mb-1">¿Qué es el Punto de Reorden?</p>
+                            <p className="text-sm">
+                              Es el nivel mínimo de stock que indica cuándo debes hacer un nuevo pedido.
+                              Cuando el inventario llegue a esta cantidad, recibirás una alerta para reabastecer
+                              el producto antes de quedarte sin existencias.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Input
                       id="reorderPoint"
                       type="number"
@@ -612,11 +648,11 @@ export default function NewProductPage() {
         {/* Actions */}
         <div className="flex justify-end gap-4">
           <Link href="/dashboard/inventory">
-            <Button type="button" variant="outline">
+            <BrandButton type="button" variant="outline">
               Cancelar
-            </Button>
+            </BrandButton>
           </Link>
-          <Button type="submit" disabled={isLoading}>
+          <BrandButton type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -628,7 +664,7 @@ export default function NewProductPage() {
                 Guardar Producto
               </>
             )}
-          </Button>
+          </BrandButton>
         </div>
       </form>
 

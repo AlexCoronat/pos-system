@@ -21,9 +21,8 @@ import {
     TrendingUp
 } from "lucide-react";
 import { format } from "date-fns";
-import { StatsCard, PageHeader, LoadingState, EmptyState } from '@/components/shared';
+import { StatsCard, PageHeader, LoadingState, EmptyState, BrandButton } from '@/components/shared';
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -174,10 +173,10 @@ export default function QuotesPage() {
                 subtitle={t("subtitle")}
                 actions={
                     <Link href="/dashboard/quotes/new">
-                        <Button size="lg">
+                        <BrandButton size="lg">
                             <Plus className="h-5 w-5 mr-2" />
                             {t("newQuote")}
-                        </Button>
+                        </BrandButton>
                     </Link>
                 }
             />
@@ -249,19 +248,19 @@ export default function QuotesPage() {
                             </SelectContent>
                         </Select>
 
-                        <Button type="submit">
+                        <BrandButton type="submit">
                             <Search className="h-4 w-4 mr-2" />
                             {t("filters.search")}
-                        </Button>
+                        </BrandButton>
 
-                        <Button
+                        <BrandButton
                             type="button"
                             variant="outline"
                             onClick={loadQuotes}
                         >
                             <RefreshCw className="h-4 w-4 mr-2" />
                             {t("filters.refresh")}
-                        </Button>
+                        </BrandButton>
                     </form>
                 </CardContent>
             </Card>
@@ -278,10 +277,10 @@ export default function QuotesPage() {
                             description="No hay cotizaciones registradas aún"
                             action={
                                 <Link href="/dashboard/quotes/new">
-                                    <Button>
+                                    <BrandButton>
                                         <Plus className="h-4 w-4 mr-2" />
                                         {t("newQuote")}
-                                    </Button>
+                                    </BrandButton>
                                 </Link>
                             }
                         />
@@ -344,9 +343,9 @@ export default function QuotesPage() {
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="sm">
+                                                        <BrandButton variant="ghost" size="sm">
                                                             <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
+                                                        </BrandButton>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem
@@ -387,22 +386,22 @@ export default function QuotesPage() {
                                 {tCommon("page")} {currentPage} {tCommon("of")} {totalPages} ({totalQuotes} {t("labels.quotesCount")})
                             </div>
                             <div className="flex gap-2">
-                                <Button
+                                <BrandButton
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     disabled={currentPage === 1}
                                 >
                                     {tCommon("previous")}
-                                </Button>
-                                <Button
+                                </BrandButton>
+                                <BrandButton
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
                                 >
                                     {tCommon("next")}
-                                </Button>
+                                </BrandButton>
                             </div>
                         </div>
                     )}

@@ -7,7 +7,7 @@ import {
   CreditCard, Plus, Pencil, Trash2, ArrowLeft, Loader2,
   MapPin, Check, X, AlertCircle
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -229,9 +229,9 @@ export default function CashRegistersPage() {
         <div>
           <div className="flex items-center gap-3 mb-2">
             <Link href="/dashboard/settings">
-              <Button variant="ghost" size="icon">
+              <BrandButton variant="ghost" size="icon">
                 <ArrowLeft className="h-5 w-5" />
-              </Button>
+              </BrandButton>
             </Link>
             <h1 className="text-3xl font-bold flex items-center gap-3">
               <CreditCard className="h-8 w-8" />
@@ -242,10 +242,10 @@ export default function CashRegistersPage() {
             Gestiona las cajas registradoras de tu negocio
           </p>
         </div>
-        <Button onClick={openCreateDialog}>
+        <BrandButton onClick={openCreateDialog}>
           <Plus className="h-4 w-4 mr-2" />
           Nueva Caja
-        </Button>
+        </BrandButton>
       </div>
 
       {cashRegisters.length === 0 ? (
@@ -255,10 +255,10 @@ export default function CashRegistersPage() {
           <p className="text-muted-foreground mb-4">
             Crea tu primera caja registradora para empezar a operar el POS
           </p>
-          <Button onClick={openCreateDialog}>
+          <BrandButton onClick={openCreateDialog}>
             <Plus className="h-4 w-4 mr-2" />
             Crear Primera Caja
-          </Button>
+          </BrandButton>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -279,22 +279,22 @@ export default function CashRegistersPage() {
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button
+                    <BrandButton
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => openEditDialog(register)}
                     >
                       <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
+                    </BrandButton>
+                    <BrandButton
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={() => openDeleteDialog(register)}
                     >
                       <Trash2 className="h-4 w-4" />
-                    </Button>
+                    </BrandButton>
                   </div>
                 </div>
               </CardHeader>
@@ -402,10 +402,10 @@ export default function CashRegistersPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+            <BrandButton variant="outline" onClick={() => setIsCreateOpen(false)}>
               Cancelar
-            </Button>
-            <Button onClick={handleCreate} disabled={isSaving}>
+            </BrandButton>
+            <BrandButton onClick={handleCreate} disabled={isSaving}>
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -417,7 +417,7 @@ export default function CashRegistersPage() {
                   Crear Caja
                 </>
               )}
-            </Button>
+            </BrandButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -497,10 +497,10 @@ export default function CashRegistersPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+            <BrandButton variant="outline" onClick={() => setIsEditOpen(false)}>
               Cancelar
-            </Button>
-            <Button onClick={handleUpdate} disabled={isSaving}>
+            </BrandButton>
+            <BrandButton onClick={handleUpdate} disabled={isSaving}>
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -512,7 +512,7 @@ export default function CashRegistersPage() {
                   Guardar Cambios
                 </>
               )}
-            </Button>
+            </BrandButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>

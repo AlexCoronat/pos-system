@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Copy, Check, AlertTriangle, User, Key } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -98,7 +98,7 @@ export function TemporaryPasswordModal({
                                     </p>
                                 </div>
                             </div>
-                            <Button
+                            <BrandButton
                                 variant="ghost"
                                 size="sm"
                                 onClick={handleCopyPassword}
@@ -109,7 +109,7 @@ export function TemporaryPasswordModal({
                                 ) : (
                                     <Copy className="h-4 w-4" />
                                 )}
-                            </Button>
+                            </BrandButton>
                         </div>
                     </div>
 
@@ -144,21 +144,21 @@ export function TemporaryPasswordModal({
                 </div>
 
                 <DialogFooter className="flex-col sm:flex-row gap-2">
-                    <Button
+                    <BrandButton
                         variant="outline"
                         onClick={handleCopyAll}
                         className="w-full sm:w-auto"
                     >
                         <Copy className="h-4 w-4 mr-2" />
                         Copiar Todo
-                    </Button>
-                    <Button
+                    </BrandButton>
+                    <BrandButton
                         onClick={handleClose}
                         disabled={!confirmed}
                         className="w-full sm:w-auto"
                     >
                         Cerrar
-                    </Button>
+                    </BrandButton>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

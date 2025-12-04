@@ -20,8 +20,7 @@ import {
   UserCheck,
   CreditCard
 } from 'lucide-react'
-import { StatsCard, PageHeader, LoadingState, EmptyState } from '@/components/shared'
-import { Button } from '@/components/ui/button'
+import { StatsCard, PageHeader, LoadingState, EmptyState, BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -165,12 +164,10 @@ export default function CustomersPage() {
         title={t('title')}
         subtitle={t('subtitle')}
         actions={
-          <Link href="/dashboard/customers/new">
-            <Button size="lg">
-              <Plus className="h-5 w-5 mr-2" />
-              {t('newCustomer')}
-            </Button>
-          </Link>
+          <BrandButton onClick={() => router.push('/dashboard/customers/new')}>
+            <Plus className="w-4 h-4 mr-2" />
+            {t('newCustomer')}
+          </BrandButton>
         }
       />
 
@@ -247,19 +244,19 @@ export default function CustomersPage() {
               </SelectContent>
             </Select>
 
-            <Button type="submit">
+            <BrandButton type="submit">
               <Search className="h-4 w-4 mr-2" />
               {t('filters.search')}
-            </Button>
+            </BrandButton>
 
-            <Button
+            <BrandButton
               type="button"
               variant="outline"
               onClick={loadCustomers}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               {t('filters.refresh')}
-            </Button>
+            </BrandButton>
           </form>
         </CardContent>
       </Card>
@@ -276,10 +273,10 @@ export default function CustomersPage() {
               description="No hay clientes registrados aún"
               action={
                 <Link href="/dashboard/customers/new">
-                  <Button>
+                  <BrandButton>
                     <Plus className="h-4 w-4 mr-2" />
                     {t('newCustomer')}
-                  </Button>
+                  </BrandButton>
                 </Link>
               }
             />
@@ -368,9 +365,9 @@ export default function CustomersPage() {
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <BrandButton variant="ghost" size="sm">
                               <MoreHorizontal className="h-4 w-4" />
-                            </Button>
+                            </BrandButton>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
@@ -409,22 +406,22 @@ export default function CustomersPage() {
                 {t('pagination.page')} {currentPage} {t('pagination.of')} {totalPages} ({totalCustomers} {t('pagination.customersTotal')})
               </div>
               <div className="flex gap-2">
-                <Button
+                <BrandButton
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                 >
                   {t('pagination.previous')}
-                </Button>
-                <Button
+                </BrandButton>
+                <BrandButton
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                 >
                   {t('pagination.next')}
-                </Button>
+                </BrandButton>
               </div>
             </div>
           )}

@@ -10,6 +10,7 @@ import { Clock, TrendingUp, Wallet } from 'lucide-react'
 import { useShiftStore } from '@/lib/stores/shift-store'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { BrandButton } from '@/components/shared'
 
 interface ShiftStatusProps {
     onOpenShift: () => void
@@ -34,13 +35,14 @@ export function ShiftStatus({ onOpenShift, onCloseShift, onAddMovement }: ShiftS
 
     if (!currentShift) {
         return (
-            <button
+            <BrandButton
                 onClick={onOpenShift}
-                className="bg-orange-50 border-2 border-orange-200 text-orange-700 rounded-lg px-4 py-2 hover:bg-orange-100 transition-colors flex items-center gap-2"
+                variant="outline"
+                className="flex items-center gap-2"
             >
                 <Clock className="w-4 h-4" />
                 <span className="font-medium">Abrir Turno</span>
-            </button>
+            </BrandButton>
         )
     }
 
@@ -75,21 +77,23 @@ export function ShiftStatus({ onOpenShift, onCloseShift, onAddMovement }: ShiftS
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <button
+                        <BrandButton
                             onClick={onAddMovement}
-                            className="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-1"
+                            size="sm"
+                            className="flex items-center gap-1"
                             title="Registrar movimiento de efectivo"
                         >
                             <Wallet className="w-4 h-4" />
                             Movimiento
-                        </button>
+                        </BrandButton>
 
-                        <button
+                        <BrandButton
                             onClick={onCloseShift}
-                            className="bg-green-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-green-700 transition-colors"
+                            variant="secondary"
+                            size="sm"
                         >
                             Cerrar Turno
-                        </button>
+                        </BrandButton>
                     </div>
                 </div>
             </div>

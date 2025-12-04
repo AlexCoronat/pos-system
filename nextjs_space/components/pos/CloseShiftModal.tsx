@@ -11,6 +11,7 @@ import { useShiftStore } from '@/lib/stores/shift-store'
 import { shiftService, type Shift } from '@/lib/services/shift.service'
 import { toast } from 'sonner'
 import { useEscapeKey } from '@/lib/hooks/use-keyboard-shortcuts'
+import { BrandButton } from '@/components/shared'
 
 interface CloseShiftModalProps {
     isOpen: boolean
@@ -250,23 +251,17 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }: CloseShiftModalP
                         >
                             Cancelar
                         </button>
-                        <button
+                        <BrandButton
                             type="submit"
                             disabled={shiftLoading || !actualAmount}
-                            className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            variant="destructive"
+                            className="flex-1 flex items-center justify-center gap-2"
+                            isLoading={shiftLoading}
+                            loadingText="Cerrando..."
                         >
-                            {shiftLoading ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    Cerrando...
-                                </>
-                            ) : (
-                                <>
-                                    <DollarSign className="w-5 h-5" />
-                                    Cerrar Turno
-                                </>
-                            )}
-                        </button>
+                            <DollarSign className="w-5 h-5" />
+                            Cerrar Turno
+                        </BrandButton>
                     </div>
                 </form>
             </div>

@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -96,7 +96,7 @@ export default function RecoverPasswordPage() {
           </div>
 
           <div className="flex flex-col space-y-3">
-            <Button
+            <BrandButton
               onClick={() => {
                 setIsSuccess(false)
                 setEmail('')
@@ -105,13 +105,13 @@ export default function RecoverPasswordPage() {
               className="w-full h-12"
             >
               Send another email
-            </Button>
+            </BrandButton>
 
             <Link href="/auth/login">
-              <Button variant="ghost" className="w-full h-12">
+              <BrandButton variant="ghost" className="w-full h-12">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to sign in
-              </Button>
+              </BrandButton>
             </Link>
           </div>
         </div>
@@ -169,23 +169,15 @@ export default function RecoverPasswordPage() {
         </div>
 
         {/* Recovery Button */}
-        <Button
+        <BrandButton
           type="submit"
-          className="w-full h-12 bg-orange-600 hover:bg-orange-700 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-          disabled={isLoading}
+          className="w-full h-12"
+          isLoading={isLoading}
+          loadingText="Sending recovery email..."
         >
-          {isLoading ? (
-            <div className="flex items-center space-x-2">
-              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-              <span>Sending recovery email...</span>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <Send className="h-5 w-5" />
-              <span>{t('sendLink')}</span>
-            </div>
-          )}
-        </Button>
+          <Send className="h-5 w-5 mr-2" />
+          {t('sendLink')}
+        </BrandButton>
       </form>
 
       {/* Back to Login */}

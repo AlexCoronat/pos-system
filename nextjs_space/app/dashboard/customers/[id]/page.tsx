@@ -19,7 +19,7 @@ import {
   TrendingUp,
   Star
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -302,9 +302,9 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/customers">
-            <Button variant="ghost" size="icon">
+            <BrandButton variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
-            </Button>
+            </BrandButton>
           </Link>
           <div>
             <h1 className="text-3xl font-bold">{getCustomerName(customer)}</h1>
@@ -325,10 +325,10 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
         </div>
 
         {!isEditing && (
-          <Button onClick={() => setIsEditing(true)}>
+          <BrandButton onClick={() => setIsEditing(true)}>
             <Edit className="h-4 w-4 mr-2" />
             Editar
-          </Button>
+          </BrandButton>
         )}
       </div>
 
@@ -595,11 +595,11 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
 
               {/* Actions */}
               <div className="flex justify-end gap-4">
-                <Button type="button" variant="outline" onClick={handleCancelEdit}>
+                <BrandButton type="button" variant="outline" onClick={handleCancelEdit}>
                   <X className="h-4 w-4 mr-2" />
                   Cancelar
-                </Button>
-                <Button type="submit" disabled={isSaving}>
+                </BrandButton>
+                <BrandButton type="submit" disabled={isSaving}>
                   {isSaving ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -611,7 +611,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                       Guardar Cambios
                     </>
                   )}
-                </Button>
+                </BrandButton>
               </div>
             </form>
           ) : (

@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { ShoppingCart, Trash2, CreditCard } from 'lucide-react'
 import { useCartStore } from '@/lib/stores/cart-store'
 import { CartItem } from './CartItem'
+import { BrandButton } from '@/components/shared'
 
 interface CartPanelProps {
     onCheckout: () => void
@@ -113,13 +114,14 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
                             <span>${cart.total.toFixed(2)}</span>
                         </div>
                     </div>
-                    <button
+                    <BrandButton
                         onClick={onCheckout}
-                        className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 flex items-center justify-center gap-2"
+                        className="w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2"
+                        size="lg"
                     >
                         <CreditCard className="w-5 h-5" />
                         Pagar (F12)
-                    </button>
+                    </BrandButton>
                 </div>
             )}
         </div>

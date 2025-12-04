@@ -44,9 +44,10 @@ export function CategoryTabs({ selectedCategory, onCategoryChange }: CategoryTab
             <button
                 onClick={() => onCategoryChange(null)}
                 className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${selectedCategory === null
-                        ? 'bg-blue-600 text-white'
+                        ? 'text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
+                style={selectedCategory === null ? { backgroundColor: 'var(--color-primary, #3B82F6)' } : undefined}
             >
                 Todos
             </button>
@@ -57,9 +58,10 @@ export function CategoryTabs({ selectedCategory, onCategoryChange }: CategoryTab
                     key={category.id}
                     onClick={() => onCategoryChange(category.id)}
                     className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${selectedCategory === category.id
-                            ? 'bg-blue-600 text-white'
+                            ? 'text-white'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
+                    style={selectedCategory === category.id ? { backgroundColor: 'var(--color-primary, #3B82F6)' } : undefined}
                 >
                     {category.name}
                 </button>

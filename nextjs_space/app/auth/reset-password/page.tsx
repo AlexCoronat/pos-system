@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -136,9 +136,9 @@ export default function ResetPasswordPage() {
 
             {/* Manual redirect button */}
             <Link href={ROUTES.AUTH.LOGIN}>
-              <Button className="w-full h-12 bg-blue-600 hover:bg-blue-700">
+              <BrandButton className="w-full h-12">
                 {t('success.goToLogin')}
-              </Button>
+              </BrandButton>
             </Link>
           </div>
         </div>
@@ -282,20 +282,15 @@ export default function ResetPasswordPage() {
             </div>
 
             {/* Reset Button */}
-            <Button
+            <BrandButton
               type="submit"
-              className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-              disabled={isLoading || newPassword !== confirmPassword}
+              className="w-full h-12"
+              disabled={newPassword !== confirmPassword}
+              isLoading={isLoading}
+              loadingText={t('resettingPassword')}
             >
-              {isLoading ? (
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                  <span>{t('resettingPassword')}</span>
-                </div>
-              ) : (
-                <span>{t('resetPassword')}</span>
-              )}
-            </Button>
+              {t('resetPassword')}
+            </BrandButton>
           </form>
 
           {/* Back to Login */}

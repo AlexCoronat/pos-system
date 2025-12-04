@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowLeft } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { BrandButton } from "@/components/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,10 +43,10 @@ export default function NewQuotePage() {
                 } else {
                     // Import location service to get first location
                     const { locationService } = await import("@/lib/services/location.service");
-                    const locationsResponse = await locationService.getLocations({ isActive: true }, 1, 1);
+                    const firstLocation = await locationService.getFirstLocation();
 
-                    if (locationsResponse.locations.length > 0) {
-                        setLocationId(locationsResponse.locations[0].id);
+                    if (firstLocation) {
+                        setLocationId(firstLocation.id);
                     } else {
                         toast({
                             variant: "destructive",
@@ -155,9 +155,9 @@ export default function NewQuotePage() {
     return (
         <div className="p-6 space-y-6">
             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                <BrandButton variant="ghost" size="sm" onClick={() => router.back()}>
                     <ArrowLeft className="h-4 w-4" />
-                </Button>
+                </BrandButton>
                 <h1 className="text-3xl font-bold">{t("newQuote")}</h1>
             </div>
 

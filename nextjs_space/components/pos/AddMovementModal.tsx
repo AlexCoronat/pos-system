@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { X, DollarSign, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 import { cashMovementService, type MovementType } from '@/lib/services/cash-movement.service'
 import { toast } from 'sonner'
+import { BrandButton } from '@/components/shared'
 
 interface AddMovementModalProps {
     isOpen: boolean
@@ -118,8 +119,8 @@ export function AddMovementModal({ isOpen, onClose, onSuccess, shiftId }: AddMov
                                         onClick={() => setMovementType(type.id)}
                                         disabled={isProcessing}
                                         className={`p-4 border-2 rounded-lg transition-all ${isSelected
-                                                ? `border-${type.color}-600 bg-${type.color}-50`
-                                                : 'border-gray-200 hover:border-gray-300'
+                                            ? `border-${type.color}-600 bg-${type.color}-50`
+                                            : 'border-gray-200 hover:border-gray-300'
                                             }`}
                                     >
                                         <Icon className={`w-8 h-8 mx-auto mb-2 ${isSelected ? `text-${type.color}-600` : 'text-gray-400'
@@ -188,23 +189,17 @@ export function AddMovementModal({ isOpen, onClose, onSuccess, shiftId }: AddMov
                         >
                             Cancelar
                         </button>
-                        <button
+                        <BrandButton
                             type="submit"
                             disabled={isProcessing}
-                            className={`flex-1 px-4 py-3 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${movementType === 'deposit'
-                                    ? 'bg-green-600 hover:bg-green-700'
-                                    : 'bg-red-600 hover:bg-red-700'
-                                }`}
+                            variant={movementType === 'deposit' ? 'secondary' : 'destructive'}
+                            className="flex-1 flex items-center justify-center gap-2"
+                            isLoading={isProcessing}
+                            loadingText="Registrando..."
                         >
-                            {isProcessing ? (
-                                'Registrando...'
-                            ) : (
-                                <>
-                                    <DollarSign className="w-5 h-5" />
-                                    Registrar {movementType === 'deposit' ? 'Depósito' : 'Retiro'}
-                                </>
-                            )}
-                        </button>
+                            <DollarSign className="w-5 h-5" />
+                            Registrar {movementType === 'deposit' ? 'Depósito' : 'Retiro'}
+                        </BrandButton>
                     </div>
                 </form>
             </div>

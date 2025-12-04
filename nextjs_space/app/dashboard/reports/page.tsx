@@ -9,9 +9,8 @@ import { TopProductsChart } from "@/components/reports/TopProductsChart"
 import { reportsService, DailySalesData, TopProductData } from "@/lib/services/reports.service"
 import { useAuth } from "@/lib/hooks/use-auth"
 import { Loader2, DollarSign, CreditCard, TrendingUp, Calendar, ShoppingCart } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
-import { StatsCard, PageHeader, LoadingState } from '@/components/shared'
+import { StatsCard, PageHeader, LoadingState, BrandButton } from '@/components/shared'
 
 export default function ReportsPage() {
     const t = useTranslations('reports')
@@ -82,11 +81,11 @@ export default function ReportsPage() {
                 title={t('title')}
                 actions={
                     <>
-                        <Button variant="outline" disabled>
+                        <BrandButton variant="outline" disabled>
                             <Calendar className="mr-2 h-4 w-4" />
                             {t('filters.last30Days')}
-                        </Button>
-                        <Button>{t('export.pdf')}</Button>
+                        </BrandButton>
+                        <BrandButton>{t('export.pdf')}</BrandButton>
                     </>
                 }
             />

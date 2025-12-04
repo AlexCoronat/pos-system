@@ -23,7 +23,7 @@ import {
   Archive,
   User
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -397,9 +397,9 @@ export default function TeamPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/settings">
-            <Button variant="ghost" size="icon">
+            <BrandButton variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
-            </Button>
+            </BrandButton>
           </Link>
           <div>
             <h1 className="text-3xl font-bold">{t('title')}</h1>
@@ -410,15 +410,15 @@ export default function TeamPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link href="/dashboard/settings/team/archived">
-            <Button variant="outline">
+            <BrandButton variant="outline">
               <Archive className="h-4 w-4 mr-2" />
               {t('viewArchived')}
-            </Button>
+            </BrandButton>
           </Link>
-          <Button onClick={handleOpenDialog}>
+          <BrandButton onClick={handleOpenDialog}>
             <UserPlus className="h-4 w-4 mr-2" />
             {t('addUser')}
-          </Button>
+          </BrandButton>
         </div>
       </div>
 
@@ -459,10 +459,10 @@ export default function TeamPage() {
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>{searchTerm ? 'No se encontraron resultados' : t('empty.title')}</p>
               {!searchTerm && (
-                <Button className="mt-4" onClick={handleOpenDialog}>
+                <BrandButton className="mt-4" onClick={handleOpenDialog}>
                   <UserPlus className="h-4 w-4 mr-2" />
                   {t('empty.addFirst')}
-                </Button>
+                </BrandButton>
               )}
             </div>
           ) : (
@@ -547,9 +547,9 @@ export default function TeamPage() {
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
+                          <BrandButton variant="ghost" size="sm">
                             <MoreHorizontal className="h-4 w-4" />
-                          </Button>
+                          </BrandButton>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
@@ -632,7 +632,7 @@ export default function TeamPage() {
             <div className="space-y-3">
               <Label>Tipo de Acceso</Label>
               <div className="flex gap-2">
-                <Button
+                <BrandButton
                   type="button"
                   variant={formData.useEmail ? 'default' : 'outline'}
                   className="flex-1"
@@ -640,8 +640,8 @@ export default function TeamPage() {
                 >
                   <Mail className="h-4 w-4 mr-2" />
                   Email
-                </Button>
-                <Button
+                </BrandButton>
+                <BrandButton
                   type="button"
                   variant={!formData.useEmail ? 'default' : 'outline'}
                   className="flex-1"
@@ -649,7 +649,7 @@ export default function TeamPage() {
                 >
                   <User className="h-4 w-4 mr-2" />
                   Usuario
-                </Button>
+                </BrandButton>
               </div>
             </div>
 
@@ -746,7 +746,7 @@ export default function TeamPage() {
                       </Label>
                     </div>
                     {formData.locationIds.includes(location.id) && (
-                      <Button
+                      <BrandButton
                         type="button"
                         variant={formData.primaryLocationId === location.id.toString() ? 'default' : 'outline'}
                         size="sm"
@@ -754,7 +754,7 @@ export default function TeamPage() {
                         onClick={() => setFormData({ ...formData, primaryLocationId: location.id.toString() })}
                       >
                         {formData.primaryLocationId === location.id.toString() ? t('addDialog.primary') : t('addDialog.makePrimary')}
-                      </Button>
+                      </BrandButton>
                     )}
                   </div>
                 ))}
@@ -762,10 +762,10 @@ export default function TeamPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              <BrandButton type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 {t('addDialog.cancel')}
-              </Button>
-              <Button type="submit" disabled={isSaving}>
+              </BrandButton>
+              <BrandButton type="submit" disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -777,7 +777,7 @@ export default function TeamPage() {
                     {t('addDialog.addUser')}
                   </>
                 )}
-              </Button>
+              </BrandButton>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -870,7 +870,7 @@ export default function TeamPage() {
                       </Label>
                     </div>
                     {editFormData.locationIds.includes(location.id) && (
-                      <Button
+                      <BrandButton
                         type="button"
                         variant={editFormData.primaryLocationId === location.id.toString() ? 'default' : 'outline'}
                         size="sm"
@@ -878,7 +878,7 @@ export default function TeamPage() {
                         onClick={() => setEditFormData({ ...editFormData, primaryLocationId: location.id.toString() })}
                       >
                         {editFormData.primaryLocationId === location.id.toString() ? t('addDialog.primary') : t('addDialog.makePrimary')}
-                      </Button>
+                      </BrandButton>
                     )}
                   </div>
                 ))}
@@ -886,10 +886,10 @@ export default function TeamPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+              <BrandButton type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
                 {t('editDialog.cancel')}
-              </Button>
-              <Button type="submit" disabled={isSaving}>
+              </BrandButton>
+              <BrandButton type="submit" disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -901,7 +901,7 @@ export default function TeamPage() {
                     {t('editDialog.saveChanges')}
                   </>
                 )}
-              </Button>
+              </BrandButton>
             </DialogFooter>
           </form>
         </DialogContent>

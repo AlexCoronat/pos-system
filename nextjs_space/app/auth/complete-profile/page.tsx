@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
@@ -512,7 +512,7 @@ export default function CompleteProfilePage() {
             {/* Navigation Buttons */}
             <div className="flex gap-3">
               {currentStep > 1 && (
-                <Button
+                <BrandButton
                   type="button"
                   variant="outline"
                   className="flex-1 h-12"
@@ -520,33 +520,27 @@ export default function CompleteProfilePage() {
                 >
                   <ArrowLeft className="h-5 w-5 mr-2" />
                   {t('buttons.back')}
-                </Button>
+                </BrandButton>
               )}
 
               {currentStep < 3 ? (
-                <Button
+                <BrandButton
                   type="button"
-                  className="flex-1 h-12 bg-blue-600 hover:bg-blue-700"
+                  className="flex-1 h-12"
                   onClick={handleNext}
                 >
                   {t('buttons.next')}
                   <ArrowRight className="h-5 w-5 ml-2" />
-                </Button>
+                </BrandButton>
               ) : (
-                <Button
+                <BrandButton
                   type="submit"
-                  className="flex-1 h-12 bg-green-600 hover:bg-green-700"
-                  disabled={isLoading}
+                  className="flex-1 h-12"
+                  isLoading={isLoading}
+                  loadingText={t('buttons.saving')}
                 >
-                  {isLoading ? (
-                    <div className="flex items-center space-x-2">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      <span>{t('buttons.saving')}</span>
-                    </div>
-                  ) : (
-                    <span>{t('buttons.complete')}</span>
-                  )}
-                </Button>
+                  {t('buttons.complete')}
+                </BrandButton>
               )}
             </div>
           </form>

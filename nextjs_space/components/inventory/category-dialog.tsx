@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, Loader2, FolderTree } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import {
   Dialog,
   DialogContent,
@@ -227,21 +227,24 @@ export function CategoryDialog({ open, onOpenChange, onCategoryCreated }: Catego
                 </div>
 
                 <div className="flex gap-2">
-                  <Button type="submit" disabled={isSaving} className="flex-1">
-                    {isSaving ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : isEditing ? (
+                  <BrandButton
+                    type="submit"
+                    className="flex-1"
+                    isLoading={isSaving}
+                    loadingText="Guardando..."
+                  >
+                    {isEditing ? (
                       <Pencil className="h-4 w-4 mr-2" />
                     ) : (
                       <Plus className="h-4 w-4 mr-2" />
                     )}
-                    {isSaving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
-                  </Button>
+                    {isEditing ? 'Actualizar' : 'Crear'}
+                  </BrandButton>
 
                   {isEditing && (
-                    <Button type="button" variant="outline" onClick={resetForm}>
+                    <BrandButton type="button" variant="outline" onClick={resetForm}>
                       Cancelar
-                    </Button>
+                    </BrandButton>
                   )}
                 </div>
               </form>
@@ -291,22 +294,22 @@ export function CategoryDialog({ open, onOpenChange, onCategoryCreated }: Catego
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
-                              <Button
+                              <BrandButton
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8"
                                 onClick={() => handleEdit(category)}
                               >
                                 <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
+                              </BrandButton>
+                              <BrandButton
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-red-600 hover:text-red-700"
                                 onClick={() => handleDeleteClick(category)}
                               >
                                 <Trash2 className="h-4 w-4" />
-                              </Button>
+                              </BrandButton>
                             </div>
                           </TableCell>
                         </TableRow>

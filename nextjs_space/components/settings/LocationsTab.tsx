@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { MapPin, Building2, Plus, Edit, Trash2, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -99,10 +99,10 @@ export function LocationsTab({
                             Sucursales, bodegas u otras ubicaciones de tu negocio
                         </CardDescription>
                     </div>
-                    <Button onClick={onAddLocation} size="sm">
+                    <BrandButton onClick={onAddLocation} size="sm">
                         <Plus className="h-4 w-4 mr-2" />
                         Agregar Ubicación
-                    </Button>
+                    </BrandButton>
                 </CardHeader>
                 <CardContent className="p-0">
                     {isLoading ? (
@@ -114,10 +114,10 @@ export function LocationsTab({
                             <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
                             <p className="font-medium">No hay ubicaciones adicionales</p>
                             <p className="text-sm mt-1">Agrega sucursales o bodegas para mejor gestión de inventario</p>
-                            <Button className="mt-4" onClick={onAddLocation} variant="outline" size="sm">
+                            <BrandButton className="mt-4" onClick={onAddLocation} variant="outline" size="sm">
                                 <Plus className="h-4 w-4 mr-2" />
                                 Agregar Primera Ubicación
-                            </Button>
+                            </BrandButton>
                         </div>
                     ) : (
                         <Table>
@@ -178,21 +178,21 @@ export function LocationsTab({
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <Button
+                                                <BrandButton
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => onEditLocation(location)}
                                                 >
                                                     <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <Button
+                                                </BrandButton>
+                                                <BrandButton
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => onDeleteLocation(location)}
                                                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                </BrandButton>
                                             </div>
                                         </TableCell>
                                     </TableRow>

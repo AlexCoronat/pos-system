@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -74,8 +74,8 @@ export function StockAdjustmentDialog({
         movementType === 'entry'
           ? `Se agregaron ${qty} unidades al inventario`
           : movementType === 'exit'
-          ? `Se retiraron ${qty} unidades del inventario`
-          : `Stock ajustado a ${qty} unidades`
+            ? `Se retiraron ${qty} unidades del inventario`
+            : `Stock ajustado a ${qty} unidades`
       )
 
       // Reset form
@@ -174,24 +174,29 @@ export function StockAdjustmentDialog({
           </div>
 
           <DialogFooter>
-            <Button
+            <BrandButton
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
               Cancelar
-            </Button>
-            <Button type="submit" disabled={isLoading || !inventoryItem}>
+            </BrandButton>
+            <button
+              type="submit"
+              disabled={!inventoryItem || isLoading}
+              className="inline-flex items-center justify-center rounded-lg font-medium px-4 py-2 text-white hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: 'var(--color-primary, #3B82F6)' }}
+            >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Procesando...
                 </>
               ) : (
                 'Guardar'
               )}
-            </Button>
+            </button>
           </DialogFooter>
         </form>
       </DialogContent>

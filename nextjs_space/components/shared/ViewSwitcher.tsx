@@ -9,7 +9,7 @@
 import { useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useViewStore, useCanSwitchView, useEffectiveView } from '@/lib/stores/view-store'
-import { Button } from '@/components/ui/button'
+import { BrandButton } from '@/components/shared'
 import { ArrowLeftRight } from 'lucide-react'
 
 interface ViewSwitcherProps {
@@ -69,13 +69,13 @@ export function ViewSwitcher({ className = '', variant = 'default' }: ViewSwitch
     }
 
     return (
-        <Button
+        <BrandButton
             onClick={handleSwitch}
             variant="outline"
             className={`gap-2 ${className}`}
         >
             <ArrowLeftRight className="w-4 h-4" />
             <span>Cambiar a {targetView}</span>
-        </Button>
+        </BrandButton>
     )
 }

@@ -27,11 +27,11 @@ const BrandButton = forwardRef<HTMLButtonElement, BrandButtonProps>(
         children,
         ...props
     }, ref) => {
-        const baseStyles = 'inline-flex items-center justify-center rounded-lg font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50'
+        const baseStyles = 'inline-flex items-center justify-center rounded-lg font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50'
 
         const variants = {
-            primary: 'bg-brand-primary text-white hover:opacity-90 shadow-sm',
-            secondary: 'bg-brand-secondary text-white hover:opacity-90 shadow-sm',
+            primary: 'text-white shadow-sm',
+            secondary: 'text-white shadow-sm',
             outline: 'border-2 border-brand-primary text-brand-primary hover:bg-brand-primary/10',
             ghost: 'text-brand-primary hover:bg-brand-primary/10',
             link: 'text-brand-primary underline-offset-4 hover:underline',
@@ -44,6 +44,17 @@ const BrandButton = forwardRef<HTMLButtonElement, BrandButtonProps>(
             lg: 'h-12 px-6 text-base gap-2'
         }
 
+        // Inline styles for brand colors to ensure visibility
+        const getInlineStyles = () => {
+            if (variant === 'primary') {
+                return { backgroundColor: 'var(--color-primary, #3B82F6)' }
+            }
+            if (variant === 'secondary') {
+                return { backgroundColor: 'var(--color-secondary, #10B981)' }
+            }
+            return {}
+        }
+
         return (
             <button
                 ref={ref}
@@ -53,6 +64,7 @@ const BrandButton = forwardRef<HTMLButtonElement, BrandButtonProps>(
                     sizes[size],
                     className
                 )}
+                style={getInlineStyles()}
                 disabled={disabled || isLoading}
                 {...props}
             >
