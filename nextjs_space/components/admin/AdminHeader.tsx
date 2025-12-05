@@ -1,13 +1,8 @@
-/**
- * Admin Header Component
- * Top header for admin dashboard with greeting and quick actions
- */
-
 'use client'
 
 import { useAuth } from '@/lib/hooks/use-auth'
-import { Bell } from 'lucide-react'
 import { ThemeToggle } from './ThemeToggle'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 export function AdminHeader() {
     const { user } = useAuth()
@@ -33,10 +28,7 @@ export function AdminHeader() {
 
             <div className="flex items-center gap-3">
                 {/* Notifications */}
-                <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg relative transition-colors">
-                    <Bell className="w-5 h-5" />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-                </button>
+                <NotificationBell />
 
                 {/* Theme Toggle */}
                 <ThemeToggle />

@@ -77,8 +77,7 @@ export default function SettingsPage() {
       descriptionKey: 'sections.notifications.description',
       href: '/dashboard/settings/notifications',
       icon: Bell,
-      color: 'text-yellow-600 bg-yellow-100',
-      disabled: true
+      color: 'text-yellow-600 bg-yellow-100'
     },
     {
       titleKey: 'sections.security.title',
