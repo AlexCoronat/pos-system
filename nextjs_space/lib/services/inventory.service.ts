@@ -17,6 +17,7 @@ export interface InventoryMovement {
 export interface InventoryAdjustment {
   productId: number
   locationId: number
+  variantId?: number | null  // Optional: specific variant or null for base product
   quantity: number
   movementType: 'entry' | 'exit' | 'adjustment'
   notes?: string
@@ -24,6 +25,7 @@ export interface InventoryAdjustment {
 
 export interface InventoryTransfer {
   productId: number
+  variantId?: number | null
   fromLocationId: number
   toLocationId: number
   quantity: number
@@ -137,6 +139,42 @@ class InventoryService {
   }
 
   /**
+   * Get inventory for a specific product variant at a location
+   */
+  async getInventoryByVariant(
+    productId: number,
+    variantId: number,
+    locationId: number
+  ): Promise<InventoryItem | null> {
+    try {
+      const { data, error } = await supabase
+        .from('inventory')
+        .select('*')
+        .eq('product_id', productId)
+        .eq('variant_id', variantId)
+        .eq('location_id', locationId)
+        .maybeSingle()
+
+      if (error) throw error
+      if (!data) return null
+
+      return {
+        id: data.id,
+        productId: data.product_id,
+        variantId: data.variant_id,
+        locationId: data.location_id,
+        quantity: data.quantity_available || data.quantity || 0,
+        minStockLevel: data.min_stock_level,
+        reorderPoint: data.reorder_point,
+        lastRestocked: data.last_restock_date ? new Date(data.last_restock_date) : undefined
+      }
+    } catch (error: any) {
+      console.error('Error getting variant inventory:', error)
+      throw new Error(error.message || 'Error al obtener inventario de variante')
+    }
+  }
+
+  /**
    * Adjust inventory (add, remove, or set specific quantity)
    */
   async adjustInventory(adjustment: InventoryAdjustment): Promise<InventoryItem> {
@@ -144,11 +182,21 @@ class InventoryService {
       // Get business context
       const { businessId } = await getBusinessContext()
 
-      // Get or create inventory record
-      let inventory = await this.getInventoryByProduct(
-        adjustment.productId,
-        adjustment.locationId
-      )
+      // Get or create inventory record - check for variant-specific or base product
+      let inventory: InventoryItem | null
+
+      if (adjustment.variantId) {
+        inventory = await this.getInventoryByVariant(
+          adjustment.productId,
+          adjustment.variantId,
+          adjustment.locationId
+        )
+      } else {
+        inventory = await this.getInventoryByProduct(
+          adjustment.productId,
+          adjustment.locationId
+        )
+      }
 
       const quantityBefore = inventory?.quantity || 0
       let newQuantity: number
@@ -187,6 +235,7 @@ class InventoryService {
           .insert({
             business_id: businessId,
             product_id: adjustment.productId,
+            variant_id: adjustment.variantId || null,
             location_id: adjustment.locationId,
             quantity_available: newQuantity,
             min_stock_level: 0,
@@ -213,7 +262,7 @@ class InventoryService {
       return {
         id: updatedInventory.id,
         productId: updatedInventory.product_id,
-        variantId: undefined,
+        variantId: updatedInventory.variant_id,
         locationId: updatedInventory.location_id,
         quantity: updatedInventory.quantity_available || updatedInventory.quantity || 0,
         minStockLevel: updatedInventory.min_stock_level,
@@ -251,6 +300,7 @@ class InventoryService {
       // Add to destination location
       await this.adjustInventory({
         productId: transfer.productId,
+        variantId: transfer.variantId,
         locationId: transfer.toLocationId,
         quantity: transfer.quantity,
         movementType: 'entry',

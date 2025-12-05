@@ -12,7 +12,8 @@ import {
   Shield,
   ChevronRight,
   Keyboard,
-  Wallet
+  Wallet,
+  Sliders
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { PageHeader } from '@/components/shared'
@@ -21,6 +22,13 @@ export default function SettingsPage() {
   const t = useTranslations('settings')
 
   const settingsSections = [
+    {
+      title: 'Preferencias',
+      description: 'Personaliza el tema, idioma y configuración personal',
+      href: '/dashboard/settings/preferences',
+      icon: Sliders,
+      color: 'text-pink-600 bg-pink-100'
+    },
     {
       titleKey: 'sections.team.title',
       descriptionKey: 'sections.team.description',
@@ -96,8 +104,8 @@ export default function SettingsPage() {
           <Card
             key={section.titleKey || section.title}
             className={`transition-all rounded-xl border shadow-sm hover:shadow-md ${section.disabled
-                ? 'opacity-50 cursor-not-allowed'
-                : 'cursor-pointer hover:border-blue-300 dark:hover:border-blue-700'
+              ? 'opacity-50 cursor-not-allowed'
+              : 'cursor-pointer hover:border-blue-300 dark:hover:border-blue-700'
               }`}
           >
             {section.disabled ? (

@@ -6,8 +6,8 @@
 'use client'
 
 import { useAuth } from '@/lib/hooks/use-auth'
-import { Bell, Settings } from 'lucide-react'
-import Link from 'next/link'
+import { Bell } from 'lucide-react'
+import { ThemeToggle } from './ThemeToggle'
 
 export function AdminHeader() {
     const { user } = useAuth()
@@ -38,12 +38,8 @@ export function AdminHeader() {
                     <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
                 </button>
 
-                {/* Settings */}
-                <Link href="/dashboard/settings">
-                    <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-                        <Settings className="w-5 h-5" />
-                    </button>
-                </Link>
+                {/* Theme Toggle */}
+                <ThemeToggle />
             </div>
         </div>
     )

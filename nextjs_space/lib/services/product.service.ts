@@ -7,7 +7,11 @@ import type {
   ProductSearchResult,
   CreateProductData,
   UpdateProductData,
-  ProductVariant
+  ProductVariant,
+  CreateVariantData,
+  UpdateVariantData,
+  VariantAttribute,
+  VariantCombination
 } from '@/lib/types/product'
 
 export interface ProductFilters {
@@ -260,10 +264,13 @@ class ProductService {
           .insert(
             data.variants.map(v => ({
               product_id: product.id,
-              variant_name: v.name,
+              variant_name: v.variantName,
               sku: v.sku,
-              cost_price: v.additionalPrice || 0,
-              selling_price: v.additionalPrice || 0,
+              barcode: v.barcode,
+              attributes: v.attributes,
+              cost_price: v.costPrice || 0,
+              selling_price: v.sellingPrice || 0,
+              image_url: v.imageUrl,
               is_active: v.isActive ?? true
             }))
           )
@@ -272,7 +279,18 @@ class ProductService {
         if (variantsError) {
           console.error('Error creating variants:', variantsError)
         } else {
-          variants = variantsData || []
+          variants = (variantsData || []).map(item => ({
+            id: item.id,
+            productId: item.product_id,
+            variantName: item.variant_name,
+            sku: item.sku,
+            barcode: item.barcode,
+            attributes: item.attributes,
+            costPrice: item.cost_price,
+            sellingPrice: item.selling_price,
+            imageUrl: item.image_url,
+            isActive: item.is_active
+          }))
         }
       }
 
@@ -369,15 +387,247 @@ class ProductService {
         .select('*')
         .eq('product_id', productId)
         .eq('is_active', true)
-        .order('name', { ascending: true })
+        .order('variant_name', { ascending: true })
 
       if (error) throw error
 
-      return data || []
+      return (data || []).map(item => ({
+        id: item.id,
+        productId: item.product_id,
+        variantName: item.variant_name,
+        sku: item.sku,
+        barcode: item.barcode,
+        attributes: item.attributes,
+        costPrice: item.cost_price,
+        sellingPrice: item.selling_price,
+        imageUrl: item.image_url,
+        isActive: item.is_active,
+        createdAt: item.created_at ? new Date(item.created_at) : undefined,
+        updatedAt: item.updated_at ? new Date(item.updated_at) : undefined
+      }))
     } catch (error: any) {
       console.error('Error getting product variants:', error)
       throw new Error(error.message || 'Error al obtener variantes')
     }
+  }
+
+  /**
+   * Create a new variant for a product
+   */
+  async createVariant(productId: number, data: CreateVariantData): Promise<ProductVariant> {
+    try {
+      // Validate SKU uniqueness
+      const skuExists = await this.checkVariantSkuExists(data.sku)
+      if (skuExists) {
+        throw new Error('El SKU ya existe. Por favor usa un SKU único.')
+      }
+
+      const { data: variant, error } = await supabase
+        .from('product_variants')
+        .insert({
+          product_id: productId,
+          variant_name: data.variantName,
+          sku: data.sku,
+          barcode: data.barcode,
+          attributes: data.attributes,
+          cost_price: data.costPrice,
+          selling_price: data.sellingPrice,
+          image_url: data.imageUrl,
+          is_active: data.isActive ?? true
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return {
+        id: variant.id,
+        productId: variant.product_id,
+        variantName: variant.variant_name,
+        sku: variant.sku,
+        barcode: variant.barcode,
+        attributes: variant.attributes,
+        costPrice: variant.cost_price,
+        sellingPrice: variant.selling_price,
+        imageUrl: variant.image_url,
+        isActive: variant.is_active,
+        createdAt: new Date(variant.created_at)
+      }
+    } catch (error: any) {
+      console.error('Error creating variant:', error)
+      throw new Error(error.message || 'Error al crear variante')
+    }
+  }
+
+  /**
+   * Update an existing variant
+   */
+  async updateVariant(variantId: number, data: UpdateVariantData): Promise<ProductVariant> {
+    try {
+      const updateData: any = {}
+
+      if (data.variantName !== undefined) updateData.variant_name = data.variantName
+      if (data.sku !== undefined) {
+        // Validate new SKU if changed
+        const skuExists = await this.checkVariantSkuExists(data.sku, variantId)
+        if (skuExists) {
+          throw new Error('El SKU ya existe. Por favor usa un SKU único.')
+        }
+        updateData.sku = data.sku
+      }
+      if (data.barcode !== undefined) updateData.barcode = data.barcode
+      if (data.attributes !== undefined) updateData.attributes = data.attributes
+      if (data.costPrice !== undefined) updateData.cost_price = data.costPrice
+      if (data.sellingPrice !== undefined) updateData.selling_price = data.sellingPrice
+      if (data.imageUrl !== undefined) updateData.image_url = data.imageUrl
+      if (data.isActive !== undefined) updateData.is_active = data.isActive
+
+      updateData.updated_at = new Date().toISOString()
+
+      const { data: variant, error } = await supabase
+        .from('product_variants')
+        .update(updateData)
+        .eq('id', variantId)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return {
+        id: variant.id,
+        productId: variant.product_id,
+        variantName: variant.variant_name,
+        sku: variant.sku,
+        barcode: variant.barcode,
+        attributes: variant.attributes,
+        costPrice: variant.cost_price,
+        sellingPrice: variant.selling_price,
+        imageUrl: variant.image_url,
+        isActive: variant.is_active,
+        updatedAt: new Date(variant.updated_at)
+      }
+    } catch (error: any) {
+      console.error('Error updating variant:', error)
+      throw new Error(error.message || 'Error al actualizar variante')
+    }
+  }
+
+  /**
+   * Delete a variant (soft delete)
+   */
+  async deleteVariant(variantId: number): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('product_variants')
+        .update({ is_active: false })
+        .eq('id', variantId)
+
+      if (error) throw error
+    } catch (error: any) {
+      console.error('Error deleting variant:', error)
+      throw new Error(error.message || 'Error al eliminar variante')
+    }
+  }
+
+  /**
+   * Check if a variant SKU already exists
+   * Checks both products and product_variants tables
+   */
+  async checkVariantSkuExists(sku: string, excludeVariantId?: number): Promise<boolean> {
+    try {
+      // Check in products table
+      const { data: productData } = await supabase
+        .from('products')
+        .select('id')
+        .eq('sku', sku)
+        .maybeSingle()
+
+      if (productData) return true
+
+      // Check in product_variants table
+      let query = supabase
+        .from('product_variants')
+        .select('id')
+        .eq('sku', sku)
+
+      if (excludeVariantId) {
+        query = query.neq('id', excludeVariantId)
+      }
+
+      const { data: variantData } = await query.maybeSingle()
+
+      return !!variantData
+    } catch (error: any) {
+      console.error('Error checking variant SKU:', error)
+      return false
+    }
+  }
+
+  /**
+   * Generate all possible combinations from variant attributes
+   * Example: Color: [Red, Blue], Size: [S, M] => 4 combinations
+   */
+  generateVariantCombinations(
+    attributes: VariantAttribute[],
+    basePrice: number = 0
+  ): VariantCombination[] {
+    if (!attributes || attributes.length === 0) {
+      return []
+    }
+
+    // Helper function to generate cartesian product
+    const cartesianProduct = (arrays: string[][]): string[][] => {
+      return arrays.reduce((acc, curr) => {
+        return acc.flatMap(a => curr.map(c => [...a, c]))
+      }, [[]] as string[][])
+    }
+
+    // Extract values arrays
+    const valuesArrays = attributes.map(attr => attr.values)
+
+    // Generate all combinations
+    const combinations = cartesianProduct(valuesArrays)
+
+    // Transform into VariantCombination format
+    return combinations.map((combo, index) => {
+      const attrs: Record<string, string> = {}
+      const nameParts: string[] = []
+
+      combo.forEach((value, idx) => {
+        const attrName = attributes[idx].name
+        attrs[attrName.toLowerCase()] = value
+        nameParts.push(value)
+      })
+
+      return {
+        name: nameParts.join(' - '),
+        attributes: attrs,
+        sku: '', // Will be generated later
+        costPrice: basePrice,
+        sellingPrice: basePrice
+      }
+    })
+  }
+
+  /**
+   * Generate a unique SKU for a variant
+   */
+  async generateVariantSKU(
+    productSku: string,
+    variantIndex: number
+  ): Promise<string> {
+    // Format: PROD-SKU-V01, PROD-SKU-V02, etc.
+    const variantSuffix = `V${String(variantIndex).padStart(2, '0')}`
+    let sku = `${productSku}-${variantSuffix}`
+
+    // Ensure uniqueness
+    let counter = 0
+    while (await this.checkVariantSkuExists(sku)) {
+      counter++
+      sku = `${productSku}-${variantSuffix}-${counter}`
+    }
+
+    return sku
   }
 
   /**

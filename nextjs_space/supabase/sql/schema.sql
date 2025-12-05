@@ -1547,6 +1547,7 @@ CREATE TABLE IF NOT EXISTS "public"."inventory" (
     "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     "updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     "business_id" integer,
+    "variant_id" integer,
     CONSTRAINT "positive_quantities" CHECK ((("quantity_available" >= (0)::numeric) AND ("quantity_reserved" >= (0)::numeric) AND ("min_stock_level" >= (0)::numeric)))
 );
 
@@ -1571,6 +1572,10 @@ COMMENT ON COLUMN "public"."inventory"."min_stock_level" IS 'Stock mínimo antes
 
 
 COMMENT ON COLUMN "public"."inventory"."reorder_point" IS 'Punto de reorden automático';
+
+
+
+COMMENT ON COLUMN "public"."inventory"."variant_id" IS 'Optional FK to product_variants. NULL for simple products, populated for variant-based inventory';
 
 
 
@@ -2264,6 +2269,10 @@ COMMENT ON TABLE "public"."sale_items" IS 'Detalles de productos vendidos';
 
 
 COMMENT ON COLUMN "public"."sale_items"."cost_price" IS 'Precio de costo al momento de la venta para análisis de margen';
+
+
+
+COMMENT ON COLUMN "public"."sale_items"."variant_id" IS 'Optional FK to product_variants. NULL for simple products, populated when a variant is sold';
 
 
 
@@ -3720,6 +3729,11 @@ ALTER TABLE ONLY "public"."inventory"
 
 
 
+ALTER TABLE ONLY "public"."inventory"
+    ADD CONSTRAINT "inventory_product_location_variant_unique" UNIQUE ("product_id", "location_id", "variant_id");
+
+
+
 ALTER TABLE ONLY "public"."locations"
     ADD CONSTRAINT "locations_code_key" UNIQUE ("code");
 
@@ -4100,6 +4114,10 @@ CREATE INDEX "idx_inventory_movements_business" ON "public"."inventory_movements
 
 
 
+CREATE INDEX "idx_inventory_variant_id" ON "public"."inventory" USING "btree" ("variant_id");
+
+
+
 CREATE INDEX "idx_locations_business" ON "public"."locations" USING "btree" ("business_id");
 
 
@@ -4237,6 +4255,10 @@ CREATE INDEX "idx_quotes_location" ON "public"."quotes" USING "btree" ("location
 
 
 CREATE INDEX "idx_quotes_status" ON "public"."quotes" USING "btree" ("status");
+
+
+
+CREATE INDEX "idx_sale_items_variant_id" ON "public"."sale_items" USING "btree" ("variant_id");
 
 
 
@@ -4609,6 +4631,11 @@ ALTER TABLE ONLY "public"."inventory_movements"
 
 ALTER TABLE ONLY "public"."inventory"
     ADD CONSTRAINT "inventory_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."inventory"
+    ADD CONSTRAINT "inventory_variant_id_fkey" FOREIGN KEY ("variant_id") REFERENCES "public"."product_variants"("id") ON DELETE CASCADE;
 
 
 

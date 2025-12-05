@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Loader2, Package, History } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, Package, History, Grid3x3, Plus } from 'lucide-react'
 import { BrandButton } from '@/components/shared'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -29,9 +30,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { productService } from '@/lib/services/product.service'
 import { inventoryService, InventoryMovement } from '@/lib/services/inventory.service'
+import { VariantsList, EditVariantDialog } from '@/components/inventory/variants'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import type { ProductWithPrice, UpdateProductData, InventoryItem } from '@/lib/types/product'
+import type { ProductWithPrice, UpdateProductData, InventoryItem, ProductVariant } from '@/lib/types/product'
 
 interface Category {
   id: number
@@ -49,6 +51,9 @@ export default function ProductDetailPage() {
   const [inventory, setInventory] = useState<InventoryItem | null>(null)
   const [movements, setMovements] = useState<InventoryMovement[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [variants, setVariants] = useState<ProductVariant[]>([])
+  const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -118,6 +123,10 @@ export default function ProductDetailPage() {
             setMovements(movementsData)
           }
         }
+
+        // Load variants
+        const variantsData = await productService.getProductVariants(productId)
+        setVariants(variantsData)
       } catch (error: any) {
         console.error('Error loading product:', error)
         toast.error('Error al cargar el producto')
@@ -261,6 +270,48 @@ export default function ProductDetailPage() {
     return colors[type] || 'bg-gray-100 text-gray-800'
   }
 
+  // Variant management functions
+  const loadVariants = async () => {
+    try {
+      const variantsData = await productService.getProductVariants(productId)
+      setVariants(variantsData)
+    } catch (error) {
+      console.error('Error loading variants:', error)
+      toast.error('Error al cargar variantes')
+    }
+  }
+
+  const handleEditVariant = (variant: ProductVariant) => {
+    setEditingVariant(variant)
+    setEditDialogOpen(true)
+  }
+
+  const handleDeleteVariant = async (variantId: number) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar esta variante?')) {
+      return
+    }
+
+    try {
+      await productService.deleteVariant(variantId)
+      toast.success('Variante eliminada exitosamente')
+      await loadVariants()
+    } catch (error: any) {
+      console.error('Error deleting variant:', error)
+      toast.error(error.message || 'Error al eliminar variante')
+    }
+  }
+
+  const handleToggleVariantActive = async (variantId: number, isActive: boolean) => {
+    try {
+      await productService.updateVariant(variantId, { isActive })
+      toast.success(isActive ? 'Variante activada' : 'Variante desactivada')
+      await loadVariants()
+    } catch (error: any) {
+      console.error('Error updating variant:', error)
+      toast.error(error.message || 'Error al actualizar variante')
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
@@ -307,6 +358,12 @@ export default function ProductDetailPage() {
             <Package className="h-4 w-4" />
             Detalles
           </TabsTrigger>
+          {variants.length > 0 && (
+            <TabsTrigger value="variants" className="flex items-center gap-2">
+              <Grid3x3 className="h-4 w-4" />
+              Variantes ({variants.length})
+            </TabsTrigger>
+          )}
           <TabsTrigger value="movements" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             Movimientos
@@ -647,7 +704,47 @@ export default function ProductDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Variants Tab */}
+        <TabsContent value="variants">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Variantes del Producto</CardTitle>
+                  <CardDescription>
+                    Gestiona las diferentes variantes de este producto
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={() => router.push(`/dashboard/inventory/products/new?cloneFrom=${productId}`)}
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Agregar Variante
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <VariantsList
+                variants={variants}
+                onEdit={handleEditVariant}
+                onDelete={handleDeleteVariant}
+                onToggleActive={handleToggleVariantActive}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* Edit Variant Dialog */}
+      <EditVariantDialog
+        open={editDialogOpen}
+        variant={editingVariant}
+        onOpenChange={setEditDialogOpen}
+        onSuccess={loadVariants}
+      />
     </div>
   )
 }

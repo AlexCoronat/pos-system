@@ -26,9 +26,10 @@ import {
 import { productService } from '@/lib/services/product.service'
 import { inventoryService } from '@/lib/services/inventory.service'
 import { CategoryDialog } from '@/components/inventory/category-dialog'
+import { ProductVariantsSection } from '@/components/inventory/variants'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import type { CreateProductData } from '@/lib/types/product'
+import type { CreateProductData, CreateVariantData } from '@/lib/types/product'
 
 interface Category {
   id: number
@@ -57,8 +58,12 @@ export default function NewProductPage() {
     isActive: true,
     initialStock: '0',
     minStockLevel: '0',
-    reorderPoint: '5'
+    reorderPoint: '5',
+    hasVariants: false
   })
+
+  // Variant state
+  const [variants, setVariants] = useState<CreateVariantData[]>([])
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -211,7 +216,9 @@ export default function NewProductPage() {
         costPrice: parseFloat(formData.costPrice),
         salePrice: parseFloat(formData.salePrice),
         isActive: formData.isActive,
-        currency: 'MXN'
+        currency: 'MXN',
+        hasVariants: formData.hasVariants,
+        variants: formData.hasVariants ? variants : undefined
       }
 
       const product = await productService.createProduct(productData)
@@ -259,7 +266,7 @@ export default function NewProductPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/dashboard/inventory">
-          <BrandButton variant="ghost" size="icon">
+          <BrandButton variant="ghost" size="sm">
             <ArrowLeft className="h-5 w-5" />
           </BrandButton>
         </Link>
@@ -331,7 +338,7 @@ export default function NewProductPage() {
                         <BrandButton
                           type="button"
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={() => setCategoryDialogOpen(true)}
                         >
                           <Plus className="h-4 w-4" />
@@ -370,7 +377,7 @@ export default function NewProductPage() {
                         <BrandButton
                           type="button"
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={handleRegenerateSKU}
                           disabled={isGeneratingSKU || !formData.categoryId}
                         >
@@ -417,7 +424,7 @@ export default function NewProductPage() {
                         <BrandButton
                           type="button"
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={handleRegenerateBarcode}
                           disabled={isGeneratingBarcode}
                         >
@@ -644,6 +651,16 @@ export default function NewProductPage() {
             </Card>
           </div>
         </div>
+
+        {/* Product Variants Section */}
+        <ProductVariantsSection
+          enabled={formData.hasVariants}
+          productSku={formData.sku}
+          productPrice={parseFloat(formData.salePrice) || 0}
+          variants={variants}
+          onToggle={(enabled) => handleChange('hasVariants', enabled)}
+          onChange={setVariants}
+        />
 
         {/* Actions */}
         <div className="flex justify-end gap-4">

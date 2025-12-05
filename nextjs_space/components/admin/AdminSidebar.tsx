@@ -77,6 +77,13 @@ const navigationItems: NavItem[] = [
 
     // Settings section
     {
+        name: 'Configuración',
+        href: '/dashboard/settings',
+        icon: Settings,
+        section: 'settings',
+        roles: ['Admin', 'Manager']
+    },
+    {
         name: 'Empresa',
         href: '/dashboard/settings/company',
         icon: Building2,
@@ -89,13 +96,6 @@ const navigationItems: NavItem[] = [
         icon: UsersRound,
         section: 'settings',
         roles: ['Admin', 'Manager']
-    },
-    {
-        name: 'Roles',
-        href: '/dashboard/settings/roles',
-        icon: Shield,
-        section: 'settings',
-        roles: ['Admin']
     },
 ]
 
@@ -164,7 +164,11 @@ export function AdminSidebar() {
                 {/* Main items */}
                 <div className="space-y-1">
                     {mainNav.map((item) => {
-                        const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                        // Dashboard should only be active on exact match
+                        // Other routes can be active if they match or are a parent route
+                        const isActive = item.href === '/dashboard'
+                            ? pathname === '/dashboard'
+                            : pathname === item.href || pathname.startsWith(item.href + '/')
                         return (
                             <Link
                                 key={item.name}
@@ -196,7 +200,11 @@ export function AdminSidebar() {
                         </div>
                         <div className="space-y-1">
                             {settingsNav.map((item) => {
-                                const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                                // Settings hub should only be active on exact match
+                                // Other settings routes can be active if they match or are a parent route
+                                const isActive = item.href === '/dashboard/settings'
+                                    ? pathname === '/dashboard/settings'
+                                    : pathname === item.href || pathname.startsWith(item.href + '/')
                                 return (
                                     <Link
                                         key={item.name}

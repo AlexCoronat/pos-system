@@ -33,16 +33,24 @@ export interface ProductPrice {
   isActive: boolean
 }
 
+/**
+ * Product Variant - represents a specific variation of a product
+ * (e.g., "Red-Large", "Chocolate-500g", "Blue Pen")
+ */
 export interface ProductVariant {
-  id: number
+  id?: number
   productId: number
-  variantName: string
-  sku?: string
-  barcode?: string
+  variantName: string        // Display name: "Rojo - Grande"
+  sku: string                 // Unique SKU for this variant
+  barcode?: string            // Optional barcode
+  attributes?: Record<string, string>  // Flexible attributes {color: "Rojo", size: "Grande"}
   costPrice?: number
   sellingPrice?: number
+  imageUrl?: string           // Variant-specific image
   isActive: boolean
-  attributes?: Record<string, any>
+  stock?: number              // Available stock (calculated from inventory)
+  createdAt?: Date
+  updatedAt?: Date
 }
 
 export interface ProductWithPrice extends Product {
@@ -71,6 +79,29 @@ export interface ProductSearchResult {
   availableStock: number
 }
 
+/**
+ * Variant Attribute - represents a characteristic that varies
+ * (e.g., Color: [Red, Blue, Green])
+ */
+export interface VariantAttribute {
+  name: string                // "Color", "Talla", "Sabor", etc.
+  values: string[]            // ["Rojo", "Azul", "Verde"]
+}
+
+/**
+ * Variant Combination - auto-generated combination of attributes
+ */
+export interface VariantCombination {
+  name: string                     // "Rojo - Grande"
+  attributes: Record<string, string>  // {color: "Rojo", size: "Grande"}
+  sku?: string
+  costPrice?: number
+  sellingPrice?: number
+}
+
+/**
+ * Create Product Data - includes optional variants
+ */
 export interface CreateProductData {
   sku: string
   name: string
@@ -85,14 +116,37 @@ export interface CreateProductData {
   taxRate?: number
   isTaxable?: boolean
   currency?: string
-  variants?: {
-    name: string
-    sku?: string
-    barcode?: string
-    additionalPrice?: number
-    isActive?: boolean
-    attributes?: Record<string, any>
-  }[]
+  hasVariants?: boolean
+  variants?: CreateVariantData[]
+}
+
+/**
+ * Create Variant Data - for creating a single variant
+ */
+export interface CreateVariantData {
+  productId?: number          // Optional during product creation
+  variantName: string
+  sku: string
+  barcode?: string
+  attributes?: Record<string, string>
+  costPrice?: number
+  sellingPrice?: number
+  imageUrl?: string
+  isActive?: boolean
+}
+
+/**
+ * Update Variant Data - for updating a variant
+ */
+export interface UpdateVariantData {
+  variantName?: string
+  sku?: string
+  barcode?: string
+  attributes?: Record<string, string>
+  costPrice?: number
+  sellingPrice?: number
+  imageUrl?: string
+  isActive?: boolean
 }
 
 export interface UpdateProductData {
@@ -109,4 +163,5 @@ export interface UpdateProductData {
   taxRate?: number
   isTaxable?: boolean
   currency?: string
+  hasVariants?: boolean
 }

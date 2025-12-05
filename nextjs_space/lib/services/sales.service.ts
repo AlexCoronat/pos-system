@@ -405,13 +405,21 @@ class SalesService {
     const { businessId } = await getBusinessContext()
 
     for (const item of items) {
-      // Get current inventory
-      const { data: inventory, error: fetchError } = await this.supabase
+      // Build query to match product + optional variant
+      let query = this.supabase
         .from('inventory')
         .select('id, quantity_available')
         .eq('product_id', item.productId)
         .eq('location_id', locationId)
-        .maybeSingle()
+
+      // Match variant_id or null for base products
+      if (item.variantId) {
+        query = query.eq('variant_id', item.variantId)
+      } else {
+        query = query.is('variant_id', null)
+      }
+
+      const { data: inventory, error: fetchError } = await query.maybeSingle()
 
       if (fetchError) {
         logger.error('Error fetching inventory', { error: fetchError, item })
@@ -428,6 +436,7 @@ class SalesService {
           .insert({
             business_id: businessId,
             product_id: item.productId,
+            variant_id: item.variantId || null,
             location_id: locationId,
             quantity_available: 0,
             min_stock_level: 0,
@@ -483,13 +492,21 @@ class SalesService {
     const { businessId } = await getBusinessContext()
 
     for (const item of items) {
-      // Get current inventory
-      const { data: inventory } = await this.supabase
+      // Build query to match product + optional variant
+      let query = this.supabase
         .from('inventory')
         .select('id, quantity_available')
         .eq('product_id', item.productId)
         .eq('location_id', locationId)
-        .maybeSingle()
+
+      // Match variant_id or null
+      if (item.variantId) {
+        query = query.eq('variant_id', item.variantId)
+      } else {
+        query = query.is('variant_id', null)
+      }
+
+      const { data: inventory } = await query.maybeSingle()
 
       if (inventory) {
         const currentQty = inventory.quantity_available || 0
