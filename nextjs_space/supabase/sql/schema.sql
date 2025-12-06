@@ -335,6 +335,29 @@ $$;
 ALTER FUNCTION "public"."cleanup_orphan_auth_users"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."delete_expired_notifications"() RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM public.notifications
+    WHERE expires_at IS NOT NULL 
+    AND expires_at < CURRENT_TIMESTAMP;
+    
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."delete_expired_notifications"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."delete_expired_notifications"() IS 'Deletes notifications that have passed their expiration date';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."ensure_single_main_location"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -873,6 +896,19 @@ ALTER FUNCTION "public"."update_inventory_on_sale"() OWNER TO "postgres";
 
 COMMENT ON FUNCTION "public"."update_inventory_on_sale"() IS 'Actualiza inventario automáticamente al registrar una venta';
 
+
+
+CREATE OR REPLACE FUNCTION "public"."update_notification_preferences_updated_at"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_notification_preferences_updated_at"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_purchase_order_totals"() RETURNS "trigger"
@@ -2300,6 +2336,58 @@ COMMENT ON MATERIALIZED VIEW "public"."mv_top_selling_products" IS 'Top selling 
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."notification_preferences" (
+    "id" integer NOT NULL,
+    "business_id" integer NOT NULL,
+    "desktop_notifications" boolean DEFAULT true NOT NULL,
+    "sound_enabled" boolean DEFAULT true NOT NULL,
+    "low_stock_alerts" boolean DEFAULT true NOT NULL,
+    "low_stock_threshold" integer DEFAULT 10 NOT NULL,
+    "sales_notifications" boolean DEFAULT true NOT NULL,
+    "sales_amount_threshold" numeric(12,2) DEFAULT 1000.00,
+    "daily_email_summary" boolean DEFAULT false NOT NULL,
+    "email_recipients" "text"[] DEFAULT ARRAY[]::"text"[],
+    "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT "notification_preferences_low_stock_threshold_check" CHECK (("low_stock_threshold" > 0))
+);
+
+
+ALTER TABLE "public"."notification_preferences" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."notification_preferences" IS 'Business-level notification configuration (applies to all locations)';
+
+
+
+COMMENT ON COLUMN "public"."notification_preferences"."low_stock_threshold" IS 'Stock level that triggers low stock alerts';
+
+
+
+COMMENT ON COLUMN "public"."notification_preferences"."sales_amount_threshold" IS 'Sales amount that triggers large sale notifications';
+
+
+
+COMMENT ON COLUMN "public"."notification_preferences"."email_recipients" IS 'Email addresses for daily summary';
+
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."notification_preferences_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."notification_preferences_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."notification_preferences_id_seq" OWNED BY "public"."notification_preferences"."id";
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."notification_settings" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "business_id" integer NOT NULL,
@@ -2344,14 +2432,44 @@ CREATE TABLE IF NOT EXISTS "public"."notifications" (
     "related_entity_id" integer,
     "metadata" "jsonb" DEFAULT '{}'::"jsonb",
     "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    "expires_at" timestamp with time zone
+    "expires_at" timestamp with time zone,
+    "business_id" integer NOT NULL,
+    "location_id" integer,
+    "type" character varying(50) NOT NULL,
+    "data" "jsonb" DEFAULT '{}'::"jsonb",
+    "read" boolean DEFAULT false NOT NULL,
+    CONSTRAINT "notifications_type_check" CHECK ((("type")::"text" = ANY ((ARRAY['stock_alert'::character varying, 'sales'::character varying, 'system'::character varying, 'info'::character varying])::"text"[])))
 );
 
 
 ALTER TABLE "public"."notifications" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."notifications" IS 'Notificaciones para usuarios del sistema';
+COMMENT ON TABLE "public"."notifications" IS 'System notifications for users with multi-store support';
+
+
+
+COMMENT ON COLUMN "public"."notifications"."user_id" IS 'Target user (NULL for all users in business/location)';
+
+
+
+COMMENT ON COLUMN "public"."notifications"."expires_at" IS 'When notification should be auto-deleted';
+
+
+
+COMMENT ON COLUMN "public"."notifications"."business_id" IS 'Business that owns this notification';
+
+
+
+COMMENT ON COLUMN "public"."notifications"."location_id" IS 'Specific location (NULL for business-wide)';
+
+
+
+COMMENT ON COLUMN "public"."notifications"."type" IS 'Notification type: stock_alert, sales, system, info';
+
+
+
+COMMENT ON COLUMN "public"."notifications"."data" IS 'Additional metadata in JSON format';
 
 
 
@@ -3509,6 +3627,10 @@ ALTER TABLE ONLY "public"."locations" ALTER COLUMN "id" SET DEFAULT "nextval"('"
 
 
 
+ALTER TABLE ONLY "public"."notification_preferences" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."notification_preferences_id_seq"'::"regclass");
+
+
+
 ALTER TABLE ONLY "public"."notifications" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."notifications_id_seq"'::"regclass");
 
 
@@ -3741,6 +3863,16 @@ ALTER TABLE ONLY "public"."locations"
 
 ALTER TABLE ONLY "public"."locations"
     ADD CONSTRAINT "locations_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."notification_preferences"
+    ADD CONSTRAINT "notification_preferences_business_id_key" UNIQUE ("business_id");
+
+
+
+ALTER TABLE ONLY "public"."notification_preferences"
+    ADD CONSTRAINT "notification_preferences_pkey" PRIMARY KEY ("id");
 
 
 
@@ -4186,11 +4318,31 @@ CREATE INDEX "idx_notification_settings_user" ON "public"."notification_settings
 
 
 
+CREATE INDEX "idx_notifications_business_user" ON "public"."notifications" USING "btree" ("business_id", "user_id", "read");
+
+
+
 CREATE INDEX "idx_notifications_created" ON "public"."notifications" USING "btree" ("created_at");
 
 
 
+CREATE INDEX "idx_notifications_created_at" ON "public"."notifications" USING "btree" ("created_at" DESC);
+
+
+
+CREATE INDEX "idx_notifications_location" ON "public"."notifications" USING "btree" ("location_id") WHERE ("location_id" IS NOT NULL);
+
+
+
 CREATE INDEX "idx_notifications_read" ON "public"."notifications" USING "btree" ("is_read");
+
+
+
+CREATE INDEX "idx_notifications_type" ON "public"."notifications" USING "btree" ("type");
+
+
+
+CREATE INDEX "idx_notifications_unread" ON "public"."notifications" USING "btree" ("business_id", "read") WHERE ("read" = false);
 
 
 
@@ -4482,6 +4634,10 @@ CREATE OR REPLACE TRIGGER "trigger_increment_product_sale_frequency" AFTER INSER
 
 
 
+CREATE OR REPLACE TRIGGER "trigger_update_notification_preferences_updated_at" BEFORE UPDATE ON "public"."notification_preferences" FOR EACH ROW EXECUTE FUNCTION "public"."update_notification_preferences_updated_at"();
+
+
+
 CREATE OR REPLACE TRIGGER "update_cash_register_shifts_updated_at" BEFORE UPDATE ON "public"."cash_register_shifts" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
 
@@ -4644,6 +4800,11 @@ ALTER TABLE ONLY "public"."locations"
 
 
 
+ALTER TABLE ONLY "public"."notification_preferences"
+    ADD CONSTRAINT "notification_preferences_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."notification_settings"
     ADD CONSTRAINT "notification_settings_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
 
@@ -4651,6 +4812,16 @@ ALTER TABLE ONLY "public"."notification_settings"
 
 ALTER TABLE ONLY "public"."notification_settings"
     ADD CONSTRAINT "notification_settings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."user_details"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."notifications"
+    ADD CONSTRAINT "notifications_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."notifications"
+    ADD CONSTRAINT "notifications_location_id_fkey" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE CASCADE;
 
 
 
@@ -5033,11 +5204,30 @@ ALTER TABLE ONLY "public"."user_details"
 
 
 
+CREATE POLICY "Admins can create notifications" ON "public"."notifications" FOR INSERT WITH CHECK (("business_id" = ( SELECT "user_details"."business_id"
+   FROM "public"."user_details"
+  WHERE ("user_details"."id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Admins can manage business preferences" ON "public"."notification_preferences" USING ((("business_id" = ( SELECT "user_details"."business_id"
+   FROM "public"."user_details"
+  WHERE ("user_details"."id" = "auth"."uid"()))) AND (EXISTS ( SELECT 1
+   FROM ("public"."user_details" "ud"
+     JOIN "public"."roles" "r" ON (("ud"."role_id" = "r"."id")))
+  WHERE (("ud"."id" = "auth"."uid"()) AND (("r"."name")::"text" = ANY ((ARRAY['admin'::character varying, 'owner'::character varying])::"text"[])))))));
+
+
+
 CREATE POLICY "Admins can manage cash registers" ON "public"."cash_registers" USING ((("business_id" = "public"."get_user_business_id"()) AND "public"."is_admin"()));
 
 
 
 CREATE POLICY "Enable read access for authenticated users on locations" ON "public"."locations" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "System can delete old notifications" ON "public"."notifications" FOR DELETE USING ((("expires_at" IS NOT NULL) AND ("expires_at" < CURRENT_TIMESTAMP)));
 
 
 
@@ -5106,6 +5296,14 @@ CREATE POLICY "Users can update own preferences" ON "public"."user_preferences" 
 
 
 
+CREATE POLICY "Users can update their own notification read status" ON "public"."notifications" FOR UPDATE USING ((("business_id" = ( SELECT "user_details"."business_id"
+   FROM "public"."user_details"
+  WHERE ("user_details"."id" = "auth"."uid"()))) AND (("user_id" IS NULL) OR ("user_id" = "auth"."uid"())))) WITH CHECK (("business_id" = ( SELECT "user_details"."business_id"
+   FROM "public"."user_details"
+  WHERE ("user_details"."id" = "auth"."uid"()))));
+
+
+
 CREATE POLICY "Users can update their own shifts" ON "public"."cash_register_shifts" FOR UPDATE USING ((("user_id" = "auth"."uid"()) OR "public"."is_admin"()));
 
 
@@ -5126,6 +5324,14 @@ CREATE POLICY "Users can view movements in their business" ON "public"."cash_reg
    FROM ("public"."cash_register_shifts" "crs"
      JOIN "public"."cash_registers" "cr" ON (("cr"."id" = "crs"."cash_register_id")))
   WHERE (("crs"."id" = "cash_register_movements"."shift_id") AND ("cr"."business_id" = "public"."get_user_business_id"())))));
+
+
+
+CREATE POLICY "Users can view notifications from their business" ON "public"."notifications" FOR SELECT USING ((("business_id" = ( SELECT "user_details"."business_id"
+   FROM "public"."user_details"
+  WHERE ("user_details"."id" = "auth"."uid"()))) AND (("user_id" IS NULL) OR ("user_id" = "auth"."uid"()) OR ("location_id" IN ( SELECT "user_locations"."location_id"
+   FROM "public"."user_locations"
+  WHERE ("user_locations"."user_id" = "auth"."uid"()))))));
 
 
 
@@ -5152,6 +5358,12 @@ CREATE POLICY "Users can view shifts in their business" ON "public"."cash_regist
 CREATE POLICY "Users can view system roles and own business roles" ON "public"."roles" FOR SELECT USING ((("business_id" IS NULL) OR ("business_id" = ( SELECT "user_details"."business_id"
    FROM "public"."user_details"
   WHERE ("user_details"."id" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "Users can view their business preferences" ON "public"."notification_preferences" FOR SELECT USING (("business_id" = ( SELECT "user_details"."business_id"
+   FROM "public"."user_details"
+  WHERE ("user_details"."id" = "auth"."uid"()))));
 
 
 
@@ -5288,7 +5500,13 @@ CREATE POLICY "locations_update" ON "public"."locations" FOR UPDATE USING (("bus
 
 
 
+ALTER TABLE "public"."notification_preferences" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."notification_settings" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."offline_sync_queue" ENABLE ROW LEVEL SECURITY;
@@ -5462,6 +5680,12 @@ GRANT ALL ON FUNCTION "public"."cleanup_orphan_auth_users"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."delete_expired_notifications"() TO "anon";
+GRANT ALL ON FUNCTION "public"."delete_expired_notifications"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."delete_expired_notifications"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."ensure_single_main_location"() TO "anon";
 GRANT ALL ON FUNCTION "public"."ensure_single_main_location"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."ensure_single_main_location"() TO "service_role";
@@ -5555,6 +5779,12 @@ GRANT ALL ON FUNCTION "public"."sync_user_email"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."update_inventory_on_sale"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_inventory_on_sale"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_inventory_on_sale"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_notification_preferences_updated_at"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_notification_preferences_updated_at"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_notification_preferences_updated_at"() TO "service_role";
 
 
 
@@ -5843,6 +6073,18 @@ GRANT ALL ON TABLE "public"."sale_items" TO "service_role";
 GRANT ALL ON TABLE "public"."mv_top_selling_products" TO "anon";
 GRANT ALL ON TABLE "public"."mv_top_selling_products" TO "authenticated";
 GRANT ALL ON TABLE "public"."mv_top_selling_products" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."notification_preferences" TO "anon";
+GRANT ALL ON TABLE "public"."notification_preferences" TO "authenticated";
+GRANT ALL ON TABLE "public"."notification_preferences" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."notification_preferences_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."notification_preferences_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."notification_preferences_id_seq" TO "service_role";
 
 
 

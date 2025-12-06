@@ -6,7 +6,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { Clock, TrendingUp, Wallet } from 'lucide-react'
+import { Clock, TrendingUp, Wallet, Calculator } from 'lucide-react'
 import { useShiftStore } from '@/lib/stores/shift-store'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -16,9 +16,10 @@ interface ShiftStatusProps {
     onOpenShift: () => void
     onCloseShift: () => void
     onAddMovement: () => void
+    onCashReconciliation?: () => void
 }
 
-export function ShiftStatus({ onOpenShift, onCloseShift, onAddMovement }: ShiftStatusProps) {
+export function ShiftStatus({ onOpenShift, onCloseShift, onAddMovement, onCashReconciliation }: ShiftStatusProps) {
     const { currentShift, loadCurrentShift, isLoading } = useShiftStore()
 
     useEffect(() => {
@@ -77,6 +78,19 @@ export function ShiftStatus({ onOpenShift, onCloseShift, onAddMovement }: ShiftS
                     </div>
 
                     <div className="flex items-center gap-2">
+                        {onCashReconciliation && (
+                            <BrandButton
+                                onClick={onCashReconciliation}
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-1"
+                                title="Arqueo de caja"
+                            >
+                                <Calculator className="w-4 h-4" />
+                                Arqueo
+                            </BrandButton>
+                        )}
+
                         <BrandButton
                             onClick={onAddMovement}
                             size="sm"
@@ -100,3 +114,4 @@ export function ShiftStatus({ onOpenShift, onCloseShift, onAddMovement }: ShiftS
         </div>
     )
 }
+

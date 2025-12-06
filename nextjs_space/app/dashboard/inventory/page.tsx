@@ -57,10 +57,13 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { productService, ProductFilters } from '@/lib/services/product.service'
 import { inventoryService, InventoryWithProduct } from '@/lib/services/inventory.service'
+import { locationService } from '@/lib/services/location.service'
 import { StockAdjustmentDialog } from '@/components/inventory/stock-adjustment-dialog'
 import { CategoryDialog } from '@/components/inventory/category-dialog'
 import type { ProductWithPrice } from '@/lib/types/product'
+import type { LocationListItem } from '@/lib/types/settings'
 import { toast } from 'sonner'
+import { MapPin } from 'lucide-react'
 
 export default function InventoryPage() {
   const router = useRouter()
@@ -80,6 +83,11 @@ export default function InventoryPage() {
   const [inventory, setInventory] = useState<InventoryWithProduct[]>([])
   const [isLoadingInventory, setIsLoadingInventory] = useState(true)
   const [lowStockItems, setLowStockItems] = useState<InventoryWithProduct[]>([])
+
+  // Location filter state
+  const [locations, setLocations] = useState<LocationListItem[]>([])
+  const [selectedLocationId, setSelectedLocationId] = useState<number | undefined>(undefined)
+  const [isLoadingLocations, setIsLoadingLocations] = useState(true)
 
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -125,15 +133,34 @@ export default function InventoryPage() {
     }
   }
 
-  const loadInventory = async () => {
+  const loadLocations = async () => {
+    setIsLoadingLocations(true)
+    try {
+      const locs = await locationService.getLocations()
+      setLocations(locs)
+      // Set default location if available
+      if (locs.length > 0 && selectedLocationId === undefined) {
+        setSelectedLocationId(locs[0].id)
+      }
+    } catch (error: any) {
+      console.error('Error loading locations:', error)
+      toast.error('Error al cargar las sucursales')
+    } finally {
+      setIsLoadingLocations(false)
+    }
+  }
+
+  const loadInventory = async (locationId?: number) => {
     setIsLoadingInventory(true)
     try {
-      // Load all inventory for location 1 (default)
-      const inventoryData = await inventoryService.getInventory({ locationId: 1 })
+      // Load inventory for selected location or all if undefined
+      const inventoryData = await inventoryService.getInventory({
+        locationId: locationId
+      })
       setInventory(inventoryData)
 
-      // Load low stock alerts
-      const lowStock = await inventoryService.getLowStockAlerts(1)
+      // Load low stock alerts for selected location
+      const lowStock = await inventoryService.getLowStockAlerts(locationId)
       setLowStockItems(lowStock)
     } catch (error: any) {
       console.error('Error loading inventory:', error)
@@ -148,10 +175,14 @@ export default function InventoryPage() {
   }, [currentPage, statusFilter])
 
   useEffect(() => {
-    if (activeTab === 'stock') {
-      loadInventory()
+    loadLocations()
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'stock' || activeTab === 'alerts') {
+      loadInventory(selectedLocationId)
     }
-  }, [activeTab])
+  }, [activeTab, selectedLocationId])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -449,8 +480,27 @@ export default function InventoryPage() {
         {/* Stock Tab */}
         <TabsContent value="stock" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <CardTitle>Niveles de Stock</CardTitle>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <Select
+                  value={selectedLocationId?.toString() || 'all'}
+                  onValueChange={(val) => setSelectedLocationId(val === 'all' ? undefined : parseInt(val))}
+                >
+                  <SelectTrigger className="w-[220px]">
+                    <SelectValue placeholder="Seleccionar sucursal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las sucursales</SelectItem>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id.toString()}>
+                        {loc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {isLoadingInventory ? (

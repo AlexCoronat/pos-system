@@ -439,6 +439,54 @@ class InventoryService {
       return false
     }
   }
+
+  /**
+   * Get product availability across all locations
+   * Returns stock for a given product in all business locations
+   */
+  async getProductAvailabilityAcrossLocations(productId: number): Promise<{
+    locationId: number
+    locationName: string
+    locationCode: string
+    quantity: number
+    reorderPoint: number
+    isLowStock: boolean
+  }[]> {
+    try {
+      const { data, error } = await supabase
+        .from('inventory')
+        .select(`
+          id,
+          quantity_available,
+          reorder_point,
+          location:locations!inner(
+            id,
+            name,
+            code
+          )
+        `)
+        .eq('product_id', productId)
+        .gt('quantity_available', 0) // Only return locations with stock
+
+      if (error) throw error
+
+      return (data || []).map((item: any) => {
+        const location = item.location as { id: number; name: string; code: string }
+        return {
+          locationId: location.id,
+          locationName: location.name,
+          locationCode: location.code,
+          quantity: item.quantity_available || 0,
+          reorderPoint: item.reorder_point || 0,
+          isLowStock: (item.quantity_available || 0) <= (item.reorder_point || 0)
+        }
+      })
+    } catch (error: any) {
+      console.error('Error getting product availability across locations:', error)
+      throw new Error(error.message || 'Error al obtener disponibilidad en otras sucursales')
+    }
+  }
 }
 
 export const inventoryService = new InventoryService()
+

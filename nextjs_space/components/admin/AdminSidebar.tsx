@@ -25,7 +25,8 @@ import {
     UsersRound,
     Shield,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    ArrowLeftRight
 } from 'lucide-react'
 
 interface NavItem {
@@ -53,6 +54,13 @@ const navigationItems: NavItem[] = [
         icon: Package,
         section: 'main',
         permissions: ['inventory:read']
+    },
+    {
+        name: 'Transferencias',
+        href: '/dashboard/transfers',
+        icon: ArrowLeftRight,
+        section: 'main',
+        permissions: ['inventory:transfer']
     },
     {
         name: 'Clientes',

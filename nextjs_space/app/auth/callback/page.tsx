@@ -29,6 +29,28 @@ export default function AuthCallbackPage() {
           throw new Error('No session found')
         }
 
+        // Check if MFA is required
+        const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors()
+        console.log('Callback - MFA Factors:', factors, 'Error:', factorsError)
+
+        if (!factorsError && factors?.totp && factors.totp.length > 0) {
+          const verifiedFactor = factors.totp.find(f => f.status === 'verified')
+          console.log('Callback - Verified factor:', verifiedFactor)
+
+          if (verifiedFactor) {
+            // Check assurance level
+            const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+            console.log('Callback - AAL Data:', aalData)
+
+            if (aalData?.currentLevel === 'aal1') {
+              // User needs MFA verification - redirect to login with MFA step
+              setStatus('success')
+              router.push(`/auth/login?mfa=required&factorId=${verifiedFactor.id}`)
+              return
+            }
+          }
+        }
+
         // Handle OAuth callback in auth service
         const result = await authService.handleOAuthCallback(
           session.user.id,
@@ -103,3 +125,4 @@ export default function AuthCallbackPage() {
     </div>
   )
 }
+

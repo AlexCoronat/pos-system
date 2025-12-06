@@ -84,8 +84,7 @@ export default function SettingsPage() {
       descriptionKey: 'sections.security.description',
       href: '/dashboard/settings/security',
       icon: Shield,
-      color: 'text-red-600 bg-red-100',
-      disabled: true
+      color: 'text-red-600 bg-red-100'
     }
   ]
 

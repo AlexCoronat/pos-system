@@ -143,36 +143,17 @@ export default function NotificationsPage() {
                         <Separator />
 
                         {/* Low Stock Alerts */}
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                    <Label>Alertas de Stock Bajo</Label>
-                                    <p className="text-sm text-gray-500">Notificar cuando los productos alcancen el umbral</p>
-                                </div>
-                                <Switch
-                                    checked={preferences?.low_stock_alerts ?? true}
-                                    onCheckedChange={(checked) =>
-                                        setPreferences(prev => prev ? { ...prev, low_stock_alerts: checked } : null)
-                                    }
-                                />
+                        <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                                <Label>Alertas de Stock Bajo</Label>
+                                <p className="text-sm text-gray-500">Notificar cuando los productos alcancen su punto de reorden</p>
                             </div>
-
-                            {preferences?.low_stock_alerts && (
-                                <div className="ml-4 space-y-2">
-                                    <Label htmlFor="threshold">Umbral de Stock Bajo</Label>
-                                    <Input
-                                        id="threshold"
-                                        type="number"
-                                        min={1}
-                                        value={preferences.low_stock_threshold}
-                                        onChange={(e) =>
-                                            setPreferences(prev => prev ? { ...prev, low_stock_threshold: Number(e.target.value) } : null)
-                                        }
-                                        className="w-32"
-                                    />
-                                    <p className="text-xs text-gray-500">Cantidad mínima antes de alertar</p>
-                                </div>
-                            )}
+                            <Switch
+                                checked={preferences?.low_stock_alerts ?? true}
+                                onCheckedChange={(checked) =>
+                                    setPreferences(prev => prev ? { ...prev, low_stock_alerts: checked } : null)
+                                }
+                            />
                         </div>
 
                         <Separator />

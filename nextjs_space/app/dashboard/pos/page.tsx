@@ -17,6 +17,7 @@ import { OpenShiftModal } from '@/components/pos/OpenShiftModal'
 import { CloseShiftModal } from '@/components/pos/CloseShiftModal'
 import { AddMovementModal } from '@/components/pos/AddMovementModal'
 import { ShiftReport } from '@/components/pos/ShiftReport'
+import { CashReconciliationModal } from '@/components/pos/CashReconciliationModal'
 import { useShiftStore } from '@/lib/stores/shift-store'
 import { useCartStore } from '@/lib/stores/cart-store'
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts'
@@ -30,6 +31,7 @@ export default function POSPage() {
     const [showOpenShiftModal, setShowOpenShiftModal] = useState(false)
     const [showCloseShiftModal, setShowCloseShiftModal] = useState(false)
     const [showMovementModal, setShowMovementModal] = useState(false)
+    const [showCashReconciliation, setShowCashReconciliation] = useState(false)
     const [showShiftReport, setShowShiftReport] = useState(false)
     const [reportShiftId, setReportShiftId] = useState<number | null>(null)
     const [refreshKey, setRefreshKey] = useState(0)
@@ -51,7 +53,7 @@ export default function POSPage() {
                 key: 'Escape',
                 handler: () => {
                     // Clear cart if no modals are open
-                    if (!showPaymentModal && !showOpenShiftModal && !showCloseShiftModal && !showMovementModal && !showShiftReport) {
+                    if (!showPaymentModal && !showOpenShiftModal && !showCloseShiftModal && !showMovementModal && !showShiftReport && !showCashReconciliation) {
                         if (items.length > 0 && confirm('¿Limpiar el carrito?')) {
                             clearCart()
                         }
@@ -77,6 +79,7 @@ export default function POSPage() {
                             onOpenShift={() => setShowOpenShiftModal(true)}
                             onCloseShift={() => setShowCloseShiftModal(true)}
                             onAddMovement={() => setShowMovementModal(true)}
+                            onCashReconciliation={() => setShowCashReconciliation(true)}
                         />
                     </div>
                 </div>
@@ -151,6 +154,12 @@ export default function POSPage() {
                 />
             )}
 
+            {/* Cash Reconciliation Modal */}
+            <CashReconciliationModal
+                isOpen={showCashReconciliation}
+                onClose={() => setShowCashReconciliation(false)}
+            />
+
             {/* Shift Report */}
             {reportShiftId && (
                 <ShiftReport
@@ -165,3 +174,4 @@ export default function POSPage() {
         </div>
     )
 }
+

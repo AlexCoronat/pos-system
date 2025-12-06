@@ -24,6 +24,7 @@ export type PermissionAction =
   | 'refund'
   | 'adjust'
   | 'transfer'
+  | 'transfer_approve'
   | 'export'
 
 // Permissions structure
@@ -102,7 +103,8 @@ export const PERMISSION_MODULES: ModuleConfig[] = [
       { key: 'update', label: 'Editar', description: 'Modificar productos' },
       { key: 'delete', label: 'Eliminar', description: 'Eliminar productos' },
       { key: 'adjust', label: 'Ajustar', description: 'Ajustar cantidades de stock' },
-      { key: 'transfer', label: 'Transferir', description: 'Transferir entre ubicaciones' },
+      { key: 'transfer', label: 'Solicitar Transferencia', description: 'Solicitar transferencias entre sucursales' },
+      { key: 'transfer_approve', label: 'Aprobar Transferencia', description: 'Aprobar o rechazar solicitudes de transferencia' },
     ]
   },
   {
