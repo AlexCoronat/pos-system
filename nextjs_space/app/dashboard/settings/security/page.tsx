@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { PageHeader } from '@/components/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Shield, Key, Monitor, Clock, AlertTriangle, CheckCircle2, Smartphone, Copy, Download } from 'lucide-react'
+import { Shield, Key, Monitor, Clock, AlertTriangle, CheckCircle2, Smartphone, Copy, Download, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -36,6 +37,7 @@ const mockSessions = [
 ]
 
 export default function SecurityPage() {
+    const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [sessions] = useState(mockSessions)
     const [isOAuthUser, setIsOAuthUser] = useState(false)
@@ -258,10 +260,19 @@ export default function SecurityPage() {
 
     return (
         <div className="p-6 space-y-6">
-            <PageHeader
-                title="Seguridad"
-                subtitle="Administra tu contraseña, sesiones y configuración de seguridad"
-            />
+            <div className="flex items-center gap-4">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push('/dashboard/settings')}
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <PageHeader
+                    title="Seguridad"
+                    subtitle="Administra tu contraseña, sesiones y configuración de seguridad"
+                />
+            </div>
 
             <div className="max-w-4xl space-y-6">
                 {/* OAuth Notice */}

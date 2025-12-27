@@ -39,6 +39,7 @@ export interface CreateTeamMemberData {
   useEmail: boolean  // Toggle: true = use email, false = use username
   email?: string  // Optional - required if useEmail = true
   username?: string  // Optional - required if useEmail = false
+  requireEmailVerification?: boolean  // If true, send confirmation email to user
   firstName: string
   lastName: string
   phone?: string
@@ -207,7 +208,15 @@ class TeamService {
         ? data.email!
         : generateInternalEmail(data.username!)
 
+      // Determine if we need email confirmation
+      // Only require email confirmation if:
+      // 1. User is using real email (not internal username)
+      // 2. Admin explicitly requested email verification
+      const shouldConfirmEmail = data.useEmail && data.requireEmailVerification === true
+
       // Create auth user with temporary password
+      // Note: When emailRedirectTo is NOT provided and email_confirm is implied,
+      // Supabase sends a confirmation email automatically if configured
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: authEmail,
         password: temporaryPassword,
@@ -216,7 +225,12 @@ class TeamService {
             first_name: data.firstName,
             last_name: data.lastName,
             phone: data.phone || null
-          }
+          },
+          // If email confirmation is required, let Supabase send the confirmation email
+          // The emailRedirectTo tells Supabase where to redirect after confirmation
+          ...(shouldConfirmEmail && {
+            emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback?type=email_confirmation`
+          })
         }
       })
 

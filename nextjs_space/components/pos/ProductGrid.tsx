@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { Package, Plus, MapPin } from 'lucide-react'
 import { posService, type Product } from '@/lib/services/pos.service'
 import { useCartStore } from '@/lib/stores/cart-store'
+import { getBusinessContext } from '@/lib/utils/business-context'
 import { ProductAvailabilityModal } from './ProductAvailabilityModal'
 
 interface ProductGridProps {
@@ -20,11 +21,22 @@ export function ProductGrid({ categoryId }: ProductGridProps) {
     const [isLoading, setIsLoading] = useState(true)
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
     const [showAvailabilityModal, setShowAvailabilityModal] = useState(false)
+    const [currentLocationId, setCurrentLocationId] = useState<number | undefined>(undefined)
     const addItem = useCartStore(state => state.addItem)
 
     useEffect(() => {
         loadProducts()
+        loadUserLocation()
     }, [categoryId])
+
+    const loadUserLocation = async () => {
+        try {
+            const context = await getBusinessContext()
+            setCurrentLocationId(context.defaultLocationId)
+        } catch (error) {
+            console.error('Error loading user location:', error)
+        }
+    }
 
     const loadProducts = async () => {
         setIsLoading(true)
@@ -82,8 +94,8 @@ export function ProductGrid({ categoryId }: ProductGridProps) {
                     <div
                         key={product.id}
                         className={`bg-white border border-gray-200 rounded-lg p-4 text-left group ${product.stock > 0
-                                ? 'hover:shadow-md transition-shadow cursor-pointer'
-                                : 'opacity-75'
+                            ? 'hover:shadow-md transition-shadow cursor-pointer'
+                            : 'opacity-75'
                             }`}
                     >
                         <div
@@ -154,6 +166,7 @@ export function ProductGrid({ categoryId }: ProductGridProps) {
                     name: selectedProduct.name,
                     sku: selectedProduct.sku
                 } : null}
+                currentLocationId={currentLocationId}
             />
         </>
     )

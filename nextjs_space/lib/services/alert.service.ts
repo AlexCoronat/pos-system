@@ -16,21 +16,26 @@ export class AlertService {
 
     /**
      * Get current user's business ID
+     * Returns null if not authenticated or user has no business (instead of throwing)
      */
-    private async getUserBusinessId(): Promise<number> {
-        const { data: { user } } = await this.supabase.auth.getUser()
-        if (!user) throw new Error('Not authenticated')
+    private async getUserBusinessId(): Promise<number | null> {
+        try {
+            const { data: { user }, error: authError } = await this.supabase.auth.getUser()
+            if (authError || !user) return null
 
-        const { data, error } = await this.supabase
-            .from('user_details')
-            .select('business_id')
-            .eq('id', user.id)
-            .single()
+            const { data, error } = await this.supabase
+                .from('user_details')
+                .select('business_id')
+                .eq('id', user.id)
+                .single()
 
-        if (error) throw error
-        if (!data?.business_id) throw new Error('User has no business')
+            if (error || !data?.business_id) return null
 
-        return data.business_id
+            return data.business_id
+        } catch {
+            // Network errors or other issues - return null gracefully
+            return null
+        }
     }
 
     /**
@@ -49,9 +54,11 @@ export class AlertService {
 
     /**
      * Get notifications for current user
+     * Returns empty array if not authenticated
      */
     async getNotifications(filter: NotificationFilter = {}): Promise<Notification[]> {
         const businessId = await this.getUserBusinessId()
+        if (!businessId) return [] // Not authenticated - return empty instead of throwing
 
         let query = this.supabase
             .from('notifications')
@@ -89,9 +96,11 @@ export class AlertService {
 
     /**
      * Get unread notifications count
+     * Returns 0 if not authenticated
      */
     async getUnreadCount(): Promise<number> {
         const businessId = await this.getUserBusinessId()
+        if (!businessId) return 0 // Not authenticated - return 0 instead of throwing
 
         const { count, error } = await this.supabase
             .from('notifications')
@@ -259,6 +268,8 @@ export class AlertService {
         location_id: number
     }): Promise<Notification | null> {
         const businessId = await this.getUserBusinessId()
+        if (!businessId) return null // Not authenticated
+
         const preferences = await this.getPreferences()
 
         // Only create if low stock alerts are enabled
@@ -290,6 +301,8 @@ export class AlertService {
         location_id: number
     }): Promise<Notification | null> {
         const businessId = await this.getUserBusinessId()
+        if (!businessId) return null // Not authenticated
+
         const preferences = await this.getPreferences()
 
         // Only create if sales notifications are enabled and amount exceeds threshold
@@ -318,8 +331,9 @@ export class AlertService {
         title: string
         message: string
         data?: Record<string, any>
-    }): Promise<Notification> {
+    }): Promise<Notification | null> {
         const businessId = await this.getUserBusinessId()
+        if (!businessId) return null // Not authenticated
 
         return this.createNotification({
             business_id: businessId,

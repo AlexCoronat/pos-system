@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { PageHeader } from '@/components/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -8,7 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Bell, Save, AlertCircle } from 'lucide-react'
+import { Bell, Save, AlertCircle, ArrowLeft } from 'lucide-react'
 import { alertService } from '@/lib/services/alert.service'
 import type { NotificationPreferences } from '@/lib/types/notification'
 import { toast } from 'sonner'
@@ -16,6 +17,7 @@ import { NotificationItem } from '@/components/notifications/NotificationItem'
 import type { Notification } from '@/lib/types/notification'
 
 export default function NotificationsPage() {
+    const router = useRouter()
     const [preferences, setPreferences] = useState<NotificationPreferences | null>(null)
     const [notifications, setNotifications] = useState<Notification[]>([])
     const [loading, setLoading] = useState(true)
@@ -92,10 +94,19 @@ export default function NotificationsPage() {
 
     return (
         <div className="p-6 space-y-6">
-            <PageHeader
-                title="Notificaciones"
-                subtitle="Configura las alertas y notificaciones del sistema"
-            />
+            <div className="flex items-center gap-4">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push('/dashboard/settings')}
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <PageHeader
+                    title="Notificaciones"
+                    subtitle="Configura las alertas y notificaciones del sistema"
+                />
+            </div>
 
             <div className="max-w-4xl space-y-6">
                 {/* Notification Preferences */}

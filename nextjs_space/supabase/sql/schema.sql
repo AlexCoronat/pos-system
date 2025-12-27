@@ -417,6 +417,41 @@ $_$;
 ALTER FUNCTION "public"."generate_shift_number"("p_cash_register_id" bigint) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."generate_transfer_number"("p_business_id" integer) RETURNS character varying
+    LANGUAGE "plpgsql"
+    AS $_$
+DECLARE
+    v_date VARCHAR(8);
+    v_sequence INT;
+    v_transfer_number VARCHAR(20);
+BEGIN
+    -- Get current date in YYYYMMDD format
+    v_date := TO_CHAR(CURRENT_DATE, 'YYYYMMDD');
+    
+    -- Get next sequence number for this business and date
+    SELECT COALESCE(MAX(
+        CAST(SUBSTRING(transfer_number FROM '[0-9]+$') AS INT)
+    ), 0) + 1
+    INTO v_sequence
+    FROM public.inventory_transfers
+    WHERE business_id = p_business_id
+    AND transfer_number LIKE 'TRF-' || v_date || '%';
+    
+    -- Format: TRF-20231127-001
+    v_transfer_number := 'TRF-' || v_date || '-' || LPAD(v_sequence::TEXT, 3, '0');
+    
+    RETURN v_transfer_number;
+END;
+$_$;
+
+
+ALTER FUNCTION "public"."generate_transfer_number"("p_business_id" integer) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."generate_transfer_number"("p_business_id" integer) IS 'Generates unique transfer number in format TRF-YYYYMMDD-NNN';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."get_archived_users"("p_business_id" integer DEFAULT NULL::integer) RETURNS TABLE("id" "uuid", "email" character varying, "first_name" character varying, "last_name" character varying, "phone" character varying, "role_name" character varying, "archived_at" timestamp with time zone, "archived_by_email" character varying, "removal_reason" "text", "assigned_locations" "jsonb", "original_created_at" timestamp with time zone)
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -1031,6 +1066,19 @@ ALTER FUNCTION "public"."update_sale_totals_correct"() OWNER TO "postgres";
 
 COMMENT ON FUNCTION "public"."update_sale_totals_correct"() IS 'Función para recalcular totales de venta CORRECTAMENTE (actualmente sin trigger asociado)';
 
+
+
+CREATE OR REPLACE FUNCTION "public"."update_transfer_timestamp"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_transfer_timestamp"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_updated_at_column"() RETURNS "trigger"
@@ -1673,6 +1721,127 @@ ALTER SEQUENCE "public"."inventory_movements_id_seq" OWNED BY "public"."inventor
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."inventory_transfer_items" (
+    "id" bigint NOT NULL,
+    "transfer_id" integer NOT NULL,
+    "product_id" integer NOT NULL,
+    "variant_id" integer,
+    "quantity_requested" integer NOT NULL,
+    "quantity_approved" integer DEFAULT 0,
+    "quantity_shipped" integer DEFAULT 0,
+    "quantity_received" integer DEFAULT 0,
+    "notes" "text"
+);
+
+
+ALTER TABLE "public"."inventory_transfer_items" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."inventory_transfer_items" IS 'Line items for inventory transfers';
+
+
+
+COMMENT ON COLUMN "public"."inventory_transfer_items"."quantity_requested" IS 'Original quantity requested';
+
+
+
+COMMENT ON COLUMN "public"."inventory_transfer_items"."quantity_approved" IS 'Quantity approved by source location';
+
+
+
+COMMENT ON COLUMN "public"."inventory_transfer_items"."quantity_shipped" IS 'Quantity actually shipped';
+
+
+
+COMMENT ON COLUMN "public"."inventory_transfer_items"."quantity_received" IS 'Quantity confirmed received at destination';
+
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."inventory_transfer_items_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."inventory_transfer_items_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."inventory_transfer_items_id_seq" OWNED BY "public"."inventory_transfer_items"."id";
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."inventory_transfers" (
+    "id" integer NOT NULL,
+    "transfer_number" character varying(20) NOT NULL,
+    "from_location_id" integer NOT NULL,
+    "to_location_id" integer NOT NULL,
+    "transfer_type" character varying(20) DEFAULT 'manual'::character varying NOT NULL,
+    "priority" character varying(10) DEFAULT 'normal'::character varying,
+    "origin_sale_id" integer,
+    "status" character varying(20) DEFAULT 'pending'::character varying NOT NULL,
+    "requested_by" "uuid" NOT NULL,
+    "approved_by" "uuid",
+    "rejected_by" "uuid",
+    "shipped_by" "uuid",
+    "received_by" "uuid",
+    "requested_at" timestamp with time zone DEFAULT "now"(),
+    "expires_at" timestamp with time zone,
+    "approved_at" timestamp with time zone,
+    "rejected_at" timestamp with time zone,
+    "shipped_at" timestamp with time zone,
+    "received_at" timestamp with time zone,
+    "request_notes" "text",
+    "rejection_reason" "text",
+    "shipping_notes" "text",
+    "receiving_notes" "text",
+    "business_id" integer NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."inventory_transfers" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."inventory_transfers" IS 'Inter-branch inventory transfer requests and tracking';
+
+
+
+COMMENT ON COLUMN "public"."inventory_transfers"."transfer_type" IS 'Type: manual (admin initiated) or pos_request (from POS sale)';
+
+
+
+COMMENT ON COLUMN "public"."inventory_transfers"."priority" IS 'Priority level: normal or urgent';
+
+
+
+COMMENT ON COLUMN "public"."inventory_transfers"."origin_sale_id" IS 'Reference to pending sale if transfer originated from POS';
+
+
+
+COMMENT ON COLUMN "public"."inventory_transfers"."status" IS 'Transfer status: pending, approved, rejected, in_transit, received, partially_received, cancelled, expired';
+
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."inventory_transfers_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."inventory_transfers_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."inventory_transfers_id_seq" OWNED BY "public"."inventory_transfers"."id";
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."locations" (
     "id" integer NOT NULL,
     "code" character varying(20) NOT NULL,
@@ -1875,6 +2044,9 @@ CREATE TABLE IF NOT EXISTS "public"."products" (
     "business_id" integer,
     "sale_frequency" integer DEFAULT 0 NOT NULL,
     "is_favorite" boolean DEFAULT false,
+    "is_service" boolean DEFAULT false,
+    "duration_minutes" integer,
+    "requires_appointment" boolean DEFAULT false,
     CONSTRAINT "positive_prices" CHECK ((("selling_price" >= (0)::numeric) AND ("cost_price" >= (0)::numeric))),
     CONSTRAINT "valid_tax_rate" CHECK ((("tax_rate" >= (0)::numeric) AND ("tax_rate" <= (100)::numeric)))
 );
@@ -3623,6 +3795,10 @@ ALTER TABLE ONLY "public"."inventory_movements" ALTER COLUMN "id" SET DEFAULT "n
 
 
 
+ALTER TABLE ONLY "public"."inventory_transfers" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."inventory_transfers_id_seq"'::"regclass");
+
+
+
 ALTER TABLE ONLY "public"."locations" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."locations_id_seq"'::"regclass");
 
 
@@ -3853,6 +4029,21 @@ ALTER TABLE ONLY "public"."inventory"
 
 ALTER TABLE ONLY "public"."inventory"
     ADD CONSTRAINT "inventory_product_location_variant_unique" UNIQUE ("product_id", "location_id", "variant_id");
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfer_items"
+    ADD CONSTRAINT "inventory_transfer_items_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfers"
+    ADD CONSTRAINT "inventory_transfers_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfers"
+    ADD CONSTRAINT "inventory_transfers_transfer_number_key" UNIQUE ("transfer_number");
 
 
 
@@ -4462,6 +4653,38 @@ CREATE INDEX "idx_top_products_quantity" ON "public"."mv_top_selling_products" U
 
 
 
+CREATE INDEX "idx_transfer_items_product" ON "public"."inventory_transfer_items" USING "btree" ("product_id");
+
+
+
+CREATE INDEX "idx_transfer_items_transfer" ON "public"."inventory_transfer_items" USING "btree" ("transfer_id");
+
+
+
+CREATE INDEX "idx_transfers_business" ON "public"."inventory_transfers" USING "btree" ("business_id");
+
+
+
+CREATE INDEX "idx_transfers_expires_at" ON "public"."inventory_transfers" USING "btree" ("expires_at") WHERE ("expires_at" IS NOT NULL);
+
+
+
+CREATE INDEX "idx_transfers_from_location" ON "public"."inventory_transfers" USING "btree" ("from_location_id");
+
+
+
+CREATE INDEX "idx_transfers_requested_at" ON "public"."inventory_transfers" USING "btree" ("requested_at");
+
+
+
+CREATE INDEX "idx_transfers_status" ON "public"."inventory_transfers" USING "btree" ("status");
+
+
+
+CREATE INDEX "idx_transfers_to_location" ON "public"."inventory_transfers" USING "btree" ("to_location_id");
+
+
+
 CREATE INDEX "idx_user_activity_created" ON "public"."user_activity_log" USING "btree" ("created_at");
 
 
@@ -4638,6 +4861,10 @@ CREATE OR REPLACE TRIGGER "trigger_update_notification_preferences_updated_at" B
 
 
 
+CREATE OR REPLACE TRIGGER "trigger_update_transfer_timestamp" BEFORE UPDATE ON "public"."inventory_transfers" FOR EACH ROW EXECUTE FUNCTION "public"."update_transfer_timestamp"();
+
+
+
 CREATE OR REPLACE TRIGGER "update_cash_register_shifts_updated_at" BEFORE UPDATE ON "public"."cash_register_shifts" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
 
@@ -4787,6 +5014,66 @@ ALTER TABLE ONLY "public"."inventory_movements"
 
 ALTER TABLE ONLY "public"."inventory"
     ADD CONSTRAINT "inventory_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfer_items"
+    ADD CONSTRAINT "inventory_transfer_items_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id");
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfer_items"
+    ADD CONSTRAINT "inventory_transfer_items_transfer_id_fkey" FOREIGN KEY ("transfer_id") REFERENCES "public"."inventory_transfers"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfer_items"
+    ADD CONSTRAINT "inventory_transfer_items_variant_id_fkey" FOREIGN KEY ("variant_id") REFERENCES "public"."product_variants"("id");
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfers"
+    ADD CONSTRAINT "inventory_transfers_approved_by_fkey" FOREIGN KEY ("approved_by") REFERENCES "auth"."users"("id");
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfers"
+    ADD CONSTRAINT "inventory_transfers_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id");
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfers"
+    ADD CONSTRAINT "inventory_transfers_from_location_id_fkey" FOREIGN KEY ("from_location_id") REFERENCES "public"."locations"("id");
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfers"
+    ADD CONSTRAINT "inventory_transfers_origin_sale_id_fkey" FOREIGN KEY ("origin_sale_id") REFERENCES "public"."sales"("id");
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfers"
+    ADD CONSTRAINT "inventory_transfers_received_by_fkey" FOREIGN KEY ("received_by") REFERENCES "auth"."users"("id");
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfers"
+    ADD CONSTRAINT "inventory_transfers_rejected_by_fkey" FOREIGN KEY ("rejected_by") REFERENCES "auth"."users"("id");
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfers"
+    ADD CONSTRAINT "inventory_transfers_requested_by_fkey" FOREIGN KEY ("requested_by") REFERENCES "auth"."users"("id");
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfers"
+    ADD CONSTRAINT "inventory_transfers_shipped_by_fkey" FOREIGN KEY ("shipped_by") REFERENCES "auth"."users"("id");
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfers"
+    ADD CONSTRAINT "inventory_transfers_to_location_id_fkey" FOREIGN KEY ("to_location_id") REFERENCES "public"."locations"("id");
 
 
 
@@ -5244,6 +5531,10 @@ CREATE POLICY "Users can create shifts" ON "public"."cash_register_shifts" FOR I
 
 
 
+CREATE POLICY "Users can create transfers for their business" ON "public"."inventory_transfers" FOR INSERT WITH CHECK (("business_id" = "public"."get_user_business_id"()));
+
+
+
 CREATE POLICY "Users can delete location assignments" ON "public"."user_locations" FOR DELETE USING (("user_id" IN ( SELECT "user_details"."id"
    FROM "public"."user_details"
   WHERE ("user_details"."business_id" = "public"."get_user_business_id"()))));
@@ -5282,6 +5573,12 @@ CREATE POLICY "Users can manage their own sessions" ON "public"."user_sessions" 
 
 
 
+CREATE POLICY "Users can manage transfer items from their business" ON "public"."inventory_transfer_items" USING ((EXISTS ( SELECT 1
+   FROM "public"."inventory_transfers" "t"
+  WHERE (("t"."id" = "inventory_transfer_items"."transfer_id") AND ("t"."business_id" = "public"."get_user_business_id"())))));
+
+
+
 CREATE POLICY "Users can read their own location assignments" ON "public"."user_locations" FOR SELECT TO "authenticated" USING (("user_id" = "auth"."uid"()));
 
 
@@ -5309,6 +5606,10 @@ CREATE POLICY "Users can update their own shifts" ON "public"."cash_register_shi
 
 
 CREATE POLICY "Users can update their sync queue" ON "public"."offline_sync_queue" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can update transfers from their business" ON "public"."inventory_transfers" FOR UPDATE USING (("business_id" = "public"."get_user_business_id"()));
 
 
 
@@ -5368,6 +5669,16 @@ CREATE POLICY "Users can view their business preferences" ON "public"."notificat
 
 
 CREATE POLICY "Users can view their own sync queue" ON "public"."offline_sync_queue" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can view transfer items from their business" ON "public"."inventory_transfer_items" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM "public"."inventory_transfers" "t"
+  WHERE (("t"."id" = "inventory_transfer_items"."transfer_id") AND ("t"."business_id" = "public"."get_user_business_id"())))));
+
+
+
+CREATE POLICY "Users can view transfers from their business" ON "public"."inventory_transfers" FOR SELECT USING (("business_id" = "public"."get_user_business_id"()));
 
 
 
@@ -5479,6 +5790,12 @@ CREATE POLICY "inventory_movements_select" ON "public"."inventory_movements" FOR
 
 CREATE POLICY "inventory_select" ON "public"."inventory" FOR SELECT USING ((("business_id" = "public"."get_user_business_id"()) OR ("business_id" IS NULL)));
 
+
+
+ALTER TABLE "public"."inventory_transfer_items" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."inventory_transfers" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."locations" ENABLE ROW LEVEL SECURITY;
@@ -5698,6 +6015,12 @@ GRANT ALL ON FUNCTION "public"."generate_shift_number"("p_cash_register_id" bigi
 
 
 
+GRANT ALL ON FUNCTION "public"."generate_transfer_number"("p_business_id" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."generate_transfer_number"("p_business_id" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."generate_transfer_number"("p_business_id" integer) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_archived_users"("p_business_id" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_archived_users"("p_business_id" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_archived_users"("p_business_id" integer) TO "service_role";
@@ -5803,6 +6126,12 @@ GRANT ALL ON FUNCTION "public"."update_quote_totals"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."update_sale_totals_correct"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_sale_totals_correct"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_sale_totals_correct"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_transfer_timestamp"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_transfer_timestamp"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_transfer_timestamp"() TO "service_role";
 
 
 
@@ -5977,6 +6306,30 @@ GRANT ALL ON TABLE "public"."inventory_movements" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."inventory_movements_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."inventory_movements_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."inventory_movements_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."inventory_transfer_items" TO "anon";
+GRANT ALL ON TABLE "public"."inventory_transfer_items" TO "authenticated";
+GRANT ALL ON TABLE "public"."inventory_transfer_items" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."inventory_transfer_items_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."inventory_transfer_items_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."inventory_transfer_items_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."inventory_transfers" TO "anon";
+GRANT ALL ON TABLE "public"."inventory_transfers" TO "authenticated";
+GRANT ALL ON TABLE "public"."inventory_transfers" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."inventory_transfers_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."inventory_transfers_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."inventory_transfers_id_seq" TO "service_role";
 
 
 

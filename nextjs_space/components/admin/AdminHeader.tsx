@@ -1,8 +1,11 @@
 'use client'
 
 import { useAuth } from '@/lib/hooks/use-auth'
+import { usePathname } from 'next/navigation'
 import { ThemeToggle } from './ThemeToggle'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { ShiftStatus } from '@/components/pos/ShiftStatus'
+import { useShiftModals } from '@/lib/contexts/shift-modals-context'
 import { Button } from '@/components/ui/button'
 import {
     DropdownMenu,
@@ -20,7 +23,12 @@ import { toast } from 'sonner'
 export function AdminHeader() {
     const { user } = useAuth()
     const router = useRouter()
+    const pathname = usePathname()
     const supabase = createClient()
+    const shiftModals = useShiftModals()
+
+    // Check if we're on the POS page
+    const isPOSPage = pathname === '/dashboard/pos'
 
     // Get time-based greeting
     const getGreeting = () => {
@@ -43,14 +51,24 @@ export function AdminHeader() {
 
     return (
         <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-            <div>
-                <h1 className="text-xl font-semibold text-gray-900">
-                    {getGreeting()}, {user?.firstName}
-                </h1>
-                <p className="text-sm text-gray-500">
-                    Bienvenido de vuelta a tu dashboard
-                </p>
-            </div>
+            {/* Left side - Show greeting on non-POS pages, ShiftStatus on POS page */}
+            {!isPOSPage ? (
+                <div>
+                    <h1 className="text-xl font-semibold text-gray-900">
+                        {getGreeting()}, {user?.firstName}
+                    </h1>
+                    <p className="text-sm text-gray-500">
+                        Bienvenido de vuelta a tu dashboard
+                    </p>
+                </div>
+            ) : (
+                <ShiftStatus
+                    onOpenShift={shiftModals.openOpenShiftModal}
+                    onCloseShift={shiftModals.openCloseShiftModal}
+                    onAddMovement={shiftModals.openMovementModal}
+                    onCashReconciliation={shiftModals.openCashReconciliation}
+                />
+            )}
 
             <div className="flex items-center gap-3">
                 {/* Notifications */}

@@ -47,12 +47,14 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
     if (!isOpen) return null
 
     const total = cart.total
+    const parsedAmount = currentAmount.trim() !== '' ? parseFloat(currentAmount) : 0
     const totalPaid = splitPaymentMode
         ? payments.reduce((sum, p) => sum + p.amount, 0)
-        : parseFloat(currentAmount) || 0
+        : parsedAmount
     const remaining = Math.max(0, total - totalPaid)
     const change = Math.max(0, totalPaid - total)
-    const isFullyPaid = totalPaid >= total
+    // Use epsilon tolerance for floating point comparison
+    const isFullyPaid = totalPaid >= total - 0.01
 
     const handleAddPayment = () => {
         const amount = parseFloat(currentAmount)

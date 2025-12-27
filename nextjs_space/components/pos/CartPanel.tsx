@@ -38,7 +38,7 @@ export function CartPanel({ onCheckout }: CartPanelProps) {
     if (!mounted) return null
 
     return (
-        <div className="w-full lg:w-96 bg-white border-l border-gray-200 flex flex-col h-full">
+        <div className="w-full bg-white border-l border-gray-200 flex flex-col h-full overflow-hidden">
             {/* Header - Fixed */}
             <div className="flex-shrink-0 p-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">

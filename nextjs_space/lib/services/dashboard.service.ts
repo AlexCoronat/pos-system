@@ -109,11 +109,12 @@ class DashboardService {
             startDate.setDate(startDate.getDate() - 6)
             startDate.setHours(0, 0, 0, 0)
 
+            // Use sale_date for filtering instead of created_at
             const { data: sales } = await this.supabase
                 .from('sales')
-                .select('created_at, total_amount')
-                .gte('created_at', startDate.toISOString())
-                .lte('created_at', endDate.toISOString())
+                .select('sale_date, total_amount')
+                .gte('sale_date', startDate.toISOString())
+                .lte('sale_date', endDate.toISOString())
                 .eq('status', 'completed')
 
             const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
@@ -126,14 +127,15 @@ class DashboardService {
             }
 
             sales?.forEach(sale => {
-                const dateKey = sale.created_at.split('T')[0]
-                if (salesByDate[dateKey] !== undefined) {
-                    salesByDate[dateKey] += Number(sale.total_amount || 0)
+                // Handle both timestamp and date formats
+                const saleDate = sale.sale_date?.split('T')[0] || sale.sale_date
+                if (salesByDate[saleDate] !== undefined) {
+                    salesByDate[saleDate] += Number(sale.total_amount || 0)
                 }
             })
 
             return Object.entries(salesByDate).map(([dateStr, sales]) => {
-                const date = new Date(dateStr)
+                const date = new Date(dateStr + 'T12:00:00') // Add noon to avoid timezone issues
                 return { date: days[date.getDay()], sales }
             })
         } catch (error) {

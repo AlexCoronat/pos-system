@@ -30,25 +30,30 @@ export function SalesChart({ data }: SalesChartProps) {
                 </div>
             ) : (
                 <>
-                    <div className="flex items-end justify-between gap-2 h-64">
+                    <div className="flex items-end justify-between gap-2" style={{ height: '200px' }}>
                         {salesData.map((item, index) => {
                             const heightPercentage = maxSales > 0 ? (item.sales / maxSales) * 100 : 0
+                            const barHeight = maxSales > 0 ? Math.max((item.sales / maxSales) * 180, 4) : 4
 
                             return (
-                                <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                                    <div className="w-full flex flex-col items-center justify-end flex-1">
-                                        <div className="text-xs font-medium text-gray-600 mb-1">
-                                            ${(item.sales / 1000).toFixed(1)}k
-                                        </div>
-                                        <div
-                                            className="w-full rounded-t-lg bg-gradient-to-t from-blue-600 to-blue-400"
-                                            style={{ height: `${heightPercentage}%` }}
-                                        ></div>
+                                <div key={index} className="flex-1 flex flex-col items-center justify-end h-full">
+                                    <div className="text-xs font-medium text-gray-600 mb-1">
+                                        ${(item.sales / 1000).toFixed(1)}k
                                     </div>
-                                    <span className="text-sm font-medium text-gray-700">{item.date}</span>
+                                    <div
+                                        className="w-full rounded-t-lg bg-gradient-to-t from-blue-600 to-blue-400 transition-all duration-300"
+                                        style={{ height: `${barHeight}px`, minHeight: '4px' }}
+                                    />
                                 </div>
                             )
                         })}
+                    </div>
+                    <div className="flex justify-between gap-2 mt-2">
+                        {salesData.map((item, index) => (
+                            <div key={index} className="flex-1 text-center">
+                                <span className="text-sm font-medium text-gray-700">{item.date}</span>
+                            </div>
+                        ))}
                     </div>
 
                     <div className="mt-6 pt-4 border-t border-gray-200">

@@ -249,7 +249,11 @@ class ProductService {
           cost_price: data.costPrice,
           selling_price: data.salePrice,
           tax_rate: data.taxRate || 16,
-          is_taxable: data.isTaxable ?? true
+          is_taxable: data.isTaxable ?? true,
+          // Service fields
+          is_service: data.isService ?? false,
+          duration_minutes: data.durationMinutes || null,
+          requires_appointment: data.requiresAppointment ?? false
         })
         .select()
         .single()
@@ -344,6 +348,10 @@ class ProductService {
       if (data.salePrice !== undefined) updateData.selling_price = data.salePrice
       if (data.taxRate !== undefined) updateData.tax_rate = data.taxRate
       if (data.isTaxable !== undefined) updateData.is_taxable = data.isTaxable
+      // Service fields
+      if (data.isService !== undefined) updateData.is_service = data.isService
+      if (data.durationMinutes !== undefined) updateData.duration_minutes = data.durationMinutes || null
+      if (data.requiresAppointment !== undefined) updateData.requires_appointment = data.requiresAppointment
 
       const { error: productError } = await supabase
         .from('products')

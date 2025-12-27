@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Loader2, RefreshCw, Wand2, Plus } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, RefreshCw, Wand2, Plus, Briefcase, Clock, Calendar } from 'lucide-react'
 import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -59,7 +59,11 @@ export default function NewProductPage() {
     initialStock: '0',
     minStockLevel: '0',
     reorderPoint: '5',
-    hasVariants: false
+    hasVariants: false,
+    // Service fields
+    isService: false,
+    durationMinutes: '',
+    requiresAppointment: false
   })
 
   // Variant state
@@ -218,30 +222,36 @@ export default function NewProductPage() {
         isActive: formData.isActive,
         currency: 'MXN',
         hasVariants: formData.hasVariants,
-        variants: formData.hasVariants ? variants : undefined
+        variants: formData.hasVariants ? variants : undefined,
+        // Service fields
+        isService: formData.isService,
+        durationMinutes: formData.durationMinutes ? parseInt(formData.durationMinutes) : undefined,
+        requiresAppointment: formData.requiresAppointment
       }
 
       const product = await productService.createProduct(productData)
 
-      // Always create inventory record for the product
-      const initialStock = parseInt(formData.initialStock) || 0
-      await inventoryService.adjustInventory({
-        productId: product.id,
-        locationId: 1, // Default location
-        quantity: initialStock,
-        movementType: initialStock > 0 ? 'entry' : 'adjustment',
-        notes: initialStock > 0 ? 'Stock inicial al crear producto' : 'Registro de inventario inicial'
-      })
+      // Only create inventory if NOT a service
+      if (!formData.isService) {
+        const initialStock = parseInt(formData.initialStock) || 0
+        await inventoryService.adjustInventory({
+          productId: product.id,
+          locationId: 1, // Default location
+          quantity: initialStock,
+          movementType: initialStock > 0 ? 'entry' : 'adjustment',
+          notes: initialStock > 0 ? 'Stock inicial al crear producto' : 'Registro de inventario inicial'
+        })
 
-      // Update stock levels
-      const inventory = await inventoryService.getInventoryByProduct(product.id, 1)
-      if (inventory) {
-        await inventoryService.updateStockLevels(
-          inventory.id!,
-          parseInt(formData.minStockLevel) || 0,
-          parseInt(formData.reorderPoint) || 5
-        )
-      }
+        // Update stock levels
+        const inventory = await inventoryService.getInventoryByProduct(product.id, 1)
+        if (inventory) {
+          await inventoryService.updateStockLevels(
+            inventory.id!,
+            parseInt(formData.minStockLevel) || 0,
+            parseInt(formData.reorderPoint) || 5
+          )
+        }
+      } // End of if (!formData.isService)
 
       toast.success('Producto creado exitosamente')
       router.push('/dashboard/inventory')
@@ -562,93 +572,164 @@ export default function NewProductPage() {
               </CardContent>
             </Card>
 
+            {/* Service Configuration */}
             <Card>
               <CardHeader>
-                <CardTitle>Inventario Inicial</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Briefcase className="h-5 w-5" />
+                  Tipo de Producto
+                </CardTitle>
                 <CardDescription>
-                  Configura el stock inicial del producto
+                  Define si es un producto físico o un servicio
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="initialStock">Cantidad Inicial</Label>
-                  <Input
-                    id="initialStock"
-                    type="number"
-                    min="0"
-                    value={formData.initialStock}
-                    onChange={(e) => handleChange('initialStock', e.target.value)}
-                    placeholder="0"
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Briefcase className="h-5 w-5 text-indigo-600" />
+                    <div>
+                      <Label className="font-medium">¿Es un servicio?</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Los servicios no manejan inventario
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={formData.isService}
+                    onCheckedChange={(checked) => handleChange('isService', checked)}
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                {formData.isService && (
+                  <>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <Label htmlFor="durationMinutes">Duración (minutos)</Label>
+                      </div>
+                      <Input
+                        id="durationMinutes"
+                        type="number"
+                        min="0"
+                        value={formData.durationMinutes}
+                        onChange={(e) => handleChange('durationMinutes', e.target.value)}
+                        placeholder="Ej: 30 (opcional)"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Tiempo estimado del servicio (opcional)
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Calendar className="h-5 w-5 text-orange-600" />
+                        <div>
+                          <Label className="font-medium">¿Requiere cita?</Label>
+                          <p className="text-sm text-muted-foreground">
+                            El cliente debe agendar previamente
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={formData.requiresAppointment}
+                        onCheckedChange={(checked) => handleChange('requiresAppointment', checked)}
+                      />
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Inventory - Hidden for services */}
+            {!formData.isService && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Inventario Inicial</CardTitle>
+                  <CardDescription>
+                    Configura el stock inicial del producto
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="minStockLevel">Stock Minimo</Label>
+                    <Label htmlFor="initialStock">Cantidad Inicial</Label>
                     <Input
-                      id="minStockLevel"
+                      id="initialStock"
                       type="number"
                       min="0"
-                      value={formData.minStockLevel}
-                      onChange={(e) => handleChange('minStockLevel', e.target.value)}
+                      value={formData.initialStock}
+                      onChange={(e) => handleChange('initialStock', e.target.value)}
                       placeholder="0"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-1.5">
-                      <Label htmlFor="reorderPoint">Punto de Reorden</Label>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M12 16v-4" />
-                                <path d="M12 8h.01" />
-                              </svg>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <p className="font-semibold mb-1">¿Qué es el Punto de Reorden?</p>
-                            <p className="text-sm">
-                              Es el nivel mínimo de stock que indica cuándo debes hacer un nuevo pedido.
-                              Cuando el inventario llegue a esta cantidad, recibirás una alerta para reabastecer
-                              el producto antes de quedarte sin existencias.
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="minStockLevel">Stock Minimo</Label>
+                      <Input
+                        id="minStockLevel"
+                        type="number"
+                        min="0"
+                        value={formData.minStockLevel}
+                        onChange={(e) => handleChange('minStockLevel', e.target.value)}
+                        placeholder="0"
+                      />
                     </div>
-                    <Input
-                      id="reorderPoint"
-                      type="number"
-                      min="0"
-                      value={formData.reorderPoint}
-                      onChange={(e) => handleChange('reorderPoint', e.target.value)}
-                      placeholder="5"
-                    />
-                  </div>
-                </div>
 
-                <p className="text-sm text-muted-foreground">
-                  Se generara una alerta cuando el stock sea menor o igual al punto de reorden.
-                </p>
-              </CardContent>
-            </Card>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <Label htmlFor="reorderPoint">Punto de Reorden</Label>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <circle cx="12" cy="12" r="10" />
+                                  <path d="M12 16v-4" />
+                                  <path d="M12 8h.01" />
+                                </svg>
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-semibold mb-1">¿Qué es el Punto de Reorden?</p>
+                              <p className="text-sm">
+                                Es el nivel mínimo de stock que indica cuándo debes hacer un nuevo pedido.
+                                Cuando el inventario llegue a esta cantidad, recibirás una alerta para reabastecer
+                                el producto antes de quedarte sin existencias.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Input
+                        id="reorderPoint"
+                        type="number"
+                        min="0"
+                        value={formData.reorderPoint}
+                        onChange={(e) => handleChange('reorderPoint', e.target.value)}
+                        placeholder="5"
+                      />
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-muted-foreground">
+                    Se generara una alerta cuando el stock sea menor o igual al punto de reorden.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
 

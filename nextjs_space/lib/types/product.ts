@@ -118,6 +118,10 @@ export interface CreateProductData {
   currency?: string
   hasVariants?: boolean
   variants?: CreateVariantData[]
+  // Service fields
+  isService?: boolean
+  durationMinutes?: number
+  requiresAppointment?: boolean
 }
 
 /**
@@ -164,4 +168,8 @@ export interface UpdateProductData {
   isTaxable?: boolean
   currency?: string
   hasVariants?: boolean
+  // Service fields
+  isService?: boolean
+  durationMinutes?: number
+  requiresAppointment?: boolean
 }

@@ -1,7 +1,8 @@
 ﻿'use client'
 
 import { useTheme } from 'next-themes'
-import { Moon, Sun, Globe, Monitor, DollarSign, Calendar, Clock, Printer, Wallet, Bell, Volume2, Mail, Type, Maximize2, Zap, LayoutDashboard, PanelLeft, Eye, Keyboard, Database, Download, Trash2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Moon, Sun, Globe, Monitor, DollarSign, Calendar, Clock, Printer, Wallet, Bell, Volume2, Mail, Type, Maximize2, Zap, LayoutDashboard, PanelLeft, Eye, Keyboard, Database, Download, Trash2, ArrowLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { PageHeader } from '@/components/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -65,6 +66,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 export default function PreferencesPage() {
     const [mounted, setMounted] = useState(false)
     const { theme, setTheme } = useTheme()
+    const router = useRouter()
     const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES)
 
     useEffect(() => {
@@ -117,10 +119,19 @@ export default function PreferencesPage() {
 
     return (
         <div className="p-6 space-y-6">
-            <PageHeader
-                title="Preferencias de Usuario"
-                subtitle="Personaliza la apariencia, formato y comportamiento del sistema"
-            />
+            <div className="flex items-center gap-4">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push('/dashboard/settings')}
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <PageHeader
+                    title="Preferencias de Usuario"
+                    subtitle="Personaliza la apariencia, formato y comportamiento del sistema"
+                />
+            </div>
 
             <div className="max-w-4xl space-y-6">
                 {/* TEMA */}

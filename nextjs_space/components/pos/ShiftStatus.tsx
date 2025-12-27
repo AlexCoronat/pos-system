@@ -8,6 +8,7 @@
 import { useEffect } from 'react'
 import { Clock, TrendingUp, Wallet, Calculator } from 'lucide-react'
 import { useShiftStore } from '@/lib/stores/shift-store'
+import { useShiftConfig } from '@/lib/stores/shift-config-store'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { BrandButton } from '@/components/shared'
@@ -21,10 +22,16 @@ interface ShiftStatusProps {
 
 export function ShiftStatus({ onOpenShift, onCloseShift, onAddMovement, onCashReconciliation }: ShiftStatusProps) {
     const { currentShift, loadCurrentShift, isLoading } = useShiftStore()
+    const { config: shiftConfig } = useShiftConfig()
 
     useEffect(() => {
         loadCurrentShift()
     }, [loadCurrentShift])
+
+    // Don't render anything if shifts are disabled
+    if (!shiftConfig.shiftsEnabled) {
+        return null
+    }
 
     if (isLoading) {
         return (
@@ -34,17 +41,9 @@ export function ShiftStatus({ onOpenShift, onCloseShift, onAddMovement, onCashRe
         )
     }
 
+    // Don't show button if no shift - the POS overlay handles this now
     if (!currentShift) {
-        return (
-            <BrandButton
-                onClick={onOpenShift}
-                variant="outline"
-                className="flex items-center gap-2"
-            >
-                <Clock className="w-4 h-4" />
-                <span className="font-medium">Abrir Turno</span>
-            </BrandButton>
-        )
+        return null
     }
 
     const openedAgo = formatDistanceToNow(new Date(currentShift.opened_at), {

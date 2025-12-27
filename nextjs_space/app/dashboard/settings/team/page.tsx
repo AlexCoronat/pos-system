@@ -21,7 +21,8 @@ import {
   Pencil,
   Trash2,
   Archive,
-  User
+  User,
+  Key
 } from 'lucide-react'
 import { BrandButton } from '@/components/shared'
 import { Input } from '@/components/ui/input'
@@ -106,6 +107,7 @@ export default function TeamPage() {
     useEmail: true, // Toggle: true = email, false = username
     email: '',
     username: '',
+    requireEmailVerification: false, // Toggle: require email confirmation
     firstName: '',
     lastName: '',
     phone: '',
@@ -150,6 +152,7 @@ export default function TeamPage() {
       useEmail: true,
       email: '',
       username: '',
+      requireEmailVerification: false,
       firstName: '',
       lastName: '',
       phone: '',
@@ -212,6 +215,7 @@ export default function TeamPage() {
         useEmail: formData.useEmail,
         email: formData.useEmail ? formData.email : undefined,
         username: formData.useEmail ? undefined : formData.username,
+        requireEmailVerification: formData.useEmail ? formData.requireEmailVerification : false,
         firstName: formData.firstName,
         lastName: formData.lastName,
         phone: formData.phone || undefined,
@@ -312,6 +316,37 @@ export default function TeamPage() {
     }
   }
 
+  const handleRegeneratePassword = async () => {
+    if (!selectedMember) return
+
+    if (selectedMember.isOwner) {
+      toast.error('No se puede regenerar la contraseña del propietario')
+      return
+    }
+
+    setIsSaving(true)
+
+    try {
+      const newPassword = await teamService.regenerateTemporaryPassword(selectedMember.id)
+
+      // Show the temporary password modal
+      setTempPasswordData({
+        username: selectedMember.email || selectedMember.username || '',
+        email: selectedMember.email || '',
+        temporaryPassword: newPassword,
+        isUsername: !!selectedMember.username && !selectedMember.email
+      })
+      setShowTempPasswordModal(true)
+      setEditDialogOpen(false)
+
+      toast.success('Contraseña regenerada correctamente')
+    } catch (error: any) {
+      toast.error(error.message || 'Error al regenerar contraseña')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const handleOpenDeleteDialog = (member: TeamMember) => {
     if (member.isOwner) {
       toast.error(t('messages.cannotDeleteOwner'))
@@ -397,7 +432,7 @@ export default function TeamPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/settings">
-            <BrandButton variant="ghost" size="icon">
+            <BrandButton variant="ghost" size="sm">
               <ArrowLeft className="h-5 w-5" />
             </BrandButton>
           </Link>
@@ -597,7 +632,7 @@ export default function TeamPage() {
 
       {/* Add Member Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('addDialog.title')}</DialogTitle>
             <DialogDescription>
@@ -634,7 +669,7 @@ export default function TeamPage() {
               <div className="flex gap-2">
                 <BrandButton
                   type="button"
-                  variant={formData.useEmail ? 'default' : 'outline'}
+                  variant={formData.useEmail ? 'primary' : 'outline'}
                   className="flex-1"
                   onClick={() => setFormData({ ...formData, useEmail: true })}
                 >
@@ -643,7 +678,7 @@ export default function TeamPage() {
                 </BrandButton>
                 <BrandButton
                   type="button"
-                  variant={!formData.useEmail ? 'default' : 'outline'}
+                  variant={!formData.useEmail ? 'primary' : 'outline'}
                   className="flex-1"
                   onClick={() => setFormData({ ...formData, useEmail: false })}
                 >
@@ -655,17 +690,36 @@ export default function TeamPage() {
 
             {/* Email Field (conditional) */}
             {formData.useEmail && (
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    className="pl-10"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="usuario@empresa.com"
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="email"
+                      type="email"
+                      className="pl-10"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="usuario@empresa.com"
+                    />
+                  </div>
+                </div>
+
+                {/* Email Verification Toggle */}
+                <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="require-verification" className="text-sm font-medium">
+                      Enviar email de verificación
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      El usuario deberá confirmar su cuenta antes de poder iniciar sesión
+                    </p>
+                  </div>
+                  <Switch
+                    id="require-verification"
+                    checked={formData.requireEmailVerification}
+                    onCheckedChange={(checked) => setFormData({ ...formData, requireEmailVerification: checked })}
                   />
                 </div>
               </div>
@@ -748,7 +802,7 @@ export default function TeamPage() {
                     {formData.locationIds.includes(location.id) && (
                       <BrandButton
                         type="button"
-                        variant={formData.primaryLocationId === location.id.toString() ? 'default' : 'outline'}
+                        variant={formData.primaryLocationId === location.id.toString() ? 'primary' : 'outline'}
                         size="sm"
                         className="h-6 text-xs"
                         onClick={() => setFormData({ ...formData, primaryLocationId: location.id.toString() })}
@@ -785,7 +839,7 @@ export default function TeamPage() {
 
       {/* Edit Member Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('editDialog.title')}</DialogTitle>
             <DialogDescription>
@@ -872,7 +926,7 @@ export default function TeamPage() {
                     {editFormData.locationIds.includes(location.id) && (
                       <BrandButton
                         type="button"
-                        variant={editFormData.primaryLocationId === location.id.toString() ? 'default' : 'outline'}
+                        variant={editFormData.primaryLocationId === location.id.toString() ? 'primary' : 'outline'}
                         size="sm"
                         className="h-6 text-xs"
                         onClick={() => setEditFormData({ ...editFormData, primaryLocationId: location.id.toString() })}
@@ -885,23 +939,35 @@ export default function TeamPage() {
               </div>
             </div>
 
-            <DialogFooter>
-              <BrandButton type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-                {t('editDialog.cancel')}
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <BrandButton
+                type="button"
+                variant="outline"
+                onClick={handleRegeneratePassword}
+                disabled={isSaving || selectedMember?.isOwner}
+                className="sm:mr-auto"
+              >
+                <Key className="h-4 w-4 mr-2" />
+                Regenerar Contraseña
               </BrandButton>
-              <BrandButton type="submit" disabled={isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {t('editDialog.saving')}
-                  </>
-                ) : (
-                  <>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    {t('editDialog.saveChanges')}
-                  </>
-                )}
-              </BrandButton>
+              <div className="flex gap-2">
+                <BrandButton type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                  {t('editDialog.cancel')}
+                </BrandButton>
+                <BrandButton type="submit" disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {t('editDialog.saving')}
+                    </>
+                  ) : (
+                    <>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      {t('editDialog.saveChanges')}
+                    </>
+                  )}
+                </BrandButton>
+              </div>
             </DialogFooter>
           </form>
         </DialogContent>

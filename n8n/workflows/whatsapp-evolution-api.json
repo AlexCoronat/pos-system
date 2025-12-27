@@ -1,0 +1,523 @@
+{
+    "name": "WhatsApp Quote Automation (Evolution API)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "whatsapp",
+                "options": {
+                    "rawBody": false
+                }
+            },
+            "id": "webhook_trigger",
+            "name": "Evolution Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                250,
+                300
+            ],
+            "webhookId": "evolution-whatsapp"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Parse Evolution API webhook data\nconst data = $input.first().json;\n\n// Evolution API sends different event types\nconst event = data.event || '';\nconst instance = data.instance || '';\n\n// Only process incoming messages\nif (event !== 'messages.upsert') {\n  return { skip: true };\n}\n\nconst message = data.data || {};\nconst key = message.key || {};\nconst messageContent = message.message || {};\n\n// Skip if message is from us (outgoing)\nif (key.fromMe) {\n  return { skip: true };\n}\n\n// Extract text from different message types\nlet text = '';\nif (messageContent.conversation) {\n  text = messageContent.conversation;\n} else if (messageContent.extendedTextMessage) {\n  text = messageContent.extendedTextMessage.text;\n} else if (messageContent.imageMessage?.caption) {\n  text = messageContent.imageMessage.caption;\n}\n\n// Extract phone number (remove @s.whatsapp.net)\nconst remoteJid = key.remoteJid || '';\nconst customerPhone = remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '');\n\n// Get push name (contact name)\nconst customerName = message.pushName || '';\n\nreturn {\n  skip: false,\n  instance: instance,\n  customerPhone: customerPhone,\n  customerName: customerName,\n  message: text,\n  messageId: key.id,\n  remoteJid: remoteJid,\n  timestamp: message.messageTimestamp\n};"
+            },
+            "id": "parse_webhook",
+            "name": "Parse Evolution Data",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "not_skip",
+                            "leftValue": "={{ $json.skip }}",
+                            "rightValue": false,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "equals"
+                            }
+                        },
+                        {
+                            "id": "has_message",
+                            "leftValue": "={{ $json.message }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notEmpty"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "filter_valid",
+            "name": "Valid Message?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                650,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "SELECT \n  b.id as business_id,\n  b.name as business_name,\n  sp.name as plan_name,\n  sp.whatsapp_enabled,\n  sp.monthly_quote_limit,\n  qas.ai_provider,\n  qas.ai_model,\n  qas.ai_temperature,\n  qas.system_prompt,\n  qas.greeting_message,\n  qas.is_enabled,\n  wn.phone_number,\n  wn.evolution_instance_name\nFROM whatsapp_numbers wn\nJOIN businesses b ON b.id = wn.business_id\nJOIN subscription_plans sp ON sp.id = b.subscription_plan_id\nLEFT JOIN quote_automation_settings qas ON qas.business_id = b.id\nWHERE wn.evolution_instance_name = '{{ $json.instance }}'\n  AND wn.is_active = true\nLIMIT 1",
+                "options": {}
+            },
+            "id": "get_business_config",
+            "name": "Get Business Config",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.4,
+            "position": [
+                850,
+                200
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "CONFIGURE_ME",
+                    "name": "Supabase PostgreSQL"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "business_found",
+                            "leftValue": "={{ $json.business_id }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "number",
+                                "operation": "exists"
+                            }
+                        },
+                        {
+                            "id": "automation_enabled",
+                            "leftValue": "={{ $json.is_enabled }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "check_enabled",
+            "name": "Is Enabled?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                1050,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "SELECT \n  COALESCE(quotes_used, 0) as quotes_used,\n  COALESCE(\n    (SELECT monthly_quote_limit FROM subscription_plans sp \n     JOIN businesses b ON b.subscription_plan_id = sp.id \n     WHERE b.id = {{ $('Get Business Config').item.json.business_id }}),\n    999999\n  ) as monthly_limit,\n  COALESCE(allow_overage, false) as allow_overage\nFROM quote_usage_monthly\nWHERE business_id = {{ $('Get Business Config').item.json.business_id }}\n  AND year_month = TO_CHAR(NOW(), 'YYYY-MM')\nUNION ALL\nSELECT 0, 999999, false WHERE NOT EXISTS (\n  SELECT 1 FROM quote_usage_monthly \n  WHERE business_id = {{ $('Get Business Config').item.json.business_id }}\n    AND year_month = TO_CHAR(NOW(), 'YYYY-MM')\n)\nLIMIT 1",
+                "options": {}
+            },
+            "id": "check_monthly_limit",
+            "name": "Check Monthly Limit",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.4,
+            "position": [
+                1250,
+                100
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "CONFIGURE_ME",
+                    "name": "Supabase PostgreSQL"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "limit_check",
+                            "leftValue": "={{ $json.quotes_used || 0 }}",
+                            "rightValue": "={{ $json.monthly_limit || 999999 }}",
+                            "operator": {
+                                "type": "number",
+                                "operation": "lt"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "under_limit",
+            "name": "Under Limit?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                1450,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $('Parse Evolution Data').item.json.message }}",
+                "options": {
+                    "systemMessage": "={{ $('Get Business Config').item.json.system_prompt || 'Eres un asistente de cotizaciones para ' + $('Get Business Config').item.json.business_name + '. Tu trabajo es ayudar a los clientes a cotizar productos. Responde en español de manera amable y profesional. Mantén las respuestas concisas.' }}"
+                }
+            },
+            "id": "ai_chat",
+            "name": "AI Assistant",
+            "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+            "typeVersion": 1,
+            "position": [
+                1650,
+                0
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "CONFIGURE_ME",
+                    "name": "OpenAI API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "=http://evolution_api_pos:8080/message/sendText/{{ $('Parse Evolution Data').item.json.instance }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "pos_evolution_key_2024"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"number\": \"{{ $('Parse Evolution Data').item.json.customerPhone }}\",\n  \"text\": \"{{ $json.text.replace(/\"/g, '\\\\\"').replace(/\\n/g, '\\\\n') }}\"\n}",
+                "options": {}
+            },
+            "id": "send_response",
+            "name": "Send WhatsApp Reply",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1850,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "=http://evolution_api_pos:8080/message/sendText/{{ $('Parse Evolution Data').item.json.instance }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "pos_evolution_key_2024"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"number\": \"{{ $('Parse Evolution Data').item.json.customerPhone }}\",\n  \"text\": \"Lo siento, este negocio ha alcanzado su límite mensual de cotizaciones. Por favor intenta el próximo mes.\"\n}",
+                "options": {}
+            },
+            "id": "send_limit_message",
+            "name": "Send Limit Reached",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1650,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "INSERT INTO quote_usage_monthly (business_id, year_month, quotes_used)\nVALUES ({{ $('Get Business Config').item.json.business_id }}, TO_CHAR(NOW(), 'YYYY-MM'), 1)\nON CONFLICT (business_id, year_month)\nDO UPDATE SET quotes_used = quote_usage_monthly.quotes_used + 1, updated_at = NOW()",
+                "options": {}
+            },
+            "id": "increment_usage",
+            "name": "Increment Usage",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.4,
+            "position": [
+                2050,
+                0
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "CONFIGURE_ME",
+                    "name": "Supabase PostgreSQL"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={\"status\": \"ok\"}",
+                "options": {}
+            },
+            "id": "respond_success",
+            "name": "Respond OK",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                2250,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={\"status\": \"skipped\"}",
+                "options": {}
+            },
+            "id": "respond_skipped",
+            "name": "Respond Skipped",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                850,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={\"status\": \"disabled\"}",
+                "options": {}
+            },
+            "id": "respond_disabled",
+            "name": "Respond Disabled",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                1250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={\"status\": \"limit_reached\"}",
+                "options": {}
+            },
+            "id": "respond_limit",
+            "name": "Respond Limit",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                1850,
+                200
+            ]
+        }
+    ],
+    "connections": {
+        "Evolution Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Evolution Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Evolution Data": {
+            "main": [
+                [
+                    {
+                        "node": "Valid Message?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Valid Message?": {
+            "main": [
+                [
+                    {
+                        "node": "Get Business Config",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Respond Skipped",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Business Config": {
+            "main": [
+                [
+                    {
+                        "node": "Is Enabled?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Is Enabled?": {
+            "main": [
+                [
+                    {
+                        "node": "Check Monthly Limit",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Respond Disabled",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check Monthly Limit": {
+            "main": [
+                [
+                    {
+                        "node": "Under Limit?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Under Limit?": {
+            "main": [
+                [
+                    {
+                        "node": "AI Assistant",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Send Limit Reached",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Assistant": {
+            "main": [
+                [
+                    {
+                        "node": "Send WhatsApp Reply",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send WhatsApp Reply": {
+            "main": [
+                [
+                    {
+                        "node": "Increment Usage",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Increment Usage": {
+            "main": [
+                [
+                    {
+                        "node": "Respond OK",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Limit Reached": {
+            "main": [
+                [
+                    {
+                        "node": "Respond Limit",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "staticData": null,
+    "tags": [
+        {
+            "name": "WhatsApp",
+            "id": "1"
+        },
+        {
+            "name": "Evolution API",
+            "id": "2"
+        },
+        {
+            "name": "AI",
+            "id": "3"
+        }
+    ],
+    "triggerCount": 0,
+    "updatedAt": "2024-12-26T00:00:00.000Z",
+    "versionId": "2"
+}

@@ -13,7 +13,11 @@ import {
   ChevronRight,
   Keyboard,
   Wallet,
-  Sliders
+  Sliders,
+  Layout,
+  Bot,
+  Phone,
+  Clock
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { PageHeader } from '@/components/shared'
@@ -28,6 +32,36 @@ export default function SettingsPage() {
       href: '/dashboard/settings/preferences',
       icon: Sliders,
       color: 'text-pink-600 bg-pink-100'
+    },
+    {
+      title: 'Layout POS',
+      description: 'Configura qué elementos mostrar en la pantalla de ventas',
+      href: '/dashboard/settings/pos-layout',
+      icon: Layout,
+      color: 'text-cyan-600 bg-cyan-100'
+    },
+    {
+      title: 'Configuración de Turnos',
+      description: 'Configura si se requieren turnos y su duración',
+      href: '/dashboard/settings/shift-config',
+      icon: Clock,
+      color: 'text-amber-600 bg-amber-100'
+    },
+    {
+      title: 'Automatización Cotizaciones',
+      description: 'Configura la generación automática de cotizaciones con IA',
+      href: '/dashboard/settings/quote-automation',
+      icon: Bot,
+      color: 'text-emerald-600 bg-emerald-100',
+      disabled: true
+    },
+    {
+      title: 'Admin WhatsApp',
+      description: 'Gestiona el pool de números WhatsApp y asignaciones',
+      href: '/dashboard/settings/whatsapp-admin',
+      icon: Phone,
+      color: 'text-green-600 bg-green-100',
+      disabled: true
     },
     {
       titleKey: 'sections.team.title',
@@ -117,8 +151,8 @@ export default function SettingsPage() {
                       {t('sections.company.comingSoon')}
                     </span>
                   </div>
-                  <CardTitle className="mt-4">{t(section.titleKey)}</CardTitle>
-                  <CardDescription>{t(section.descriptionKey)}</CardDescription>
+                  <CardTitle className="mt-4">{section.titleKey ? t(section.titleKey) : section.title}</CardTitle>
+                  <CardDescription>{section.descriptionKey ? t(section.descriptionKey) : section.description}</CardDescription>
                 </CardHeader>
               </div>
             ) : (

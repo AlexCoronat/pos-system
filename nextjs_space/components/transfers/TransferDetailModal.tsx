@@ -6,6 +6,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
     DialogFooter,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
@@ -201,6 +202,10 @@ export function TransferDetailModal({
         return (
             <Dialog open={open} onOpenChange={onOpenChange}>
                 <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Detalle de Transferencia</DialogTitle>
+                        <DialogDescription>Cargando información de la transferencia</DialogDescription>
+                    </DialogHeader>
                     <LoadingState message="Cargando transferencia..." />
                 </DialogContent>
             </Dialog>
@@ -222,6 +227,9 @@ export function TransferDetailModal({
                             <Badge variant="destructive">URGENTE</Badge>
                         )}
                     </DialogTitle>
+                    <DialogDescription>
+                        Transferencia de {transfer.fromLocationName} a {transfer.toLocationName}
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-6">

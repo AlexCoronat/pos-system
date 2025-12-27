@@ -129,8 +129,7 @@ class TransferService {
             quantity_shipped,
             quantity_received,
             notes,
-            product:products(id, name, sku),
-            variant:product_variants(id, name)
+            product:products(id, name, sku)
           )
         `)
                 .eq('id', transferId)

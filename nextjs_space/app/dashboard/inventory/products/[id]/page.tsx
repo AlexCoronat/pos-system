@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Loader2, Package, History, Grid3x3, Plus } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, Package, History, Grid3x3, Plus, Briefcase, Clock, Calendar } from 'lucide-react'
 import { BrandButton } from '@/components/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -68,7 +68,11 @@ export default function ProductDetailPage() {
     salePrice: '',
     isActive: true,
     minStockLevel: '0',
-    reorderPoint: '5'
+    reorderPoint: '5',
+    // Service fields
+    isService: false,
+    durationMinutes: '',
+    requiresAppointment: false
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -102,7 +106,11 @@ export default function ProductDetailPage() {
           salePrice: productData.price.salePrice.toString(),
           isActive: productData.isActive,
           minStockLevel: '0',
-          reorderPoint: '0'
+          reorderPoint: '0',
+          // Service fields from product
+          isService: (productData as any).isService || false,
+          durationMinutes: (productData as any).durationMinutes?.toString() || '',
+          requiresAppointment: (productData as any).requiresAppointment || false
         })
 
         // Load inventory
@@ -202,7 +210,11 @@ export default function ProductDetailPage() {
         costPrice: parseFloat(formData.costPrice),
         salePrice: parseFloat(formData.salePrice),
         isActive: formData.isActive,
-        currency: 'MXN'
+        currency: 'MXN',
+        // Service fields
+        isService: formData.isService,
+        durationMinutes: formData.durationMinutes ? parseInt(formData.durationMinutes) : undefined,
+        requiresAppointment: formData.requiresAppointment
       }
 
       await productService.updateProduct(productId, updateData)
@@ -336,7 +348,7 @@ export default function ProductDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/dashboard/inventory">
-          <BrandButton variant="ghost" size="icon">
+          <BrandButton variant="ghost" size="sm">
             <ArrowLeft className="h-5 w-5" />
           </BrandButton>
         </Link>
@@ -562,69 +574,140 @@ export default function ProductDetailPage() {
                   </CardContent>
                 </Card>
 
+                {/* Service Configuration */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Estado del Inventario</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <Briefcase className="h-5 w-5" />
+                      Tipo de Producto
+                    </CardTitle>
                     <CardDescription>
-                      Informacion actual del stock
+                      Define si es un producto físico o un servicio
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    {inventory ? (
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Cantidad disponible</span>
-                          <span className="font-semibold text-lg">{inventory.quantity}</span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="minStockLevel">Stock mínimo</Label>
-                            <Input
-                              id="minStockLevel"
-                              type="number"
-                              min="0"
-                              value={formData.minStockLevel}
-                              onChange={(e) => handleChange('minStockLevel', e.target.value)}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="reorderPoint">Punto de reorden</Label>
-                            <Input
-                              id="reorderPoint"
-                              type="number"
-                              min="0"
-                              value={formData.reorderPoint}
-                              onChange={(e) => handleChange('reorderPoint', e.target.value)}
-                            />
-                          </div>
-                        </div>
-
-                        {inventory.lastRestocked && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Último reabastecimiento</span>
-                            <span>{formatDate(inventory.lastRestocked)}</span>
-                          </div>
-                        )}
-
-                        <div className="pt-2">
-                          {inventory.quantity <= 0 ? (
-                            <Badge variant="destructive">Sin Stock</Badge>
-                          ) : inventory.quantity <= (parseInt(formData.reorderPoint) || 0) ? (
-                            <Badge className="bg-yellow-100 text-yellow-800">Bajo Stock</Badge>
-                          ) : (
-                            <Badge className="bg-green-100 text-green-800">Stock Normal</Badge>
-                          )}
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Briefcase className="h-5 w-5 text-indigo-600" />
+                        <div>
+                          <Label className="font-medium">¿Es un servicio?</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Los servicios no manejan inventario
+                          </p>
                         </div>
                       </div>
-                    ) : (
-                      <p className="text-muted-foreground text-sm">
-                        No hay registro de inventario para este producto
-                      </p>
+                      <Switch
+                        checked={formData.isService}
+                        onCheckedChange={(checked) => handleChange('isService', checked)}
+                      />
+                    </div>
+
+                    {formData.isService && (
+                      <>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <Label htmlFor="durationMinutes">Duración (minutos)</Label>
+                          </div>
+                          <Input
+                            id="durationMinutes"
+                            type="number"
+                            min="0"
+                            value={formData.durationMinutes}
+                            onChange={(e) => handleChange('durationMinutes', e.target.value)}
+                            placeholder="Ej: 30 (opcional)"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Tiempo estimado del servicio (opcional)
+                          </p>
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Calendar className="h-5 w-5 text-orange-600" />
+                            <div>
+                              <Label className="font-medium">¿Requiere cita?</Label>
+                              <p className="text-sm text-muted-foreground">
+                                El cliente debe agendar previamente
+                              </p>
+                            </div>
+                          </div>
+                          <Switch
+                            checked={formData.requiresAppointment}
+                            onCheckedChange={(checked) => handleChange('requiresAppointment', checked)}
+                          />
+                        </div>
+                      </>
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Inventory Status - Hidden for services */}
+                {!formData.isService && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Estado del Inventario</CardTitle>
+                      <CardDescription>
+                        Informacion actual del stock
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {inventory ? (
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Cantidad disponible</span>
+                            <span className="font-semibold text-lg">{inventory.quantity}</span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="minStockLevel">Stock mínimo</Label>
+                              <Input
+                                id="minStockLevel"
+                                type="number"
+                                min="0"
+                                value={formData.minStockLevel}
+                                onChange={(e) => handleChange('minStockLevel', e.target.value)}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="reorderPoint">Punto de reorden</Label>
+                              <Input
+                                id="reorderPoint"
+                                type="number"
+                                min="0"
+                                value={formData.reorderPoint}
+                                onChange={(e) => handleChange('reorderPoint', e.target.value)}
+                              />
+                            </div>
+                          </div>
+
+                          {inventory.lastRestocked && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Último reabastecimiento</span>
+                              <span>{formatDate(inventory.lastRestocked)}</span>
+                            </div>
+                          )}
+
+                          <div className="pt-2">
+                            {inventory.quantity <= 0 ? (
+                              <Badge variant="destructive">Sin Stock</Badge>
+                            ) : inventory.quantity <= (parseInt(formData.reorderPoint) || 0) ? (
+                              <Badge className="bg-yellow-100 text-yellow-800">Bajo Stock</Badge>
+                            ) : (
+                              <Badge className="bg-green-100 text-green-800">Stock Normal</Badge>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground text-sm">
+                          No hay registro de inventario para este producto
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
 
@@ -745,6 +828,6 @@ export default function ProductDetailPage() {
         onOpenChange={setEditDialogOpen}
         onSuccess={loadVariants}
       />
-    </div>
+    </div >
   )
 }

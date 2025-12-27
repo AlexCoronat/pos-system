@@ -1,6 +1,6 @@
 // Notification types and interfaces
 
-export type NotificationType = 'stock_alert' | 'sales' | 'system' | 'info'
+export type NotificationType = 'stock_alert' | 'sales' | 'system' | 'info' | 'transfer'
 
 export interface Notification {
     id: number
