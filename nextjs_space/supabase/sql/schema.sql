@@ -257,6 +257,96 @@ COMMENT ON FUNCTION "public"."check_low_stock"() IS 'Genera alertas automáticas
 
 
 
+CREATE OR REPLACE FUNCTION "public"."check_monthly_quote_limit"("p_business_id" integer) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    v_year_month VARCHAR(7);
+    v_usage RECORD;
+    v_plan RECORD;
+    v_allowed BOOLEAN;
+    v_reason TEXT;
+BEGIN
+    v_year_month := TO_CHAR(CURRENT_DATE, 'YYYY-MM');
+    
+    -- Obtener plan del negocio
+    SELECT sp.* INTO v_plan
+    FROM public.businesses b
+    JOIN public.subscription_plans sp ON sp.id = b.subscription_plan_id
+    WHERE b.id = p_business_id;
+    
+    -- Si no tiene plan o WhatsApp no está habilitado
+    IF NOT FOUND OR NOT v_plan.whatsapp_enabled THEN
+        RETURN JSONB_BUILD_OBJECT(
+            'allowed', false,
+            'reason', 'whatsapp_not_enabled',
+            'message', 'Tu plan no incluye WhatsApp. Actualiza tu plan para usar esta función.'
+        );
+    END IF;
+    
+    -- Si es ilimitado
+    IF v_plan.monthly_quote_limit = -1 THEN
+        RETURN JSONB_BUILD_OBJECT(
+            'allowed', true,
+            'reason', 'unlimited',
+            'quotes_used', 0,
+            'quotes_limit', -1
+        );
+    END IF;
+    
+    -- Obtener o crear registro de uso mensual
+    INSERT INTO public.quote_usage_monthly (
+        business_id, year_month, quotes_limit, overage_price_per_quote, allow_overage
+    ) VALUES (
+        p_business_id, v_year_month, v_plan.monthly_quote_limit, 
+        v_plan.overage_price_per_quote, v_plan.allow_overage
+    )
+    ON CONFLICT (business_id, year_month) DO NOTHING;
+    
+    SELECT * INTO v_usage
+    FROM public.quote_usage_monthly
+    WHERE business_id = p_business_id AND year_month = v_year_month;
+    
+    -- Verificar límite
+    IF v_usage.quotes_used < v_usage.quotes_limit THEN
+        v_allowed := true;
+        v_reason := 'within_limit';
+    ELSIF v_usage.allow_overage THEN
+        v_allowed := true;
+        v_reason := 'overage_allowed';
+    ELSE
+        v_allowed := false;
+        v_reason := 'limit_reached';
+    END IF;
+    
+    RETURN JSONB_BUILD_OBJECT(
+        'allowed', v_allowed,
+        'reason', v_reason,
+        'quotes_used', v_usage.quotes_used,
+        'quotes_limit', v_usage.quotes_limit,
+        'overage_quotes', v_usage.overage_quotes,
+        'overage_amount', v_usage.overage_amount,
+        'allow_overage', v_usage.allow_overage,
+        'overage_price', v_usage.overage_price_per_quote,
+        'message', CASE 
+            WHEN v_reason = 'limit_reached' THEN 
+                'Has alcanzado tu límite mensual de cotizaciones. Activa los excedentes o actualiza tu plan.'
+            WHEN v_reason = 'overage_allowed' THEN
+                'Has excedido tu límite. Se aplicará un cargo adicional por esta cotización.'
+            ELSE NULL
+        END
+    );
+END;
+$$;
+
+
+ALTER FUNCTION "public"."check_monthly_quote_limit"("p_business_id" integer) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."check_monthly_quote_limit"("p_business_id" integer) IS 'Verifica si un negocio puede crear más cotizaciones este mes';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."check_plan_limit"("p_business_id" integer, "p_resource_type" character varying, "p_current_count" integer DEFAULT NULL::integer) RETURNS boolean
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -303,6 +393,79 @@ $$;
 
 
 ALTER FUNCTION "public"."check_plan_limit"("p_business_id" integer, "p_resource_type" character varying, "p_current_count" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."check_quote_automation_limit"("p_business_id" integer, "p_customer_phone" character varying DEFAULT NULL::character varying, "p_customer_email" character varying DEFAULT NULL::character varying) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    v_limit INTEGER;
+    v_count INTEGER;
+    v_allowed BOOLEAN;
+BEGIN
+    -- Get the daily limit for this business
+    SELECT COALESCE(daily_quote_limit, 3) INTO v_limit
+    FROM public.quote_automation_settings
+    WHERE business_id = p_business_id;
+    
+    IF v_limit IS NULL THEN
+        v_limit := 3; -- Default limit
+    END IF;
+    
+    -- Count quotes created today for this customer
+    SELECT COUNT(*) INTO v_count
+    FROM public.quote_conversation_sessions
+    WHERE business_id = p_business_id
+        AND status = 'completed'
+        AND quote_id IS NOT NULL
+        AND created_at >= CURRENT_DATE
+        AND (
+            (p_customer_phone IS NOT NULL AND customer_phone = p_customer_phone)
+            OR (p_customer_email IS NOT NULL AND customer_email = p_customer_email)
+        );
+    
+    v_allowed := v_count < v_limit;
+    
+    RETURN JSONB_BUILD_OBJECT(
+        'allowed', v_allowed,
+        'current_count', v_count,
+        'daily_limit', v_limit,
+        'remaining', GREATEST(0, v_limit - v_count)
+    );
+END;
+$$;
+
+
+ALTER FUNCTION "public"."check_quote_automation_limit"("p_business_id" integer, "p_customer_phone" character varying, "p_customer_email" character varying) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."check_quote_automation_limit"("p_business_id" integer, "p_customer_phone" character varying, "p_customer_email" character varying) IS 'Checks if a customer has exceeded their daily quote limit';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."cleanup_expired_quote_sessions"() RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    v_count INTEGER;
+BEGIN
+    UPDATE public.quote_conversation_sessions
+    SET status = 'expired',
+        updated_at = NOW()
+    WHERE status = 'active'
+        AND expires_at < NOW();
+    
+    GET DIAGNOSTICS v_count = ROW_COUNT;
+    RETURN v_count;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."cleanup_expired_quote_sessions"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."cleanup_expired_quote_sessions"() IS 'Marks expired conversation sessions as expired';
+
 
 
 CREATE OR REPLACE FUNCTION "public"."cleanup_orphan_auth_users"() RETURNS "void"
@@ -378,6 +541,38 @@ $$;
 
 
 ALTER FUNCTION "public"."ensure_single_main_location"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."find_customer_by_phone"("p_business_id" integer, "p_phone" character varying) RETURNS TABLE("id" integer, "customer_number" character varying, "first_name" character varying, "last_name" character varying, "business_name" character varying, "email" character varying, "phone" character varying)
+    LANGUAGE "sql" SECURITY DEFINER
+    AS $$
+    SELECT 
+        c.id,
+        c.customer_number,
+        c.first_name,
+        c.last_name,
+        c.business_name,
+        c.email,
+        c.phone
+    FROM public.customers c
+    WHERE c.business_id = p_business_id
+        AND c.is_active = true
+        AND c.deleted_at IS NULL
+        AND (
+            c.phone = p_phone 
+            OR c.mobile = p_phone
+            OR c.phone = REPLACE(REPLACE(REPLACE(p_phone, '+', ''), '-', ''), ' ', '')
+            OR c.mobile = REPLACE(REPLACE(REPLACE(p_phone, '+', ''), '-', ''), ' ', '')
+        )
+    LIMIT 1;
+$$;
+
+
+ALTER FUNCTION "public"."find_customer_by_phone"("p_business_id" integer, "p_phone" character varying) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."find_customer_by_phone"("p_business_id" integer, "p_phone" character varying) IS 'Finds an existing customer by phone number';
+
 
 
 CREATE OR REPLACE FUNCTION "public"."generate_shift_number"("p_cash_register_id" bigint) RETURNS character varying
@@ -485,6 +680,123 @@ COMMENT ON FUNCTION "public"."get_archived_users"("p_business_id" integer) IS 'R
 
 
 
+CREATE OR REPLACE FUNCTION "public"."get_business_by_evolution_instance"("p_instance_name" "text") RETURNS TABLE("business_id" integer, "business_name" "text", "subscription_plan_id" integer, "plan_name" "text", "whatsapp_enabled" boolean, "monthly_quote_limit" integer, "ai_provider" "text", "ai_model" "text", "ai_temperature" numeric, "system_prompt" "text", "greeting_message" "text", "is_enabled" boolean)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        b.id::INTEGER as business_id,
+        b.name::TEXT as business_name,
+        sp.id::INTEGER as subscription_plan_id,
+        sp.name::TEXT as plan_name,
+        COALESCE(sp.whatsapp_enabled, false) as whatsapp_enabled,
+        COALESCE(sp.monthly_quote_limit, 0)::INTEGER as monthly_quote_limit,
+        COALESCE(qas.ai_provider, 'openai')::TEXT as ai_provider,
+        COALESCE(qas.ai_model, 'gpt-4-turbo')::TEXT as ai_model,
+        COALESCE(qas.ai_temperature, 0.7) as ai_temperature,
+        qas.system_prompt::TEXT as system_prompt,
+        COALESCE(qas.greeting_message, 'Hola! ¿En qué puedo ayudarte?')::TEXT as greeting_message,
+        COALESCE(qas.is_enabled, false) as is_enabled
+    FROM whatsapp_numbers wn
+    JOIN businesses b ON b.id = wn.business_id
+    JOIN subscription_plans sp ON sp.id = b.subscription_plan_id
+    LEFT JOIN quote_automation_settings qas ON qas.business_id = b.id
+    WHERE wn.evolution_instance_name = p_instance_name
+      AND wn.is_active = true
+    LIMIT 1;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_business_by_evolution_instance"("p_instance_name" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_business_by_whatsapp_number"("p_whatsapp_number" "text") RETURNS TABLE("business_id" integer, "business_name" "text", "subscription_plan_id" integer, "plan_name" "text", "whatsapp_enabled" boolean, "monthly_quote_limit" integer, "ai_provider" "text", "ai_model" "text", "ai_temperature" numeric, "system_prompt" "text", "greeting_message" "text", "is_enabled" boolean)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        b.id::INTEGER as business_id,
+        b.name::TEXT as business_name,
+        sp.id::INTEGER as subscription_plan_id,
+        sp.name::TEXT as plan_name,
+        COALESCE(sp.whatsapp_enabled, false) as whatsapp_enabled,
+        COALESCE(sp.monthly_quote_limit, 0)::INTEGER as monthly_quote_limit,
+        COALESCE(qas.ai_provider, 'openai')::TEXT as ai_provider,
+        COALESCE(qas.ai_model, 'gpt-4-turbo')::TEXT as ai_model,
+        COALESCE(qas.ai_temperature, 0.7) as ai_temperature,
+        qas.system_prompt::TEXT as system_prompt,
+        COALESCE(qas.greeting_message, 'Hola! ¿En qué puedo ayudarte?')::TEXT as greeting_message,
+        COALESCE(qas.is_enabled, false) as is_enabled
+    FROM whatsapp_numbers wn
+    JOIN businesses b ON b.id = wn.business_id
+    JOIN subscription_plans sp ON sp.id = b.subscription_plan_id
+    LEFT JOIN quote_automation_settings qas ON qas.business_id = b.id
+    WHERE wn.phone_number = p_whatsapp_number
+      AND wn.is_active = true
+    LIMIT 1;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_business_by_whatsapp_number"("p_whatsapp_number" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_business_by_whatsapp_number"("p_whatsapp_number" character varying) RETURNS TABLE("business_id" integer, "business_name" character varying, "subscription_plan_id" integer, "plan_name" character varying, "whatsapp_enabled" boolean, "monthly_quote_limit" integer, "ai_provider" character varying, "ai_model" character varying, "ai_temperature" numeric, "system_prompt" "text", "greeting_message" "text", "is_enabled" boolean)
+    LANGUAGE "sql" SECURITY DEFINER
+    AS $$
+    SELECT 
+        b.id as business_id,
+        b.name as business_name,
+        b.subscription_plan_id,
+        sp.name as plan_name,
+        sp.whatsapp_enabled,
+        sp.monthly_quote_limit,
+        COALESCE(s.ai_provider, 'claude') as ai_provider,
+        COALESCE(s.ai_model, 'claude-3-sonnet-20240229') as ai_model,
+        COALESCE(s.ai_temperature, 0.7) as ai_temperature,
+        s.system_prompt,
+        COALESCE(s.greeting_message, 'Hola! Soy tu asistente de cotizaciones.') as greeting_message,
+        COALESCE(s.is_enabled, false) as is_enabled
+    FROM public.whatsapp_numbers w
+    JOIN public.businesses b ON b.id = w.business_id
+    JOIN public.subscription_plans sp ON sp.id = b.subscription_plan_id
+    LEFT JOIN public.quote_automation_settings s ON s.business_id = b.id
+    WHERE w.phone_number = p_whatsapp_number
+        AND w.is_active = true
+        AND w.is_verified = true
+        AND sp.whatsapp_enabled = true
+    LIMIT 1;
+$$;
+
+
+ALTER FUNCTION "public"."get_business_by_whatsapp_number"("p_whatsapp_number" character varying) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."get_business_by_whatsapp_number"("p_whatsapp_number" character varying) IS 'Identifica qué negocio corresponde a un número de WhatsApp entrante';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."get_business_whatsapp_number"("p_business_id" integer) RETURNS TABLE("phone_number" character varying, "is_verified" boolean)
+    LANGUAGE "sql" SECURITY DEFINER
+    AS $$
+    SELECT phone_number, is_verified
+    FROM public.whatsapp_numbers
+    WHERE business_id = p_business_id
+        AND is_active = true
+    LIMIT 1;
+$$;
+
+
+ALTER FUNCTION "public"."get_business_whatsapp_number"("p_business_id" integer) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."get_business_whatsapp_number"("p_business_id" integer) IS 'Obtiene el número WhatsApp asignado a un negocio';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."get_enabled_payment_methods"("p_business_id" integer) RETURNS TABLE("method_id" integer, "method_code" character varying, "method_name" character varying, "method_type" character varying, "config" "jsonb", "display_order" integer)
     LANGUAGE "sql" SECURITY DEFINER
     AS $$
@@ -574,6 +886,22 @@ ALTER FUNCTION "public"."get_notification_preferences"("p_user_id" "uuid") OWNER
 
 
 COMMENT ON FUNCTION "public"."get_notification_preferences"("p_user_id" "uuid") IS 'Gets user notification preferences or business defaults';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."get_twilio_webhook_url"("p_business_id" integer) RETURNS "text"
+    LANGUAGE "sql" SECURITY DEFINER
+    AS $$
+    SELECT twilio_webhook_url
+    FROM public.quote_automation_settings
+    WHERE business_id = p_business_id;
+$$;
+
+
+ALTER FUNCTION "public"."get_twilio_webhook_url"("p_business_id" integer) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."get_twilio_webhook_url"("p_business_id" integer) IS 'Returns the webhook URL for Twilio configuration';
 
 
 
@@ -719,6 +1047,55 @@ ALTER FUNCTION "public"."increment_product_sale_frequency"() OWNER TO "postgres"
 
 
 COMMENT ON FUNCTION "public"."increment_product_sale_frequency"() IS 'Increments product sale frequency counter when sold';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."increment_quote_usage"("p_business_id" integer) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    v_year_month VARCHAR(7);
+    v_usage RECORD;
+    v_is_overage BOOLEAN;
+BEGIN
+    v_year_month := TO_CHAR(CURRENT_DATE, 'YYYY-MM');
+    
+    -- Actualizar contador
+    UPDATE public.quote_usage_monthly
+    SET 
+        quotes_used = quotes_used + 1,
+        overage_quotes = CASE 
+            WHEN quotes_used >= quotes_limit AND quotes_limit > 0 
+            THEN overage_quotes + 1 
+            ELSE overage_quotes 
+        END,
+        overage_amount = CASE 
+            WHEN quotes_used >= quotes_limit AND quotes_limit > 0 
+            THEN overage_amount + overage_price_per_quote
+            ELSE overage_amount 
+        END,
+        updated_at = NOW()
+    WHERE business_id = p_business_id AND year_month = v_year_month
+    RETURNING * INTO v_usage;
+    
+    v_is_overage := v_usage.quotes_used > v_usage.quotes_limit AND v_usage.quotes_limit > 0;
+    
+    RETURN JSONB_BUILD_OBJECT(
+        'success', true,
+        'quotes_used', v_usage.quotes_used,
+        'quotes_limit', v_usage.quotes_limit,
+        'is_overage', v_is_overage,
+        'overage_quotes', v_usage.overage_quotes,
+        'overage_amount', v_usage.overage_amount
+    );
+END;
+$$;
+
+
+ALTER FUNCTION "public"."increment_quote_usage"("p_business_id" integer) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."increment_quote_usage"("p_business_id" integer) IS 'Incrementa el contador de cotizaciones usadas';
 
 
 
@@ -1113,6 +1490,32 @@ $$;
 
 ALTER FUNCTION "public"."user_belongs_to_business"("p_business_id" integer) OWNER TO "postgres";
 
+
+CREATE OR REPLACE FUNCTION "public"."verify_twilio_whatsapp"("p_business_id" integer) RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+    UPDATE public.quote_automation_settings
+    SET 
+        twilio_verified = true,
+        twilio_verified_at = NOW(),
+        updated_at = NOW()
+    WHERE business_id = p_business_id
+        AND twilio_account_sid IS NOT NULL
+        AND twilio_auth_token_encrypted IS NOT NULL
+        AND twilio_whatsapp_number IS NOT NULL;
+    
+    RETURN FOUND;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."verify_twilio_whatsapp"("p_business_id" integer) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."verify_twilio_whatsapp"("p_business_id" integer) IS 'Marks Twilio configuration as verified after successful test';
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
@@ -1221,7 +1624,8 @@ CREATE TABLE IF NOT EXISTS "public"."businesses" (
     "metadata" "jsonb" DEFAULT '{}'::"jsonb",
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
-    "deleted_at" timestamp with time zone
+    "deleted_at" timestamp with time zone,
+    "subscription_plan_id" integer
 );
 
 
@@ -3028,6 +3432,87 @@ ALTER SEQUENCE "public"."purchase_receipts_id_seq" OWNED BY "public"."purchase_r
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."quote_automation_settings" (
+    "id" integer NOT NULL,
+    "business_id" integer NOT NULL,
+    "ai_provider" character varying(20) DEFAULT 'claude'::character varying,
+    "ai_model" character varying(50) DEFAULT 'claude-3-sonnet-20240229'::character varying,
+    "ai_temperature" numeric(2,1) DEFAULT 0.7,
+    "is_enabled" boolean DEFAULT false,
+    "whatsapp_enabled" boolean DEFAULT false,
+    "email_enabled" boolean DEFAULT false,
+    "web_enabled" boolean DEFAULT false,
+    "daily_quote_limit" integer DEFAULT 3,
+    "auto_send_quote" boolean DEFAULT true,
+    "include_product_images" boolean DEFAULT false,
+    "default_expiry_days" integer DEFAULT 7,
+    "system_prompt" "text",
+    "greeting_message" "text" DEFAULT 'Hola! Soy tu asistente de cotizaciones. Cuéntame qué productos necesitas y te prepararé una cotización.'::"text",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "twilio_account_sid" character varying(50),
+    "twilio_auth_token_encrypted" "text",
+    "twilio_whatsapp_number" character varying(20),
+    "twilio_verified" boolean DEFAULT false,
+    "twilio_verified_at" timestamp with time zone,
+    "twilio_webhook_url" "text",
+    "allow_overage" boolean DEFAULT false,
+    "overage_notification_sent" boolean DEFAULT false,
+    CONSTRAINT "quote_automation_settings_ai_provider_check" CHECK ((("ai_provider")::"text" = ANY ((ARRAY['claude'::character varying, 'openai'::character varying, 'deepseek'::character varying])::"text"[])))
+);
+
+
+ALTER TABLE "public"."quote_automation_settings" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."quote_automation_settings" IS 'Per-business configuration for quote automation features';
+
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."quote_automation_settings_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."quote_automation_settings_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."quote_automation_settings_id_seq" OWNED BY "public"."quote_automation_settings"."id";
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."quote_conversation_sessions" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "business_id" integer NOT NULL,
+    "customer_id" integer,
+    "customer_phone" character varying(20),
+    "customer_email" character varying(100),
+    "customer_name" character varying(100),
+    "channel" character varying(20) NOT NULL,
+    "channel_session_id" character varying(255),
+    "messages" "jsonb" DEFAULT '[]'::"jsonb" NOT NULL,
+    "extracted_items" "jsonb" DEFAULT '[]'::"jsonb",
+    "status" character varying(20) DEFAULT 'active'::character varying,
+    "quote_id" integer,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "expires_at" timestamp with time zone DEFAULT ("now"() + '24:00:00'::interval),
+    CONSTRAINT "quote_conversation_sessions_channel_check" CHECK ((("channel")::"text" = ANY ((ARRAY['whatsapp'::character varying, 'email'::character varying, 'web'::character varying, 'telegram'::character varying])::"text"[]))),
+    CONSTRAINT "quote_conversation_sessions_status_check" CHECK ((("status")::"text" = ANY ((ARRAY['active'::character varying, 'completed'::character varying, 'expired'::character varying, 'cancelled'::character varying])::"text"[])))
+);
+
+
+ALTER TABLE "public"."quote_conversation_sessions" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."quote_conversation_sessions" IS 'Stores conversation context for AI-powered quote generation';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."quote_follow_ups" (
     "id" integer NOT NULL,
     "quote_id" integer NOT NULL,
@@ -3115,6 +3600,45 @@ ALTER SEQUENCE "public"."quote_items_id_seq" OWNER TO "postgres";
 
 
 ALTER SEQUENCE "public"."quote_items_id_seq" OWNED BY "public"."quote_items"."id";
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."quote_usage_monthly" (
+    "id" integer NOT NULL,
+    "business_id" integer NOT NULL,
+    "year_month" character varying(7) NOT NULL,
+    "quotes_used" integer DEFAULT 0,
+    "quotes_limit" integer DEFAULT 0,
+    "overage_quotes" integer DEFAULT 0,
+    "overage_amount" numeric(10,2) DEFAULT 0,
+    "overage_price_per_quote" numeric(10,2) DEFAULT 0,
+    "allow_overage" boolean DEFAULT false,
+    "overage_blocked_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."quote_usage_monthly" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."quote_usage_monthly" IS 'Tracking de cotizaciones usadas por mes por negocio';
+
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."quote_usage_monthly_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."quote_usage_monthly_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."quote_usage_monthly_id_seq" OWNED BY "public"."quote_usage_monthly"."id";
 
 
 
@@ -3289,7 +3813,11 @@ CREATE TABLE IF NOT EXISTS "public"."subscription_plans" (
     "features" "jsonb" DEFAULT '[]'::"jsonb",
     "is_active" boolean DEFAULT true,
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"()
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "whatsapp_enabled" boolean DEFAULT false,
+    "monthly_quote_limit" integer DEFAULT 0,
+    "overage_price_per_quote" numeric(10,2) DEFAULT 0,
+    "allow_overage" boolean DEFAULT false
 );
 
 
@@ -3747,6 +4275,57 @@ COMMENT ON TABLE "public"."user_sessions" IS 'Sesiones activas de usuarios para 
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."whatsapp_numbers" (
+    "id" integer NOT NULL,
+    "phone_number" character varying(20) NOT NULL,
+    "twilio_phone_sid" character varying(50),
+    "business_id" integer,
+    "assigned_at" timestamp with time zone,
+    "assigned_by" "uuid",
+    "is_active" boolean DEFAULT true,
+    "is_verified" boolean DEFAULT false,
+    "friendly_name" character varying(100),
+    "notes" "text",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "evolution_instance_name" character varying(100),
+    "evolution_api_url" character varying(255) DEFAULT 'http://evolution_api_pos:8080'::character varying,
+    "connection_type" character varying(20) DEFAULT 'twilio'::character varying,
+    CONSTRAINT "whatsapp_numbers_connection_type_check" CHECK ((("connection_type")::"text" = ANY ((ARRAY['twilio'::character varying, 'evolution'::character varying])::"text"[])))
+);
+
+
+ALTER TABLE "public"."whatsapp_numbers" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."whatsapp_numbers" IS 'Pool de números WhatsApp de la plataforma para asignar a negocios';
+
+
+
+COMMENT ON COLUMN "public"."whatsapp_numbers"."evolution_instance_name" IS 'Name of the Evolution API instance for this number';
+
+
+
+COMMENT ON COLUMN "public"."whatsapp_numbers"."connection_type" IS 'Type of WhatsApp connection: twilio or evolution';
+
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."whatsapp_numbers_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."whatsapp_numbers_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."whatsapp_numbers_id_seq" OWNED BY "public"."whatsapp_numbers"."id";
+
+
+
 ALTER TABLE ONLY "public"."audit_log" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."audit_log_id_seq"'::"regclass");
 
 
@@ -3792,6 +4371,10 @@ ALTER TABLE ONLY "public"."inventory" ALTER COLUMN "id" SET DEFAULT "nextval"('"
 
 
 ALTER TABLE ONLY "public"."inventory_movements" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."inventory_movements_id_seq"'::"regclass");
+
+
+
+ALTER TABLE ONLY "public"."inventory_transfer_items" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."inventory_transfer_items_id_seq"'::"regclass");
 
 
 
@@ -3847,11 +4430,19 @@ ALTER TABLE ONLY "public"."purchase_receipts" ALTER COLUMN "id" SET DEFAULT "nex
 
 
 
+ALTER TABLE ONLY "public"."quote_automation_settings" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."quote_automation_settings_id_seq"'::"regclass");
+
+
+
 ALTER TABLE ONLY "public"."quote_follow_ups" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."quote_follow_ups_id_seq"'::"regclass");
 
 
 
 ALTER TABLE ONLY "public"."quote_items" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."quote_items_id_seq"'::"regclass");
+
+
+
+ALTER TABLE ONLY "public"."quote_usage_monthly" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."quote_usage_monthly_id_seq"'::"regclass");
 
 
 
@@ -3924,6 +4515,10 @@ ALTER TABLE ONLY "public"."user_locations" ALTER COLUMN "id" SET DEFAULT "nextva
 
 
 ALTER TABLE ONLY "public"."user_preferences" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."user_preferences_id_seq"'::"regclass");
+
+
+
+ALTER TABLE ONLY "public"."whatsapp_numbers" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."whatsapp_numbers_id_seq"'::"regclass");
 
 
 
@@ -4157,6 +4752,21 @@ ALTER TABLE ONLY "public"."purchase_receipts"
 
 
 
+ALTER TABLE ONLY "public"."quote_automation_settings"
+    ADD CONSTRAINT "quote_automation_settings_business_id_key" UNIQUE ("business_id");
+
+
+
+ALTER TABLE ONLY "public"."quote_automation_settings"
+    ADD CONSTRAINT "quote_automation_settings_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."quote_conversation_sessions"
+    ADD CONSTRAINT "quote_conversation_sessions_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."quote_follow_ups"
     ADD CONSTRAINT "quote_follow_ups_pkey" PRIMARY KEY ("id");
 
@@ -4164,6 +4774,16 @@ ALTER TABLE ONLY "public"."quote_follow_ups"
 
 ALTER TABLE ONLY "public"."quote_items"
     ADD CONSTRAINT "quote_items_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."quote_usage_monthly"
+    ADD CONSTRAINT "quote_usage_monthly_business_id_year_month_key" UNIQUE ("business_id", "year_month");
+
+
+
+ALTER TABLE ONLY "public"."quote_usage_monthly"
+    ADD CONSTRAINT "quote_usage_monthly_pkey" PRIMARY KEY ("id");
 
 
 
@@ -4334,6 +4954,16 @@ ALTER TABLE ONLY "public"."user_preferences"
 
 ALTER TABLE ONLY "public"."user_sessions"
     ADD CONSTRAINT "user_sessions_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."whatsapp_numbers"
+    ADD CONSTRAINT "whatsapp_numbers_phone_number_key" UNIQUE ("phone_number");
+
+
+
+ALTER TABLE ONLY "public"."whatsapp_numbers"
+    ADD CONSTRAINT "whatsapp_numbers_pkey" PRIMARY KEY ("id");
 
 
 
@@ -4565,11 +5195,43 @@ CREATE INDEX "idx_products_sale_frequency" ON "public"."products" USING "btree" 
 
 
 
+CREATE INDEX "idx_quote_automation_whatsapp_number" ON "public"."quote_automation_settings" USING "btree" ("twilio_whatsapp_number") WHERE ("twilio_whatsapp_number" IS NOT NULL);
+
+
+
+CREATE INDEX "idx_quote_conv_sessions_business" ON "public"."quote_conversation_sessions" USING "btree" ("business_id");
+
+
+
+CREATE INDEX "idx_quote_conv_sessions_channel" ON "public"."quote_conversation_sessions" USING "btree" ("channel");
+
+
+
+CREATE INDEX "idx_quote_conv_sessions_customer_email" ON "public"."quote_conversation_sessions" USING "btree" ("customer_email");
+
+
+
+CREATE INDEX "idx_quote_conv_sessions_customer_phone" ON "public"."quote_conversation_sessions" USING "btree" ("customer_phone");
+
+
+
+CREATE INDEX "idx_quote_conv_sessions_expires" ON "public"."quote_conversation_sessions" USING "btree" ("expires_at") WHERE (("status")::"text" = 'active'::"text");
+
+
+
+CREATE INDEX "idx_quote_conv_sessions_status" ON "public"."quote_conversation_sessions" USING "btree" ("status");
+
+
+
 CREATE INDEX "idx_quote_items_product" ON "public"."quote_items" USING "btree" ("product_id");
 
 
 
 CREATE INDEX "idx_quote_items_quote" ON "public"."quote_items" USING "btree" ("quote_id");
+
+
+
+CREATE INDEX "idx_quote_usage_business_month" ON "public"."quote_usage_monthly" USING "btree" ("business_id", "year_month");
 
 
 
@@ -4745,6 +5407,18 @@ CREATE INDEX "idx_user_sessions_business" ON "public"."user_sessions" USING "btr
 
 
 
+CREATE INDEX "idx_whatsapp_numbers_available" ON "public"."whatsapp_numbers" USING "btree" ("is_active") WHERE (("business_id" IS NULL) AND ("is_active" = true));
+
+
+
+CREATE INDEX "idx_whatsapp_numbers_business" ON "public"."whatsapp_numbers" USING "btree" ("business_id") WHERE ("business_id" IS NOT NULL);
+
+
+
+CREATE INDEX "idx_whatsapp_numbers_evolution_instance" ON "public"."whatsapp_numbers" USING "btree" ("evolution_instance_name") WHERE ("evolution_instance_name" IS NOT NULL);
+
+
+
 CREATE UNIQUE INDEX "products_business_barcode_unique" ON "public"."products" USING "btree" ("business_id", "barcode") WHERE (("deleted_at" IS NULL) AND ("barcode" IS NOT NULL));
 
 
@@ -4899,6 +5573,11 @@ ALTER TABLE ONLY "public"."businesses"
 
 ALTER TABLE ONLY "public"."businesses"
     ADD CONSTRAINT "businesses_plan_id_fkey" FOREIGN KEY ("plan_id") REFERENCES "public"."subscription_plans"("id");
+
+
+
+ALTER TABLE ONLY "public"."businesses"
+    ADD CONSTRAINT "businesses_subscription_plan_id_fkey" FOREIGN KEY ("subscription_plan_id") REFERENCES "public"."subscription_plans"("id");
 
 
 
@@ -5207,6 +5886,26 @@ ALTER TABLE ONLY "public"."purchase_receipts"
 
 
 
+ALTER TABLE ONLY "public"."quote_automation_settings"
+    ADD CONSTRAINT "quote_automation_settings_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."quote_conversation_sessions"
+    ADD CONSTRAINT "quote_conversation_sessions_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."quote_conversation_sessions"
+    ADD CONSTRAINT "quote_conversation_sessions_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id");
+
+
+
+ALTER TABLE ONLY "public"."quote_conversation_sessions"
+    ADD CONSTRAINT "quote_conversation_sessions_quote_id_fkey" FOREIGN KEY ("quote_id") REFERENCES "public"."quotes"("id");
+
+
+
 ALTER TABLE ONLY "public"."quote_follow_ups"
     ADD CONSTRAINT "quote_follow_ups_assigned_to_fkey" FOREIGN KEY ("assigned_to") REFERENCES "public"."user_details"("id") ON DELETE SET NULL;
 
@@ -5229,6 +5928,11 @@ ALTER TABLE ONLY "public"."quote_items"
 
 ALTER TABLE ONLY "public"."quote_items"
     ADD CONSTRAINT "quote_items_quote_id_fkey" FOREIGN KEY ("quote_id") REFERENCES "public"."quotes"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."quote_usage_monthly"
+    ADD CONSTRAINT "quote_usage_monthly_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
 
 
 
@@ -5491,6 +6195,16 @@ ALTER TABLE ONLY "public"."user_details"
 
 
 
+ALTER TABLE ONLY "public"."whatsapp_numbers"
+    ADD CONSTRAINT "whatsapp_numbers_assigned_by_fkey" FOREIGN KEY ("assigned_by") REFERENCES "auth"."users"("id");
+
+
+
+ALTER TABLE ONLY "public"."whatsapp_numbers"
+    ADD CONSTRAINT "whatsapp_numbers_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE SET NULL;
+
+
+
 CREATE POLICY "Admins can create notifications" ON "public"."notifications" FOR INSERT WITH CHECK (("business_id" = ( SELECT "user_details"."business_id"
    FROM "public"."user_details"
   WHERE ("user_details"."id" = "auth"."uid"()))));
@@ -5510,11 +6224,23 @@ CREATE POLICY "Admins can manage cash registers" ON "public"."cash_registers" US
 
 
 
+CREATE POLICY "Businesses can view own usage" ON "public"."quote_usage_monthly" FOR SELECT USING (("business_id" = "public"."get_user_business_id"()));
+
+
+
 CREATE POLICY "Enable read access for authenticated users on locations" ON "public"."locations" FOR SELECT TO "authenticated" USING (true);
 
 
 
+CREATE POLICY "Platform admins can manage whatsapp numbers" ON "public"."whatsapp_numbers" USING (true) WITH CHECK (true);
+
+
+
 CREATE POLICY "System can delete old notifications" ON "public"."notifications" FOR DELETE USING ((("expires_at" IS NOT NULL) AND ("expires_at" < CURRENT_TIMESTAMP)));
+
+
+
+CREATE POLICY "System can update usage" ON "public"."quote_usage_monthly" USING (true) WITH CHECK (true);
 
 
 
@@ -5555,6 +6281,14 @@ CREATE POLICY "Users can insert own preferences" ON "public"."user_preferences" 
 
 
 
+CREATE POLICY "Users can insert sessions for their business" ON "public"."quote_conversation_sessions" FOR INSERT WITH CHECK (("business_id" = "public"."get_user_business_id"()));
+
+
+
+CREATE POLICY "Users can insert settings for their business" ON "public"."quote_automation_settings" FOR INSERT WITH CHECK (("business_id" = "public"."get_user_business_id"()));
+
+
+
 CREATE POLICY "Users can insert their own location assignments" ON "public"."user_locations" FOR INSERT TO "authenticated" WITH CHECK (("user_id" = "auth"."uid"()));
 
 
@@ -5590,6 +6324,14 @@ CREATE POLICY "Users can update location assignments" ON "public"."user_location
 
 
 CREATE POLICY "Users can update own preferences" ON "public"."user_preferences" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can update sessions from their business" ON "public"."quote_conversation_sessions" FOR UPDATE USING (("business_id" = "public"."get_user_business_id"()));
+
+
+
+CREATE POLICY "Users can update settings from their business" ON "public"."quote_automation_settings" FOR UPDATE USING (("business_id" = "public"."get_user_business_id"()));
 
 
 
@@ -5647,6 +6389,14 @@ CREATE POLICY "Users can view own location assignments" ON "public"."user_locati
 
 
 CREATE POLICY "Users can view own preferences" ON "public"."user_preferences" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can view sessions from their business" ON "public"."quote_conversation_sessions" FOR SELECT USING (("business_id" = "public"."get_user_business_id"()));
+
+
+
+CREATE POLICY "Users can view settings from their business" ON "public"."quote_automation_settings" FOR SELECT USING (("business_id" = "public"."get_user_business_id"()));
 
 
 
@@ -5840,6 +6590,12 @@ CREATE POLICY "products_select" ON "public"."products" FOR SELECT USING ((("busi
 
 
 
+ALTER TABLE "public"."quote_automation_settings" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."quote_conversation_sessions" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."quote_items" ENABLE ROW LEVEL SECURITY;
 
 
@@ -5865,6 +6621,9 @@ CREATE POLICY "quote_items_update_policy" ON "public"."quote_items" FOR UPDATE U
    FROM "public"."quotes"
   WHERE ("quotes"."business_id" = ( SELECT "public"."get_user_business_id"() AS "get_user_business_id")))));
 
+
+
+ALTER TABLE "public"."quote_usage_monthly" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."quotes" ENABLE ROW LEVEL SECURITY;
@@ -5954,6 +6713,9 @@ CREATE POLICY "users_view_notification_settings" ON "public"."notification_setti
 
 
 
+ALTER TABLE "public"."whatsapp_numbers" ENABLE ROW LEVEL SECURITY;
+
+
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
@@ -5985,9 +6747,27 @@ GRANT ALL ON FUNCTION "public"."check_low_stock"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."check_monthly_quote_limit"("p_business_id" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."check_monthly_quote_limit"("p_business_id" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."check_monthly_quote_limit"("p_business_id" integer) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."check_plan_limit"("p_business_id" integer, "p_resource_type" character varying, "p_current_count" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."check_plan_limit"("p_business_id" integer, "p_resource_type" character varying, "p_current_count" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."check_plan_limit"("p_business_id" integer, "p_resource_type" character varying, "p_current_count" integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."check_quote_automation_limit"("p_business_id" integer, "p_customer_phone" character varying, "p_customer_email" character varying) TO "anon";
+GRANT ALL ON FUNCTION "public"."check_quote_automation_limit"("p_business_id" integer, "p_customer_phone" character varying, "p_customer_email" character varying) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."check_quote_automation_limit"("p_business_id" integer, "p_customer_phone" character varying, "p_customer_email" character varying) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."cleanup_expired_quote_sessions"() TO "anon";
+GRANT ALL ON FUNCTION "public"."cleanup_expired_quote_sessions"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cleanup_expired_quote_sessions"() TO "service_role";
 
 
 
@@ -6009,6 +6789,12 @@ GRANT ALL ON FUNCTION "public"."ensure_single_main_location"() TO "service_role"
 
 
 
+GRANT ALL ON FUNCTION "public"."find_customer_by_phone"("p_business_id" integer, "p_phone" character varying) TO "anon";
+GRANT ALL ON FUNCTION "public"."find_customer_by_phone"("p_business_id" integer, "p_phone" character varying) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."find_customer_by_phone"("p_business_id" integer, "p_phone" character varying) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."generate_shift_number"("p_cash_register_id" bigint) TO "anon";
 GRANT ALL ON FUNCTION "public"."generate_shift_number"("p_cash_register_id" bigint) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."generate_shift_number"("p_cash_register_id" bigint) TO "service_role";
@@ -6024,6 +6810,30 @@ GRANT ALL ON FUNCTION "public"."generate_transfer_number"("p_business_id" intege
 GRANT ALL ON FUNCTION "public"."get_archived_users"("p_business_id" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_archived_users"("p_business_id" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_archived_users"("p_business_id" integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_business_by_evolution_instance"("p_instance_name" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_business_by_evolution_instance"("p_instance_name" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_business_by_evolution_instance"("p_instance_name" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_business_by_whatsapp_number"("p_whatsapp_number" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_business_by_whatsapp_number"("p_whatsapp_number" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_business_by_whatsapp_number"("p_whatsapp_number" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_business_by_whatsapp_number"("p_whatsapp_number" character varying) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_business_by_whatsapp_number"("p_whatsapp_number" character varying) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_business_by_whatsapp_number"("p_whatsapp_number" character varying) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_business_whatsapp_number"("p_business_id" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_business_whatsapp_number"("p_business_id" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_business_whatsapp_number"("p_business_id" integer) TO "service_role";
 
 
 
@@ -6045,6 +6855,12 @@ GRANT ALL ON FUNCTION "public"."get_notification_preferences"("p_user_id" "uuid"
 
 
 
+GRANT ALL ON FUNCTION "public"."get_twilio_webhook_url"("p_business_id" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_twilio_webhook_url"("p_business_id" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_twilio_webhook_url"("p_business_id" integer) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_user_business_id"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_user_business_id"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_user_business_id"() TO "service_role";
@@ -6060,6 +6876,12 @@ GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."increment_product_sale_frequency"() TO "anon";
 GRANT ALL ON FUNCTION "public"."increment_product_sale_frequency"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."increment_product_sale_frequency"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."increment_quote_usage"("p_business_id" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."increment_quote_usage"("p_business_id" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."increment_quote_usage"("p_business_id" integer) TO "service_role";
 
 
 
@@ -6144,6 +6966,12 @@ GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."user_belongs_to_business"("p_business_id" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."user_belongs_to_business"("p_business_id" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."user_belongs_to_business"("p_business_id" integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."verify_twilio_whatsapp"("p_business_id" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."verify_twilio_whatsapp"("p_business_id" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."verify_twilio_whatsapp"("p_business_id" integer) TO "service_role";
 
 
 
@@ -6561,6 +7389,24 @@ GRANT ALL ON SEQUENCE "public"."purchase_receipts_id_seq" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."quote_automation_settings" TO "anon";
+GRANT ALL ON TABLE "public"."quote_automation_settings" TO "authenticated";
+GRANT ALL ON TABLE "public"."quote_automation_settings" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."quote_automation_settings_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."quote_automation_settings_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."quote_automation_settings_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."quote_conversation_sessions" TO "anon";
+GRANT ALL ON TABLE "public"."quote_conversation_sessions" TO "authenticated";
+GRANT ALL ON TABLE "public"."quote_conversation_sessions" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."quote_follow_ups" TO "anon";
 GRANT ALL ON TABLE "public"."quote_follow_ups" TO "authenticated";
 GRANT ALL ON TABLE "public"."quote_follow_ups" TO "service_role";
@@ -6582,6 +7428,18 @@ GRANT ALL ON TABLE "public"."quote_items" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."quote_items_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."quote_items_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."quote_items_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."quote_usage_monthly" TO "anon";
+GRANT ALL ON TABLE "public"."quote_usage_monthly" TO "authenticated";
+GRANT ALL ON TABLE "public"."quote_usage_monthly" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."quote_usage_monthly_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."quote_usage_monthly_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."quote_usage_monthly_id_seq" TO "service_role";
 
 
 
@@ -6774,6 +7632,18 @@ GRANT ALL ON SEQUENCE "public"."user_preferences_id_seq" TO "service_role";
 GRANT ALL ON TABLE "public"."user_sessions" TO "anon";
 GRANT ALL ON TABLE "public"."user_sessions" TO "authenticated";
 GRANT ALL ON TABLE "public"."user_sessions" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."whatsapp_numbers" TO "anon";
+GRANT ALL ON TABLE "public"."whatsapp_numbers" TO "authenticated";
+GRANT ALL ON TABLE "public"."whatsapp_numbers" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."whatsapp_numbers_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."whatsapp_numbers_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."whatsapp_numbers_id_seq" TO "service_role";
 
 
 

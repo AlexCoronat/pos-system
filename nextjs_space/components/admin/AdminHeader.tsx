@@ -52,23 +52,26 @@ export function AdminHeader() {
     return (
         <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
             {/* Left side - Show greeting on non-POS pages, ShiftStatus on POS page */}
-            {!isPOSPage ? (
-                <div>
-                    <h1 className="text-xl font-semibold text-gray-900">
-                        {getGreeting()}, {user?.firstName}
-                    </h1>
-                    <p className="text-sm text-gray-500">
-                        Bienvenido de vuelta a tu dashboard
-                    </p>
-                </div>
-            ) : (
-                <ShiftStatus
-                    onOpenShift={shiftModals.openOpenShiftModal}
-                    onCloseShift={shiftModals.openCloseShiftModal}
-                    onAddMovement={shiftModals.openMovementModal}
-                    onCashReconciliation={shiftModals.openCashReconciliation}
-                />
-            )}
+            {/* Left side - Show greeting on non-POS pages, ShiftStatus on POS page */}
+            <div>
+                {!isPOSPage ? (
+                    <div>
+                        <h1 className="text-xl font-semibold text-gray-900">
+                            {getGreeting()}, {user?.firstName}
+                        </h1>
+                        <p className="text-sm text-gray-500">
+                            Bienvenido de vuelta a tu dashboard
+                        </p>
+                    </div>
+                ) : (
+                    <ShiftStatus
+                        onOpenShift={shiftModals.openOpenShiftModal}
+                        onCloseShift={shiftModals.openCloseShiftModal}
+                        onAddMovement={shiftModals.openMovementModal}
+                        onCashReconciliation={shiftModals.openCashReconciliation}
+                    />
+                )}
+            </div>
 
             <div className="flex items-center gap-3">
                 {/* Notifications */}
@@ -98,7 +101,7 @@ export function AdminHeader() {
                             </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => router.push('/dashboard/settings/profile')}>
+                        <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
                             <User className="h-4 w-4 mr-2" />
                             Mi Perfil
                         </DropdownMenuItem>
