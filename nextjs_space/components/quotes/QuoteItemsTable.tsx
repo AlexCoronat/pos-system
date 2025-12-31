@@ -91,10 +91,11 @@ export function QuoteItemsTable({
     };
 
     // Helper to find product name
-    const getProductName = (id?: number) => {
-        if (!id) return t("unknownProduct") || "Unknown Product";
-        const product = products.find(p => p.id === id);
-        return product ? product.name : `Product #${id}`;
+    const getProductName = (item: Partial<QuoteItem>) => {
+        if (item.product?.name) return item.product.name;
+        if (!item.product_id) return t("unknownProduct") || "Unknown Product";
+        const product = products.find(p => p.id === item.product_id);
+        return product ? product.name : `Product #${item.product_id}`;
     };
 
     return (
@@ -124,9 +125,9 @@ export function QuoteItemsTable({
                                 <TableRow key={index}>
                                     <TableCell>
                                         {readOnly ? (
-                                            <span>{getProductName(item.product_id)}</span>
+                                            <span>{getProductName(item)}</span>
                                         ) : (
-                                            <div className="font-medium">{getProductName(item.product_id)}</div>
+                                            <div className="font-medium">{getProductName(item)}</div>
                                         )}
                                     </TableCell>
                                     <TableCell>

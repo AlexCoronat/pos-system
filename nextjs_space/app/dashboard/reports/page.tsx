@@ -11,6 +11,11 @@ import { useAuth } from "@/lib/hooks/use-auth"
 import { Loader2, DollarSign, CreditCard, TrendingUp, Calendar, ShoppingCart } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { StatsCard, PageHeader, LoadingState, BrandButton } from '@/components/shared'
+import { useBranding } from '@/lib/contexts/BrandingContext'
+import { pdf } from "@react-pdf/renderer"
+import { ReportsDocument } from "@/components/reports/ReportsDocument"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
 
 export default function ReportsPage() {
     const t = useTranslations('reports')
@@ -18,6 +23,7 @@ export default function ReportsPage() {
     const { formatCurrency } = useFormatters()
     const { user } = useAuth()
     const { toast } = useToast()
+    const { branding } = useBranding()
     const [loading, setLoading] = useState(true)
     const [dailySales, setDailySales] = useState<DailySalesData[]>([])
     const [topProducts, setTopProducts] = useState<TopProductData[]>([])
@@ -71,6 +77,60 @@ export default function ReportsPage() {
         fetchData()
     }, [user?.businessId, toast])
 
+    const handleDownloadPDF = async () => {
+        try {
+            setLoading(true)
+
+            // Prepare strings
+            const strings = {
+                title: t('title'),
+                date: tCommon('date'),
+                last30Days: t('filters.last30Days'),
+                summary: tCommon('summary'),
+                totalSales: t('summary.totalSales'),
+                transactions: t('summary.transactions'),
+                completedSales: t('summary.completedSales'),
+                avgTicket: t('summary.avgTicket'),
+                perTransaction: t('summary.perTransaction'),
+                salesTrend: t('charts.salesTrend'),
+                topProducts: t('charts.topProducts'),
+                product: t('items.product'),
+                quantitySold: t('charts.quantitySold'),
+                sales: t('charts.sales'),
+                details: tCommon('details'),
+            }
+
+            const blob = await pdf(
+                <ReportsDocument
+                    data={{ summary, dailySales, topProducts }}
+                    strings={strings}
+                    companyName={user?.businessName || 'Mi Empresa'}
+                    primaryColor={branding.primaryColor}
+                />
+            ).toBlob()
+
+            // Create URL and trigger download
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = `reporte-ventas-${new Date().toISOString().split('T')[0]}.pdf`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(url)
+
+        } catch (error) {
+            console.error("Error generating PDF:", error)
+            toast({
+                title: tCommon("error"),
+                description: t("messages.error"),
+                variant: "destructive"
+            })
+        } finally {
+            setLoading(false)
+        }
+    }
+
     if (loading) {
         return <LoadingState message={t('messages.loading')} minHeight="h-full" />
     }
@@ -85,7 +145,10 @@ export default function ReportsPage() {
                             <Calendar className="mr-2 h-4 w-4" />
                             {t('filters.last30Days')}
                         </BrandButton>
-                        <BrandButton>{t('export.pdf')}</BrandButton>
+                        <BrandButton onClick={handleDownloadPDF}>
+                            <Loader2 className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : 'hidden'}`} />
+                            {t('export.pdf')}
+                        </BrandButton>
                     </>
                 }
             />

@@ -328,28 +328,27 @@ export default function POSLayoutSettingsPage() {
                         {/* Preview Content */}
                         <div className="flex-1 flex overflow-hidden bg-gray-100">
                             {/* Products Area */}
-                            <div className={`${previewClasses.products} flex flex-col border-r`}>
-                                {/* Search Bar Preview */}
-                                {config.showSearchBar && (
-                                    <div className="p-4 bg-white border-b">
-                                        <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-4 py-3">
-                                            <Search className="h-5 w-5 text-gray-400" />
-                                            <span className="text-gray-400">Buscar producto... (F2)</span>
+                            <div className={`${previewClasses.products} flex flex-col border-r h-full overflow-hidden`}>
+                                {/* Fixed Header Preview */}
+                                <div className="bg-white border-b shadow-sm z-10">
+                                    {/* Search Bar Preview */}
+                                    {config.showSearchBar && (
+                                        <div className="p-4 pb-2">
+                                            <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-4 py-3">
+                                                <Search className="h-5 w-5 text-gray-400" />
+                                                <span className="text-gray-400">Buscar producto... (F2)</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
 
-                                {/* Scrollable Content */}
-                                <div className="flex-1 overflow-y-auto p-4 space-y-4">
                                     {/* Categories Preview - only shown if products grid is also enabled */}
                                     {config.showCategoryFilter && config.showAllProducts && (
-                                        <div>
-                                            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Categorías</h3>
-                                            <div className="flex gap-2 overflow-x-auto pb-2">
+                                        <div className="px-4 pb-0">
+                                            <div className="flex gap-2 overflow-x-auto pb-0">
                                                 {['Todos', 'Electrónica', 'Ropa', 'Hogar', 'Oficina'].map((cat) => (
                                                     <div
                                                         key={cat}
-                                                        className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${cat === 'Todos' ? 'bg-blue-600 text-white' : 'bg-white border'}`}
+                                                        className={`px-4 py-2 text-sm whitespace-nowrap border-b-2 transition-colors ${cat === 'Todos' ? 'border-blue-600 text-blue-600 font-medium' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                                                     >
                                                         {cat}
                                                     </div>
@@ -357,7 +356,10 @@ export default function POSLayoutSettingsPage() {
                                             </div>
                                         </div>
                                     )}
+                                </div>
 
+                                {/* Scrollable Content */}
+                                <div className="flex-1 overflow-y-auto p-4 space-y-6">
                                     {/* Quick Products Preview */}
                                     {config.showQuickProducts && (
                                         <div>
@@ -401,7 +403,10 @@ export default function POSLayoutSettingsPage() {
                                     {/* All Products Preview */}
                                     {config.showAllProducts && (
                                         <div>
-                                            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Todos los Productos</h3>
+                                            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
+                                                <span className="w-1.5 h-6 bg-blue-600 rounded-full"></span>
+                                                Todos los Productos
+                                            </h3>
                                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                                 {Array.from({ length: 8 }).map((_, i) => (
                                                     <div key={i} className="bg-white p-3 rounded-lg border hover:shadow-md transition-shadow">

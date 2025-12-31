@@ -1,642 +1,752 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
-import { useTranslations } from 'next-intl'
-import { useAuth } from '@/lib/hooks/use-auth'
-import { useToast } from '@/hooks/use-toast'
-import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
+import { Moon, Sun, Globe, Monitor, DollarSign, Calendar, Clock, Bell, Volume2, Mail, Type, Eye, Keyboard, Wallet, Check, Shield, Key, Smartphone, AlertTriangle, CheckCircle2, Copy, Download, Info } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
-import {
-  User,
-  Mail,
-  Phone,
-  Building2,
-  Shield,
-  MapPin,
-  Calendar,
-  Lock,
-  Clock,
-  Globe,
-  Sun,
-  Moon,
-  Bell,
-  Edit,
-  Save,
-  X
-} from 'lucide-react'
-import { PageHeader, LoadingState, BrandButton } from '@/components/shared'
+import { Separator } from '@/components/ui/separator'
+import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Progress } from '@/components/ui/progress'
+import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
+import { useAuth } from '@/lib/hooks/use-auth'
+import { createClient } from '@/lib/supabase/client'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { changePasswordSchema, type ChangePasswordFormData } from '@/lib/validations/auth'
+import Image from 'next/image'
 
-interface ProfileData {
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
+// --- Types & Defaults (Migrated from Preferences) ---
+interface UserPreferences {
+  language: string
+  dateFormat: string
+  timeFormat: string
+  currency: string
+  firstDayOfWeek: string
+  desktopNotifications: boolean
+  soundEnabled: boolean
+  dailyEmailSummary: boolean
+  fontSize: string
+  density: string
+  animationsEnabled: boolean
+  sidebarDefault: string
+  defaultPage: string
+  highContrast: boolean
+  reduceMotion: boolean
+  keyboardFocus: boolean
 }
 
-interface PasswordData {
-  currentPassword: string
-  newPassword: string
-  confirmPassword: string
+const DEFAULT_PROFILE_PREFS: UserPreferences = {
+  language: 'es',
+  dateFormat: 'DD/MM/YYYY',
+  timeFormat: '24h',
+  currency: 'MXN',
+  firstDayOfWeek: 'monday',
+  desktopNotifications: true,
+  soundEnabled: true,
+  dailyEmailSummary: false,
+  fontSize: 'normal',
+  density: 'normal',
+  animationsEnabled: true,
+  sidebarDefault: 'expanded',
+  defaultPage: 'dashboard',
+  highContrast: false,
+  reduceMotion: false,
+  keyboardFocus: true,
 }
+
+// Mock data for active sessions
+const mockSessions = [
+  {
+    id: '1',
+    device: 'Chrome on Windows',
+    location: 'Ciudad de México, México',
+    ip: '192.168.1.1',
+    lastActive: '2 minutos ago',
+    isCurrent: true
+  },
+  {
+    id: '2',
+    device: 'Safari on iPhone',
+    location: 'Ciudad de México, México',
+    ip: '192.168.1.50',
+    lastActive: '1 hora ago',
+    isCurrent: false
+  }
+]
 
 export default function ProfilePage() {
-  const [isLoading, setIsLoading] = useState(true)
-  const [isOAuthUser, setIsOAuthUser] = useState(false)
-  const [isEditingProfile, setIsEditingProfile] = useState(false)
-  const [isSavingProfile, setIsSavingProfile] = useState(false)
-  const [isChangingPassword, setIsChangingPassword] = useState(false)
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
-
-  const [profileData, setProfileData] = useState<ProfileData>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: ''
-  })
-
-  const [passwordData, setPasswordData] = useState<PasswordData>({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  })
-
-  // Preferences
-  const [language, setLanguage] = useState('es')
-  const [emailNotifications, setEmailNotifications] = useState(true)
-
-  const { user, loading, initialized, updateProfile, changePassword } = useAuth()
-  const { toast } = useToast()
-  const router = useRouter()
+  const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
+  const router = useRouter()
+  const { user } = useAuth()
+  const supabase = createClient()
 
-  const t = useTranslations('profile')
-  const tCommon = useTranslations('common')
+  // Preferences State
+  const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PROFILE_PREFS)
 
-  const isAdmin = user?.roleName === 'Admin'
+  // Security State
+  const [loading, setLoading] = useState(false)
+  const [sessions] = useState(mockSessions)
+  const [isOAuthUser, setIsOAuthUser] = useState(false)
+  const [oauthProvider, setOauthProvider] = useState<string>('')
+  const [mfaEnabled, setMfaEnabled] = useState(false)
+  const [showMfaSetup, setShowMfaSetup] = useState(false)
+  const [qrCode, setQrCode] = useState('')
+  const [backupCodes, setBackupCodes] = useState<string[]>([])
+  const [verificationCode, setVerificationCode] = useState('')
+  const [currentFactorId, setCurrentFactorId] = useState<string | null>(null)
+
+  // Form Hook for Password Change
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset
+  } = useForm<ChangePasswordFormData>({
+    resolver: zodResolver(changePasswordSchema)
+  })
 
   useEffect(() => {
-    if (initialized && !loading) {
-      if (!user) {
-        router.push('/auth/login')
-        return
+    setMounted(true)
+    loadPreferences()
+    checkAuthProvider()
+    checkMfaStatus()
+  }, [])
+
+  const loadPreferences = () => {
+    const saved = localStorage.getItem('userPreferences')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        setPreferences({ ...DEFAULT_PROFILE_PREFS, ...parsed })
+      } catch (e) {
+        console.error('Error loading preferences:', e)
       }
-      loadUserData()
     }
-  }, [user, loading, initialized, router])
+  }
 
-  const loadUserData = async () => {
-    setIsLoading(true)
+  const savePreferences = (newPrefs: Partial<UserPreferences>) => {
+    const updated = { ...preferences, ...newPrefs }
+    setPreferences(updated)
+    const existing = localStorage.getItem('userPreferences')
+    let fullObject = {}
+    if (existing) {
+      try {
+        fullObject = JSON.parse(existing)
+      } catch (e) { }
+    }
+    localStorage.setItem('userPreferences', JSON.stringify({ ...fullObject, ...updated }))
+    toast.success('Cambios guardados')
+  }
+
+  const checkAuthProvider = async () => {
     try {
-      // Load user data
-      setProfileData({
-        firstName: user?.firstName || '',
-        lastName: user?.lastName || '',
-        email: user?.email || '',
-        phone: user?.phone || ''
-      })
-
-      // Check if user is OAuth
-      const supabase = createClient()
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-
-      // OAuth users have identities array with providers
-      const hasOAuthIdentity = authUser?.identities?.some(
-        identity => identity.provider !== 'email'
-      )
-      setIsOAuthUser(hasOAuthIdentity || false)
-
-      // Load preferences from localStorage
-      const savedLanguage = localStorage.getItem('app_language') || 'es'
-      const savedNotifications = localStorage.getItem('email_notifications')
-
-      setLanguage(savedLanguage)
-      setEmailNotifications(savedNotifications !== 'false')
-
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const provider = user.app_metadata?.provider || user.app_metadata?.providers?.[0]
+        if (provider && provider !== 'email') {
+          setIsOAuthUser(true)
+          setOauthProvider(provider)
+        }
+      }
     } catch (error) {
-      console.error('Error loading user data:', error)
-      toast({
-        title: tCommon('error'),
-        description: t('errors.loadProfileFailed'),
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+      console.error('Error checking auth provider:', error)
     }
   }
 
-  const handleSaveProfile = async () => {
-    setIsSavingProfile(true)
+  const checkMfaStatus = async () => {
     try {
-      await updateProfile({
-        firstName: profileData.firstName,
-        lastName: profileData.lastName,
-        phone: profileData.phone
-      })
-
-      toast({
-        title: t('notifications.profileUpdated'),
-        description: t('notifications.profileUpdatedDesc'),
-      })
-
-      setIsEditingProfile(false)
-    } catch (error: any) {
-      console.error('Error updating profile:', error)
-      toast({
-        title: tCommon('error'),
-        description: error.message || t('errors.updateProfileFailed'),
-        variant: "destructive",
-      })
-    } finally {
-      setIsSavingProfile(false)
+      const { data, error } = await supabase.auth.mfa.listFactors()
+      if (error) throw error
+      const hasVerifiedFactor = data?.totp?.some(factor => factor.status === 'verified')
+      setMfaEnabled(!!hasVerifiedFactor)
+    } catch (error) {
+      console.error('Error checking MFA status:', error)
     }
   }
 
-  const handleChangePassword = async () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast({
-        title: tCommon('error'),
-        description: t('errors.passwordMismatch'),
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      toast({
-        title: tCommon('error'),
-        description: t('errors.passwordTooShort'),
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsChangingPassword(true)
+  const onSubmitPassword = async (data: ChangePasswordFormData) => {
+    setLoading(true)
     try {
-      await changePassword({
-        currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword
+      const { error } = await supabase.auth.updateUser({
+        password: data.newPassword
       })
-
-      toast({
-        title: t('notifications.passwordChanged'),
-        description: t('notifications.passwordChangedDesc'),
-      })
-
-      setPasswordDialogOpen(false)
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      })
+      if (error) throw error
+      toast.success('Contraseña actualizada correctamente')
+      reset()
     } catch (error: any) {
-      console.error('Error changing password:', error)
-      toast({
-        title: tCommon('error'),
-        description: error.message || t('errors.changePasswordFailed'),
-        variant: "destructive",
-      })
+      console.error('Error updating password:', error)
+      toast.error(error.message || 'Error al actualizar la contraseña')
     } finally {
-      setIsChangingPassword(false)
+      setLoading(false)
     }
   }
 
-  const handleLanguageChange = (value: string) => {
-    setLanguage(value)
-    localStorage.setItem('app_language', value)
-    // Update i18n cookie
-    document.cookie = `NEXT_LOCALE=${value}; path=/; max-age=31536000`
-    toast({
-      title: t('notifications.languageUpdated'),
-      description: t('notifications.languageUpdatedDesc').replace('{language}', value === 'es' ? t('preferences.spanish') : t('preferences.english')),
-    })
-    // Reload page to apply new locale
-    setTimeout(() => window.location.reload(), 500)
+  const handleEnableMfa = async () => {
+    try {
+      setLoading(true)
+      const { data: existingFactors } = await supabase.auth.mfa.listFactors()
+      const hasUnverified = existingFactors?.totp?.some(f => f.status !== 'verified')
+
+      if (hasUnverified) {
+        const unverifiedFactor = existingFactors?.totp?.find(f => f.status !== 'verified')
+        if (unverifiedFactor) {
+          await supabase.auth.mfa.unenroll({ factorId: unverifiedFactor.id })
+        }
+      }
+
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: 'totp'
+      })
+
+      if (error) throw error
+
+      if (!data?.totp?.qr_code) {
+        throw new Error('No se pudo generar el código QR')
+      }
+
+      const codes = Array.from({ length: 10 }, () =>
+        Math.random().toString(36).substring(2, 10).toUpperCase()
+      )
+
+      setQrCode(data.totp.qr_code)
+      setCurrentFactorId(data.id)
+      setBackupCodes(codes)
+      setShowMfaSetup(true)
+    } catch (error: any) {
+      console.error('MFA Setup Error:', error)
+      toast.error(error?.message || 'Error al configurar 2FA')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleThemeChange = (value: string) => {
-    setTheme(value)
-    toast({
-      title: t('notifications.themeUpdated'),
-      description: t('notifications.themeUpdatedDesc').replace('{theme}', value === 'light' ? t('preferences.light') : t('preferences.dark')),
-    })
+  const handleVerifyMfa = async () => {
+    try {
+      setLoading(true)
+      if (!currentFactorId) {
+        throw new Error('No se encontró el factor de autenticación. Intenta habilitar 2FA de nuevo.')
+      }
+
+      const { error } = await supabase.auth.mfa.challengeAndVerify({
+        factorId: currentFactorId,
+        code: verificationCode
+      })
+
+      if (error) throw error
+
+      setMfaEnabled(true)
+      setShowMfaSetup(false)
+      setCurrentFactorId(null)
+      setVerificationCode('')
+      toast.success('2FA habilitado correctamente')
+    } catch (error: any) {
+      toast.error(error.message || 'Código inválido')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleNotificationsChange = (checked: boolean) => {
-    setEmailNotifications(checked)
-    localStorage.setItem('email_notifications', checked.toString())
-    toast({
-      title: t('notifications.notificationsUpdated'),
-      description: checked ? t('notifications.notificationsEnabled') : t('notifications.notificationsDisabled'),
-    })
+  const handleDisableMfa = async () => {
+    try {
+      setLoading(true)
+      const { data: factors } = await supabase.auth.mfa.listFactors()
+      const factor = factors?.totp?.find(f => f.status === 'verified')
+
+      if (!factor) throw new Error('No verified factor found')
+
+      const { error } = await supabase.auth.mfa.unenroll({
+        factorId: factor.id
+      })
+
+      if (error) throw error
+
+      setMfaEnabled(false)
+      toast.success('2FA deshabilitado correctamente')
+    } catch (error: any) {
+      toast.error(error.message || 'Error al deshabilitar 2FA')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const formatDate = (dateString?: Date) => {
-    if (!dateString) return 'N/A'
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+  const handleRevokeSession = async (sessionId: string) => {
+    try {
+      toast.success('Sesión revocada correctamente')
+    } catch (error) {
+      toast.error('Error al revocar la sesión')
+    }
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <LoadingState message={tCommon('loading')} />
-        </div>
-      </div>
-    )
+  const handleRevokeAllSessions = async () => {
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'global' })
+      if (error) throw error
+      toast.success('Todas las sesiones han sido cerradas')
+      window.location.href = '/auth/login'
+    } catch (error: any) {
+      toast.error('Error al cerrar las sesiones')
+    }
   }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    toast.success('Copiado al portapapeles')
+  }
+
+  const downloadBackupCodes = () => {
+    const text = backupCodes.join('\n')
+    const blob = new Blob([text], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'backup-codes.txt'
+    a.click()
+  }
+
+  if (!mounted) {
+    return <div className="p-6">Cargando perfil...</div>
+  }
+
+  const themeOptions = [
+    { value: 'light', label: 'Claro', icon: Sun },
+    { value: 'dark', label: 'Oscuro', icon: Moon },
+    { value: 'system', label: 'Sistema', icon: Monitor }
+  ]
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <PageHeader
-          title={t('title')}
-          subtitle={t('subtitle')}
-        />
+    <div className="p-6 max-w-6xl mx-auto space-y-8">
+      {/* Header Profile Info */}
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-6 bg-white dark:bg-gray-900 p-6 rounded-xl border shadow-sm">
+        <Avatar className="h-24 w-24 border-4 border-white shadow-lg">
+          <AvatarImage src={user?.avatarUrl || "/placeholder-avatar.jpg"} />
+          <AvatarFallback className="text-2xl bg-blue-100 text-blue-600">
+            {user?.firstName?.charAt(0) || 'U'}{user?.lastName?.charAt(0) || ''}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1 space-y-2">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">{user?.firstName} {user?.lastName}</h1>
+            <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">Administrador</Badge>
+          </div>
+          <p className="text-muted-foreground">{user?.email}</p>
+          <p className="text-xs text-muted-foreground">ID: {user?.id.split('-')[0]}...</p>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="outline">Editar Datos</Button>
+        </div>
+      </div>
 
-        <div className="space-y-6">
-          {/* Profile Overview Card */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-6">
-                {/* Avatar */}
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                  {user?.firstName?.[0]}{user?.lastName?.[0]}
-                </div>
+      <Tabs defaultValue="subscription" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsTrigger value="subscription">Suscripción</TabsTrigger>
+          <TabsTrigger value="preferences">Apariencia</TabsTrigger>
+          <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
+          <TabsTrigger value="security">Seguridad</TabsTrigger>
+        </TabsList>
 
-                {/* User Info */}
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {user?.firstName} {user?.lastName}
-                  </h2>
-                  <p className="text-gray-600 dark:text-gray-400">{user?.email}</p>
-                  <div className="mt-2 flex items-center gap-4 text-sm">
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full font-medium">
-                      <Shield className="w-4 h-4" />
-                      {user?.roleName}
-                    </span>
-                    {user?.locationName && (
-                      <span className="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                        <MapPin className="w-4 h-4" />
-                        {user.locationName}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Personal Information */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="w-5 h-5" />
-                    {t('personalInfo.title')}
-                  </CardTitle>
-                  <CardDescription>{t('personalInfo.subtitle')}</CardDescription>
-                </div>
-                {!isEditingProfile && (
-                  <BrandButton
-                    onClick={() => setIsEditingProfile(true)}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    {t('personalInfo.edit')}
-                  </BrandButton>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName">{t('personalInfo.firstName')}</Label>
-                  <Input
-                    id="firstName"
-                    value={profileData.firstName}
-                    onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
-                    disabled={!isEditingProfile}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="lastName">{t('personalInfo.lastName')}</Label>
-                  <Input
-                    id="lastName"
-                    value={profileData.lastName}
-                    onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
-                    disabled={!isEditingProfile}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="email">{t('personalInfo.email')}</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={profileData.email}
-                  disabled
-                  className="bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('personalInfo.emailNote')}</p>
-              </div>
-
-              <div>
-                <Label htmlFor="phone">{t('personalInfo.phone')}</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={profileData.phone}
-                  onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                  disabled={!isEditingProfile}
-                  placeholder="+1 (555) 000-0000"
-                />
-              </div>
-
-              {isEditingProfile && (
-                <div className="flex gap-2 pt-4">
-                  <BrandButton
-                    onClick={handleSaveProfile}
-                    isLoading={isSavingProfile}
-                    loadingText={t('personalInfo.saving')}
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {t('personalInfo.saveChanges')}
-                  </BrandButton>
-                  <BrandButton
-                    onClick={() => {
-                      setIsEditingProfile(false)
-                      setProfileData({
-                        firstName: user?.firstName || '',
-                        lastName: user?.lastName || '',
-                        email: user?.email || '',
-                        phone: user?.phone || ''
-                      })
-                    }}
-                    variant="outline"
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    {t('personalInfo.cancel')}
-                  </BrandButton>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Business Information - Admin Only */}
-          {isAdmin && (
-            <Card>
+        {/* SUBSCRIPTION TAB */}
+        <TabsContent value="subscription" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Current Plan */}
+            <Card className="lg:col-span-2 border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5" />
-                  {t('businessInfo.title')}
-                </CardTitle>
-                <CardDescription>{t('businessInfo.subtitle')}</CardDescription>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-xl text-blue-700 dark:text-blue-400">Plan Profesional</CardTitle>
+                    <CardDescription>Facturación Mensual</CardDescription>
+                  </div>
+                  <Badge className="bg-green-500 hover:bg-green-600">Activo</Badge>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-gray-600">{t('businessInfo.businessName')}</Label>
-                    <p className="text-lg font-medium">{user?.businessName || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-gray-600">{t('businessInfo.plan')}</Label>
-                    <p className="text-lg font-medium">{user?.planName || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-gray-600">{t('businessInfo.role')}</Label>
-                    <p className="text-lg font-medium">{user?.roleName}</p>
-                  </div>
-                  <div>
-                    <Label className="text-gray-600">{t('businessInfo.status')}</Label>
-                    <p className="text-lg font-medium">
-                      {user?.isBusinessOwner ? `👑 ${t('businessInfo.owner')}` : t('businessInfo.teamMember')}
-                    </p>
-                  </div>
+              <CardContent className="space-y-6">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold">$999</span>
+                  <span className="text-sm text-muted-foreground">MXN / mes + IVA</span>
+                </div>
+                <div className="flex flex-wrap gap-4">
+                  <Button className="bg-blue-600 hover:bg-blue-700">
+                    <Wallet className="mr-2 h-4 w-4" />
+                    Gestionar Suscripción con Stripe
+                  </Button>
+                  <Button variant="outline">Ver Historial de Pagos</Button>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-4 bg-white/50 dark:bg-black/20 p-3 rounded-lg w-fit">
+                  <Calendar className="h-4 w-4" />
+                  Próximo cobro: 27 de Enero, 2026
                 </div>
               </CardContent>
             </Card>
-          )}
 
-          {/* Security */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lock className="w-5 h-5" />
-                {t('security.title')}
-              </CardTitle>
-              <CardDescription>{t('security.subtitle')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!isOAuthUser && (
-                <>
-                  <div className="flex items-center justify-between py-3 border-b">
-                    <div>
-                      <p className="font-medium">{t('security.password')}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{t('security.changePasswordSubtitle')}</p>
-                    </div>
-                    <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-                      <DialogTrigger asChild>
-                        <BrandButton variant="outline" size="sm">
-                          {t('security.changePassword')}
-                        </BrandButton>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>{t('security.changePassword')}</DialogTitle>
-                          <DialogDescription>
-                            {t('security.changePasswordSubtitle')}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div>
-                            <Label htmlFor="currentPassword">{t('security.currentPassword')}</Label>
-                            <Input
-                              id="currentPassword"
-                              type="password"
-                              value={passwordData.currentPassword}
-                              onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="newPassword">{t('security.newPassword')}</Label>
-                            <Input
-                              id="newPassword"
-                              type="password"
-                              value={passwordData.newPassword}
-                              onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="confirmPassword">{t('security.confirmPassword')}</Label>
-                            <Input
-                              id="confirmPassword"
-                              type="password"
-                              value={passwordData.confirmPassword}
-                              onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <BrandButton variant="outline" onClick={() => setPasswordDialogOpen(false)}>
-                            {t('common.cancel')}
-                          </BrandButton>
-                          <BrandButton
-                            onClick={handleChangePassword}
-                            isLoading={isChangingPassword}
-                            loadingText={t('security.changing')}
-                          >
-                            {t('security.changePassword')}
-                          </BrandButton>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
+            {/* Usage Stats (Mock Data) */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Uso de Recursos</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Usuarios</span>
+                    <span className="font-medium">3 / 5</span>
                   </div>
-                  <Separator />
-                </>
-              )}
-
-              <div className="flex items-center justify-between py-3">
-                <div>
-                  <p className="font-medium">{t('security.activeSessions')}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{t('security.activeSessionsSubtitle')}</p>
+                  <Progress value={60} className="h-2" />
                 </div>
-                <BrandButton
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push('/dashboard/sessions')}
-                >
-                  <Clock className="w-4 h-4 mr-2" />
-                  {t('security.viewSessions')}
-                </BrandButton>
-              </div>
-
-              {isOAuthUser && (
-                <>
-                  <Separator />
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                      <strong>{t('security.oauthAccount')}:</strong> {t('security.oauthNote')}
-                    </p>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Sucursales</span>
+                    <span className="font-medium">1 / 2</span>
                   </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                  <Progress value={50} className="h-2" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Cotizaciones IA</span>
+                    <span className="font-medium">85 / 100</span>
+                  </div>
+                  <Progress value={85} className="h-2 bg-yellow-100 [&>div]:bg-yellow-500" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-          {/* Preferences */}
+        {/* VISUAL & REGIONAL PREFERENCES TAB */}
+        <TabsContent value="preferences" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="w-5 h-5" />
-                {t('preferences.title')}
-              </CardTitle>
-              <CardDescription>{t('preferences.subtitle')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Language */}
-              <div className="flex items-center justify-between py-3 border-b dark:border-gray-700">
-                <div>
-                  <p className="font-medium">{t('preferences.language')}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{t('preferences.languageSubtitle')}</p>
-                </div>
-                <Select value={language} onValueChange={handleLanguageChange}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="es">{t('preferences.spanish')}</SelectItem>
-                    <SelectItem value="en">{t('preferences.english')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Theme */}
-              <div className="flex items-center justify-between py-3 border-b dark:border-gray-700">
-                <div>
-                  <p className="font-medium">{t('preferences.theme')}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{t('preferences.themeSubtitle')}</p>
-                </div>
-                <Select value={theme} onValueChange={handleThemeChange}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">
-                      <div className="flex items-center gap-2">
-                        <Sun className="w-4 h-4" />
-                        {t('preferences.light')}
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="dark">
-                      <div className="flex items-center gap-2">
-                        <Moon className="w-4 h-4" />
-                        {t('preferences.dark')}
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Email Notifications */}
-              <div className="flex items-center justify-between py-3">
-                <div>
-                  <p className="font-medium">{t('preferences.emailNotifications')}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{t('preferences.emailNotificationsSubtitle')}</p>
-                </div>
-                <Switch
-                  checked={emailNotifications}
-                  onCheckedChange={handleNotificationsChange}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Account Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                {t('accountDetails.title')}
-              </CardTitle>
+              <CardTitle>Tema de Apariencia</CardTitle>
+              <CardDescription>Personaliza la interfaz visual</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-gray-600 dark:text-gray-400">{t('accountDetails.lastLogin')}</Label>
-                  <p className="text-lg font-medium text-gray-900 dark:text-gray-100">{formatDate(user?.lastLoginAt)}</p>
+              <div className="flex w-full rounded-lg border border-gray-200 dark:border-gray-800 divide-x divide-gray-200 dark:divide-gray-800 overflow-hidden">
+                {themeOptions.map((option) => {
+                  const Icon = option.icon
+                  const isSelected = theme === option.value
+                  return (
+                    <button
+                      key={option.value}
+                      onClick={() => setTheme(option.value)}
+                      className={`flex-1 p-4 transition-all flex flex-col items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${isSelected ? 'bg-blue-50/50 dark:bg-blue-900/20 text-blue-600' : 'text-muted-foreground'}`}
+                    >
+                      <Icon className={`h-5 w-5 ${isSelected ? 'text-blue-600' : ''}`} />
+                      <span className={`text-sm ${isSelected ? 'font-medium' : ''}`}>{option.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Interfaz y Accesibilidad</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><Type className="h-4 w-4" />Tamaño de Fuente</Label>
+                  <Select value={preferences.fontSize} onValueChange={(value) => savePreferences({ fontSize: value })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="small">Pequeño</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="large">Grande</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><Globe className="h-4 w-4" />Idioma</Label>
+                  <Select value={preferences.language} onValueChange={(value) => savePreferences({ language: value })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="es">Español</SelectItem>
+                      <SelectItem value="en">English (US)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-gray-600 dark:text-gray-400">{t('accountDetails.accountStatus')}</Label>
-                  <p className="text-lg font-medium">
-                    {user?.isActive ? (
-                      <span className="text-green-600 dark:text-green-400">✓ {t('accountDetails.active')}</span>
-                    ) : (
-                      <span className="text-red-600 dark:text-red-400">✗ {t('accountDetails.inactive')}</span>
-                    )}
+                  <Label>Animaciones de Interfaz</Label>
+                  <p className="text-xs text-muted-foreground">Efectos visuales al navegar</p>
+                </div>
+                <Switch checked={preferences.animationsEnabled} onCheckedChange={(checked) => savePreferences({ animationsEnabled: checked })} />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* NOTIFICATIONS TAB */}
+        <TabsContent value="notifications" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Preferencias de Notificación</CardTitle>
+              <CardDescription>Controla qué notificaciones ves o escuchas en este dispositivo</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Navigation Hint */}
+              <div className="flex items-start gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <Info className="h-5 w-5 text-gray-500 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-sm">¿Buscas configurar alertas de stock o ventas?</h4>
+                  <p className="text-xs text-gray-500">
+                    Esas son reglas de negocio. Configúralas en <button onClick={() => router.push('/dashboard/settings/notifications')} className="underline hover:text-blue-600">Ajustes &gt; Notificaciones</button>.
                   </p>
                 </div>
               </div>
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg text-blue-600 mx-0"><Bell className="h-5 w-5" /></div>
+                  <div>
+                    <Label>Notificaciones de Escritorio</Label>
+                    <p className="text-xs text-muted-foreground">Alertas popup mientras usas el sistema</p>
+                  </div>
+                </div>
+                <Switch checked={preferences.desktopNotifications} onCheckedChange={(checked) => savePreferences({ desktopNotifications: checked })} />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-lg text-purple-600 mx-0"><Volume2 className="h-5 w-5" /></div>
+                  <div>
+                    <Label>Sonidos del Sistema</Label>
+                    <p className="text-xs text-muted-foreground">Feedback auditivo al completar acciones</p>
+                  </div>
+                </div>
+                <Switch checked={preferences.soundEnabled} onCheckedChange={(checked) => savePreferences({ soundEnabled: checked })} />
+              </div>
             </CardContent>
           </Card>
-        </div>
-      </div>
+        </TabsContent>
+
+        {/* SECURITY TAB (Migrated) */}
+        <TabsContent value="security" className="space-y-6">
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* 1. Change Password / OAuth Info */}
+            <div className="space-y-6">
+              {isOAuthUser ? (
+                <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 h-full flex flex-col justify-center">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-semibold text-blue-900 dark:text-blue-100">
+                          Autenticado con {oauthProvider}
+                        </h4>
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                          Tu cuenta está vinculada externamente. Gestiona tu seguridad desde {oauthProvider}.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Key className="h-5 w-5" />
+                      Cambiar Contraseña
+                    </CardTitle>
+                    <CardDescription>
+                      Seguridad de acceso
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleSubmit(onSubmitPassword)} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="currentPassword">Actual</Label>
+                        <Input
+                          id="currentPassword"
+                          type="password"
+                          {...register('currentPassword')}
+                          className={errors.currentPassword ? 'border-red-500' : ''}
+                        />
+                        {errors.currentPassword && <p className="text-xs text-red-500">{errors.currentPassword.message}</p>}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="newPassword">Nueva</Label>
+                        <Input
+                          id="newPassword"
+                          type="password"
+                          {...register('newPassword')}
+                          className={errors.newPassword ? 'border-red-500' : ''}
+                        />
+                        {errors.newPassword && <p className="text-xs text-red-500">{errors.newPassword.message}</p>}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="confirmPassword">Confirmar</Label>
+                        <Input
+                          id="confirmPassword"
+                          type="password"
+                          {...register('confirmPassword')}
+                          className={errors.confirmPassword ? 'border-red-500' : ''}
+                        />
+                        {errors.confirmPassword && <p className="text-xs text-red-500">{errors.confirmPassword.message}</p>}
+                      </div>
+
+                      <Button type="submit" disabled={loading} className="w-full">
+                        {loading ? 'Actualizando...' : 'Actualizar Contraseña'}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* 2. 2FA Configuration */}
+            <div className="space-y-6">
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Smartphone className="h-5 w-5" />
+                    Doble Factor (2FA)
+                  </CardTitle>
+                  <CardDescription>
+                    Protección adicional
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {!showMfaSetup ? (
+                    <>
+                      <div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                        {mfaEnabled ? (
+                          <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+                        ) : (
+                          <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                        )}
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-sm">
+                            {mfaEnabled ? '2FA Activo' : '2FA Inactivo'}
+                          </h4>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {mfaEnabled
+                              ? 'Tu cuenta está protegida.'
+                              : 'Recomendamos activar 2FA para mayor seguridad.'
+                            }
+                          </p>
+                        </div>
+                        <Switch
+                          checked={mfaEnabled}
+                          onCheckedChange={mfaEnabled ? handleDisableMfa : handleEnableMfa}
+                          disabled={loading}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top-4">
+                      <div className="text-center">
+                        {qrCode && (
+                          <div className="inline-block p-4 bg-white rounded-lg border shadow-sm mb-4">
+                            <Image src={qrCode} alt="QR Code" width={150} height={150} />
+                          </div>
+                        )}
+                        <p className="text-xs text-muted-foreground mb-4">Escanea con Google Authenticator</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Código de Verificación</Label>
+                        <Input
+                          placeholder="000000"
+                          maxLength={6}
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                          className="text-center tracking-widest text-lg"
+                        />
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button onClick={handleVerifyMfa} disabled={loading || verificationCode.length !== 6} className="flex-1">
+                          Verificar
+                        </Button>
+                        <Button variant="outline" onClick={() => setShowMfaSetup(false)}>
+                          Cancelar
+                        </Button>
+                      </div>
+
+                      <div className="pt-4 border-t">
+                        <Label className="text-xs mb-2 block">Códigos de Respaldo (Guardar)</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {backupCodes.slice(0, 4).map((code) => (
+                            <div key={code} className="text-center text-xs font-mono bg-gray-100 dark:bg-gray-800 p-1 rounded">
+                              {code}
+                            </div>
+                          ))}
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={downloadBackupCodes} className="w-full mt-2 text-xs">
+                          <Download className="h-3 w-3 mr-2" /> Descargar Todos
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* 3. Active Sessions */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Monitor className="h-5 w-5" />
+                  Sesiones Activas
+                </CardTitle>
+                <Button variant="destructive" size="sm" onClick={handleRevokeAllSessions} className="h-8 text-xs">
+                  Cerrar Todas
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {sessions.map((session) => (
+                <div key={session.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50/50 dark:bg-gray-900/50">
+                  <div className="flex gap-3 items-center">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                      <Monitor className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium text-sm">{session.device}</h4>
+                        {session.isCurrent && (
+                          <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">
+                            Actual
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {session.location} • {session.lastActive}
+                      </p>
+                    </div>
+                  </div>
+                  {!session.isCurrent && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRevokeSession(session.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      Revocar
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

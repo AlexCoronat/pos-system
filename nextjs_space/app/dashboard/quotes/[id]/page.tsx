@@ -3,8 +3,12 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, XCircle, Send, ShoppingCart, Download } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, XCircle, Send, ShoppingCart, Download, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { pdf } from "@react-pdf/renderer";
+import { QuoteDocument } from "@/components/quotes/QuoteDocument";
+import { useBranding } from "@/lib/contexts/BrandingContext";
+import { useAuth } from "@/lib/hooks/use-auth";
 
 import { BrandButton } from "@/components/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +43,8 @@ export default function QuoteDetailPage() {
     const t = useTranslations("quotes");
     const tCommon = useTranslations("common");
     const { toast } = useToast();
+    const { branding } = useBranding();
+    const { user } = useAuth();
 
     const id = params.id as string;
     const isEditMode = searchParams.get("edit") === "true";
@@ -50,6 +56,7 @@ export default function QuoteDetailPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+    const [isPdfLoading, setIsPdfLoading] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -64,7 +71,7 @@ export default function QuoteDetailPage() {
                     const productsResponse = await productService.getProducts({ isActive: true }, 1, 100);
 
                     // Map ProductWithPrice to Product structure
-                    const mappedProducts: Product[] = productsResponse.products.map((p) => ({
+                    const mappedProducts: Product[] = productsResponse.products.map((p: any) => ({
                         id: p.id,
                         sku: p.sku,
                         name: p.name,
@@ -209,6 +216,90 @@ export default function QuoteDetailPage() {
         }
     };
 
+    const handleDownloadPDF = async () => {
+        if (!quote) return;
+
+        try {
+            setIsPdfLoading(true);
+
+            // Prepare strings for PDF
+            const strings = {
+                quote: t("title"),
+                quoteNumber: t("form.quoteNumber"),
+                date: t("form.date"),
+                expiryDate: t("form.expiryDate"),
+                customer: t("form.customer"),
+                product: t("items.product"),
+                quantity: t("items.quantity"),
+                unitPrice: t("items.price"),
+                discount: t("form.discount"),
+                tax: t("form.tax"),
+                total: t("form.total"),
+                subtotal: t("form.subtotal"),
+                notes: t("form.notes"),
+                terms: t("form.terms"),
+                deliveryTime: t("labels.deliveryTime"),
+                status: t("labels.status"),
+                signature: "Firma del Cliente",
+                acceptanceText: "Al firmar, acepto los términos y condiciones de esta cotización.",
+                validUntil: "Válida hasta",
+                thankYou: "¡Gracias por su preferencia!"
+            };
+
+            // Company info
+            const companyInfo = {
+                name: user?.businessName || 'Mi Empresa',
+                address: '',
+                phone: '',
+                email: ''
+            };
+
+            // Generate PDF blob
+            const blob = await pdf(
+                <QuoteDocument
+                    quote={{
+                        quote_number: quote.quote_number,
+                        quote_date: quote.quote_date,
+                        expiry_date: quote.expiry_date,
+                        status: quote.status,
+                        customer: quote.customer,
+                        items: quote.items || [],
+                        subtotal: quote.subtotal,
+                        discount_amount: quote.discount_amount,
+                        tax_amount: quote.tax_amount,
+                        total_amount: quote.total_amount,
+                        notes: quote.notes,
+                        terms_and_conditions: quote.terms_and_conditions,
+                        delivery_time: quote.delivery_time
+                    }}
+                    companyInfo={companyInfo}
+                    primaryColor={branding.primaryColor}
+                    strings={strings}
+                />
+            ).toBlob();
+
+            // Download
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `cotizacion-${quote.quote_number}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+            toast({
+                variant: "destructive",
+                title: tCommon("error"),
+                description: "Error al generar el PDF"
+            });
+        } finally {
+            setIsPdfLoading(false);
+        }
+    };
+
     if (isLoading) {
         return <div className="p-8 text-center">{tCommon("loading")}</div>;
     }
@@ -296,7 +387,7 @@ export default function QuoteDetailPage() {
                         </BrandButton>
                     )}
 
-                    <BrandButton variant="outline">
+                    <BrandButton variant="outline" onClick={handleDownloadPDF}>
                         <Download className="h-4 w-4 mr-2" />
                         {t("actions.downloadPdf")}
                     </BrandButton>

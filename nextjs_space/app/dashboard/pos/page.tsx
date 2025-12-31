@@ -142,58 +142,82 @@ export default function POSPage() {
     return (
         <div className="-m-6 h-[calc(100vh-4rem)] flex flex-col lg:flex-row overflow-hidden bg-gray-50">
             {/* Main Content Area */}
-            <div className={`flex-1 ${layoutClasses.products} flex flex-col overflow-hidden`}>
-                {/* Top Bar with Search */}
-                {layoutConfig.showSearchBar && (
-                    <div className="flex-shrink-0 bg-white border-b border-gray-200 p-4">
-                        <ProductSearch />
-                    </div>
-                )}
+            <div className={`flex-1 ${layoutClasses.products} flex flex-col h-full overflow-hidden bg-gray-50/50`}>
+                {/* Fixed Header Section (Search & Categories) */}
+                <div className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm z-10">
+                    {/* Search Bar */}
+                    {layoutConfig.showSearchBar && (
+                        <div className="p-4 pb-2">
+                            <ProductSearch />
+                        </div>
+                    )}
 
-                {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                    {/* Category Filters - only shown if products grid is also enabled */}
+                    {/* Category Tabs - Horizontal Scroll */}
                     {layoutConfig.showCategoryFilter && layoutConfig.showAllProducts && (
-                        <div>
-                            <h2 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-                                Categorías
-                            </h2>
+                        <div className="px-4 pb-0">
                             <CategoryTabs
                                 selectedCategory={selectedCategory}
                                 onCategoryChange={setSelectedCategory}
                             />
                         </div>
                     )}
+                </div>
 
-                    {/* Quick Products */}
+                {/* Scrollable Content Area */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-8 scroll-smooth">
+
+                    {/* Quick Products Section */}
                     {layoutConfig.showQuickProducts && (
-                        <QuickProducts key={`quick-${refreshKey}`} />
+                        <section>
+                            <QuickProducts key={`quick-${refreshKey}`} />
+                        </section>
                     )}
 
                     {/* Services Section */}
                     {layoutConfig.showServices && (
-                        <ServicesGrid key={`services-${refreshKey}`} />
+                        <section>
+                            <ServicesGrid key={`services-${refreshKey}`} />
+                        </section>
                     )}
 
                     {/* All Products Grid */}
                     {layoutConfig.showAllProducts && (
-                        <div>
-                            <h2 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
-                                {selectedCategory === null ? 'Todos los Productos' : 'Productos Filtrados'}
-                            </h2>
+                        <section>
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                    {selectedCategory === null ? (
+                                        <>
+                                            <span className="w-1.5 h-6 bg-blue-600 rounded-full"></span>
+                                            Todos los Productos
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="w-1.5 h-6 bg-blue-600 rounded-full"></span>
+                                            Productos Filtrados
+                                        </>
+                                    )}
+                                </h2>
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full border border-gray-200">
+                                    Mostrando resultados
+                                </span>
+                            </div>
                             <ProductGrid categoryId={selectedCategory} key={`grid-${refreshKey}-${selectedCategory}`} />
-                        </div>
+                        </section>
                     )}
 
                     {/* Empty state if nothing is shown */}
                     {!layoutConfig.showCategoryFilter && !layoutConfig.showQuickProducts && !layoutConfig.showServices && !layoutConfig.showAllProducts && (
-                        <div className="flex-1 flex items-center justify-center">
-                            <div className="text-center text-gray-500">
-                                <p>No hay componentes visibles</p>
-                                <p className="text-sm">Configura el layout en Ajustes → Layout POS</p>
+                        <div className="h-full flex items-center justify-center min-h-[400px]">
+                            <div className="text-center text-gray-500 max-w-sm mx-auto p-8 rounded-2xl bg-white border border-dashed border-gray-200">
+                                <AlertCircle className="h-10 w-10 mx-auto text-gray-300 mb-4" />
+                                <p className="font-medium text-gray-900 mb-1">No hay componentes visibles</p>
+                                <p className="text-sm">Configura el layout en Ajustes → Layout POS para mostrar secciones.</p>
                             </div>
                         </div>
                     )}
+
+                    {/* Bottom padding for mobile FAB */}
+                    <div className="h-20 lg:h-0"></div>
                 </div>
             </div>
 

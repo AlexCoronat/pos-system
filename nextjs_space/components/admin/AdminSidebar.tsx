@@ -113,6 +113,13 @@ export function AdminSidebar() {
     const collapsed = useSidebarCollapsed()
     const { toggleSidebar } = useViewStore()
 
+    // Prevent hydration mismatch by not rendering dynamic content until mounted
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
+
     const canAccessRoute = (item: NavItem): boolean => {
         if (user?.roleName === 'Admin') return true
         if (item.roles && !hasRole(...item.roles)) return false
@@ -124,23 +131,26 @@ export function AdminSidebar() {
     const mainNav = filteredNavigation.filter(item => item.section === 'main' || !item.section)
     const settingsNav = filteredNavigation.filter(item => item.section === 'settings')
 
+    // Use consistent collapsed state during SSR
+    const isCollapsed = mounted ? collapsed : false
+
     return (
         <div
             className={`
         fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 
         transition-all duration-300 flex flex-col
-        ${collapsed ? 'w-20' : 'w-64'}
+        ${isCollapsed ? 'w-20' : 'w-64'}
       `}
         >
             {/* Logo and brand */}
             <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
-                {!collapsed && (
+                {!isCollapsed && (
                     <Link href="/dashboard" className="flex items-center gap-3">
                         <CompanyLogo size="sm" showName={true} />
                     </Link>
                 )}
 
-                {collapsed && (
+                {isCollapsed && (
                     <div className="w-full flex justify-center">
                         <CompanyLogo size="sm" showName={false} />
                     </div>
@@ -148,10 +158,10 @@ export function AdminSidebar() {
             </div>
 
             {/* Location selector */}
-            <div className={`px-3 py-3 border-b border-gray-200 ${collapsed ? 'hidden' : 'block'}`}>
+            <div className={`px-3 py-3 border-b border-gray-200 ${isCollapsed ? 'hidden' : 'block'}`}>
                 <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
                     <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    {!collapsed && (
+                    {!isCollapsed && (
                         <select className="text-sm text-gray-700 bg-transparent border-none w-full focus:ring-0 cursor-pointer">
                             {user?.assignedLocations && user.assignedLocations.length > 0 ? (
                                 user.assignedLocations.map((loc) => (
@@ -187,12 +197,12 @@ export function AdminSidebar() {
                                         ? 'bg-brand-primary/10 text-brand-primary font-medium border-l-4'
                                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                     }
-                  ${collapsed ? 'justify-center' : ''}
+                  ${isCollapsed ? 'justify-center' : ''}
                 `}
-                                title={collapsed ? item.name : undefined}
+                                title={isCollapsed ? item.name : undefined}
                             >
                                 <item.icon className="w-5 h-5 flex-shrink-0" />
-                                {!collapsed && <span className="text-sm">{item.name}</span>}
+                                {!isCollapsed && <span className="text-sm">{item.name}</span>}
                             </Link>
                         )
                     })}
@@ -201,7 +211,7 @@ export function AdminSidebar() {
                 {/* Settings section */}
                 {settingsNav.length > 0 && (
                     <>
-                        <div className={`mt-6 mb-2 px-3 ${collapsed ? 'hidden' : 'block'}`}>
+                        <div className={`mt-6 mb-2 px-3 ${isCollapsed ? 'hidden' : 'block'}`}>
                             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                                 Configuración
                             </h3>
@@ -223,12 +233,12 @@ export function AdminSidebar() {
                                                 ? 'bg-brand-primary/10 text-brand-primary font-medium border-l-4'
                                                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                             }
-                      ${collapsed ? 'justify-center' : ''}
+                      ${isCollapsed ? 'justify-center' : ''}
                     `}
-                                        title={collapsed ? item.name : undefined}
+                                        title={isCollapsed ? item.name : undefined}
                                     >
                                         <item.icon className="w-5 h-5 flex-shrink-0" />
-                                        {!collapsed && <span className="text-sm">{item.name}</span>}
+                                        {!isCollapsed && <span className="text-sm">{item.name}</span>}
                                     </Link>
                                 )
                             })}
@@ -241,11 +251,11 @@ export function AdminSidebar() {
 
             {/* User section */}
             <div className="p-3 border-t border-gray-200">
-                <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
+                <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
                     <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                         <User className="w-5 h-5 text-gray-600" />
                     </div>
-                    {!collapsed && (
+                    {!isCollapsed && (
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 truncate">
                                 {user?.firstName} {user?.lastName}
@@ -260,9 +270,9 @@ export function AdminSidebar() {
             <button
                 onClick={toggleSidebar}
                 className="absolute -right-3 top-20 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 shadow-sm transition-all"
-                aria-label={collapsed ? 'Expandir sidebar' : 'Contraer sidebar'}
+                aria-label={isCollapsed ? 'Expandir sidebar' : 'Contraer sidebar'}
             >
-                {collapsed ? (
+                {isCollapsed ? (
                     <ChevronRight className="w-4 h-4 text-gray-600" />
                 ) : (
                     <ChevronLeft className="w-4 h-4 text-gray-600" />

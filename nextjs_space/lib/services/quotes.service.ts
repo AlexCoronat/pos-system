@@ -16,6 +16,7 @@ export interface QuoteItem {
     subtotal: number
     notes?: string
     created_at?: string
+    product?: { name: string }
 }
 
 export interface Quote {
@@ -183,7 +184,6 @@ class QuotesService {
             // But for now assuming the shape matches enough or we cast it
             const quotes = (data || []).map(q => ({
                 ...q,
-                // Map customer fields if necessary, e.g. snake_case to camelCase
                 customer: q.customer ? {
                     id: q.customer.id,
                     firstName: q.customer.first_name,
@@ -192,7 +192,6 @@ class QuotesService {
                     email: q.customer.email,
                     phone: q.customer.phone,
                     city: q.customer.city,
-                    // ... other fields
                 } : undefined
             })) as QuoteWithDetails[]
 
@@ -219,7 +218,10 @@ class QuotesService {
                 .select(`
           *,
           customer:customers(*),
-          items:quote_items(*)
+          items:quote_items(
+            *,
+            product:products(name)
+          )
         `)
                 .eq('id', id)
                 .single()
@@ -256,32 +258,54 @@ class QuotesService {
             const { businessId } = await getBusinessContext()
             const quoteNumber = await this.generateQuoteNumber(businessId)
 
-            // Calculate totals
+            // Calculate totals (Gross-down approach)
             const items = data.items
-            let subtotal = 0
-            let discountAmount = 0
-            let taxAmount = 0
+            let totalGross = 0
+            let totalNet = 0
+            let totalTax = 0
+            let totalDiscountNet = 0
 
             const calculatedItems = items.map(item => {
-                const itemSubtotal = item.quantity * item.unit_price
-                const itemDiscount = item.discount_amount || 0
+                const itemQuantity = item.quantity
+                const itemUnitPriceGross = item.unit_price
+                const itemDiscountGross = item.discount_amount || 0
                 const itemTaxRate = item.tax_rate || 16
-                const itemTax = (itemSubtotal - itemDiscount) * (itemTaxRate / 100)
 
-                subtotal += itemSubtotal
-                discountAmount += itemDiscount
-                taxAmount += itemTax
+                // 1. Line Totals (Gross)
+                const itemTotalGrossUndiscounted = itemQuantity * itemUnitPriceGross
+                const itemTotalGross = itemTotalGrossUndiscounted - itemDiscountGross
+
+                // 2. Breakdown to Net and Tax
+                // Net = Gross / (1 + Rate)
+                const itemNetUndiscounted = itemTotalGrossUndiscounted / (1 + itemTaxRate / 100)
+                const itemDiscountNet = itemDiscountGross / (1 + itemTaxRate / 100)
+                const itemTotalNet = itemTotalGross / (1 + itemTaxRate / 100)
+                const itemTax = itemTotalGross - itemTotalNet
+
+                totalGross += itemTotalGross
+                totalNet += itemNetUndiscounted
+                totalTax += itemTax
+                totalDiscountNet += itemDiscountNet
 
                 return {
                     ...item,
-                    subtotal: itemSubtotal, // Base subtotal
+                    subtotal: itemNetUndiscounted, // Store Net Undiscounted
                     tax_amount: itemTax,
                     tax_rate: itemTaxRate,
-                    discount_amount: itemDiscount
+                    discount_amount: itemDiscountNet // Store Net Discount to verify equation
                 }
             })
 
-            const totalAmount = subtotal - discountAmount + taxAmount
+            // Final Rounding & Balancing
+            const targetTotal = Math.round(totalGross * 100) / 100
+            const subtotal = Math.round(totalNet * 100) / 100
+            const discountAmount = Math.round(totalDiscountNet * 100) / 100
+
+            // Force Tax to account for rounding differences to match Total
+            // Equation: Total = Subtotal - Discount + Tax
+            // Tax = Total - Subtotal + Discount
+            const taxAmount = Number((targetTotal - subtotal + discountAmount).toFixed(2))
+            const totalAmount = targetTotal
 
             // 1. Create Quote
             const { data: quote, error: quoteError } = await supabase
@@ -319,11 +343,11 @@ class QuotesService {
                             quote_id: quote.id,
                             product_id: item.product_id,
                             quantity: item.quantity,
-                            unit_price: item.unit_price,
+                            unit_price: item.unit_price, // Store Original Gross Price as unit_price
                             discount_amount: item.discount_amount,
                             tax_rate: item.tax_rate,
                             tax_amount: item.tax_amount,
-                            subtotal: item.subtotal,
+                            subtotal: item.subtotal, // Store Net Subtotal
                             notes: item.notes
                         }))
                     )
@@ -347,31 +371,47 @@ class QuotesService {
             // For simplicity, we might delete all and recreate, or update intelligently
             // Here we'll implement a "replace items" strategy for simplicity in this MVP
 
-            // Calculate new totals
-            let subtotal = 0
-            let discountAmount = 0
-            let taxAmount = 0
+            // Calculate new totals (Gross-down approach)
+            let totalGross = 0
+            let totalNet = 0
+            let totalTax = 0
+            let totalDiscountNet = 0
 
             const calculatedItems = data.items ? data.items.map(item => {
-                const itemSubtotal = item.quantity * item.unit_price
-                const itemDiscount = item.discount_amount || 0
+                const itemQuantity = item.quantity
+                const itemUnitPriceGross = item.unit_price
+                const itemDiscountGross = item.discount_amount || 0
                 const itemTaxRate = item.tax_rate || 16
-                const itemTax = (itemSubtotal - itemDiscount) * (itemTaxRate / 100)
 
-                subtotal += itemSubtotal
-                discountAmount += itemDiscount
-                taxAmount += itemTax
+                // 1. Line Totals (Gross)
+                const itemTotalGrossUndiscounted = itemQuantity * itemUnitPriceGross
+                const itemTotalGross = itemTotalGrossUndiscounted - itemDiscountGross
+
+                // 2. Breakdown to Net and Tax
+                const itemNetUndiscounted = itemTotalGrossUndiscounted / (1 + itemTaxRate / 100)
+                const itemDiscountNet = itemDiscountGross / (1 + itemTaxRate / 100)
+                const itemTotalNet = itemTotalGross / (1 + itemTaxRate / 100)
+                const itemTax = itemTotalGross - itemTotalNet
+
+                totalGross += itemTotalGross
+                totalNet += itemNetUndiscounted
+                totalTax += itemTax
+                totalDiscountNet += itemDiscountNet
 
                 return {
                     ...item,
-                    subtotal: itemSubtotal,
+                    subtotal: itemNetUndiscounted,
                     tax_amount: itemTax,
                     tax_rate: itemTaxRate,
-                    discount_amount: itemDiscount
+                    discount_amount: itemDiscountNet
                 }
             }) : []
 
-            const totalAmount = subtotal - discountAmount + taxAmount
+            const targetTotal = Math.round(totalGross * 100) / 100
+            const subtotal = Math.round(totalNet * 100) / 100
+            const discountAmount = Math.round(totalDiscountNet * 100) / 100
+            const taxAmount = Number((targetTotal - subtotal + discountAmount).toFixed(2))
+            const totalAmount = targetTotal
 
             // Update Quote Header
             const updateData: any = {
@@ -415,11 +455,11 @@ class QuotesService {
                                 quote_id: id,
                                 product_id: item.product_id,
                                 quantity: item.quantity,
-                                unit_price: item.unit_price,
+                                unit_price: item.unit_price, // Store Gross Price
                                 discount_amount: item.discount_amount,
                                 tax_rate: item.tax_rate,
                                 tax_amount: item.tax_amount,
-                                subtotal: item.subtotal,
+                                subtotal: item.subtotal, // Store Net Subtotal
                                 notes: item.notes
                             }))
                         )
