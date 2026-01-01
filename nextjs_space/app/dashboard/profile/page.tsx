@@ -104,6 +104,9 @@ export default function ProfilePage() {
   const [verificationCode, setVerificationCode] = useState('')
   const [currentFactorId, setCurrentFactorId] = useState<string | null>(null)
 
+  // Subscription Plans State
+  const [availablePlans, setAvailablePlans] = useState<any[]>([])
+
   // Form Hook for Password Change
   const {
     register,
@@ -119,7 +122,23 @@ export default function ProfilePage() {
     loadPreferences()
     checkAuthProvider()
     checkMfaStatus()
+    loadAvailablePlans()
   }, [])
+
+  const loadAvailablePlans = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('subscription_plans')
+        .select('id, name, description, price, currency, billing_period, max_users, max_locations, max_products, features, whatsapp_enabled, monthly_quote_limit')
+        .eq('is_active', true)
+        .order('price', { ascending: true })
+
+      if (error) throw error
+      setAvailablePlans(data || [])
+    } catch (error) {
+      console.error('Error loading plans:', error)
+    }
+  }
 
   const loadPreferences = () => {
     const saved = localStorage.getItem('userPreferences')
@@ -361,61 +380,144 @@ export default function ProfilePage() {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-xl text-blue-700 dark:text-blue-400">Plan Profesional</CardTitle>
-                    <CardDescription>Facturación Mensual</CardDescription>
+                    <CardTitle className="text-xl text-blue-700 dark:text-blue-400">
+                      Plan {user?.plan?.name || user?.planName || 'Sin Plan'}
+                    </CardTitle>
+                    <CardDescription>
+                      {user?.plan?.description || `Facturación ${user?.plan?.billingPeriod === 'monthly' ? 'Mensual' : user?.plan?.billingPeriod === 'yearly' ? 'Anual' : 'Mensual'}`}
+                    </CardDescription>
                   </div>
                   <Badge className="bg-green-500 hover:bg-green-600">Activo</Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold">$999</span>
-                  <span className="text-sm text-muted-foreground">MXN / mes + IVA</span>
+                  <span className="text-4xl font-bold">
+                    ${user?.plan?.price?.toLocaleString() || '0'}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {user?.plan?.currency || 'MXN'} / {user?.plan?.billingPeriod === 'yearly' ? 'año' : 'mes'} + IVA
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-4">
                   <Button className="bg-blue-600 hover:bg-blue-700">
                     <Wallet className="mr-2 h-4 w-4" />
-                    Gestionar Suscripción con Stripe
+                    Gestionar Suscripción
                   </Button>
                   <Button variant="outline">Ver Historial de Pagos</Button>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mt-4 bg-white/50 dark:bg-black/20 p-3 rounded-lg w-fit">
                   <Calendar className="h-4 w-4" />
-                  Próximo cobro: 27 de Enero, 2026
+                  Próximo cobro: Consultar en portal de pagos
                 </div>
               </CardContent>
             </Card>
 
-            {/* Usage Stats (Mock Data) */}
+            {/* Usage Stats */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Uso de Recursos</CardTitle>
+                <CardTitle className="text-base">Límites del Plan</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Usuarios</span>
-                    <span className="font-medium">3 / 5</span>
+                    <span className="font-medium">
+                      {user?.plan?.maxUsers === -1 ? 'Ilimitados' : `Máx. ${user?.plan?.maxUsers || 1}`}
+                    </span>
                   </div>
-                  <Progress value={60} className="h-2" />
+                  <Progress value={user?.plan?.maxUsers === -1 ? 10 : 50} className="h-2" />
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Sucursales</span>
-                    <span className="font-medium">1 / 2</span>
+                    <span className="font-medium">
+                      {user?.plan?.maxLocations === -1 ? 'Ilimitadas' : `Máx. ${user?.plan?.maxLocations || 1}`}
+                    </span>
                   </div>
-                  <Progress value={50} className="h-2" />
+                  <Progress value={user?.plan?.maxLocations === -1 ? 10 : 50} className="h-2" />
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Cotizaciones IA</span>
-                    <span className="font-medium">85 / 100</span>
+                    <span className="text-muted-foreground">Productos</span>
+                    <span className="font-medium">
+                      {user?.plan?.maxProducts === -1 ? 'Ilimitados' : `Máx. ${user?.plan?.maxProducts || 50}`}
+                    </span>
                   </div>
-                  <Progress value={85} className="h-2 bg-yellow-100 [&>div]:bg-yellow-500" />
+                  <Progress value={user?.plan?.maxProducts === -1 ? 10 : 30} className="h-2" />
                 </div>
+                {user?.plan?.whatsappEnabled && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Cotizaciones WhatsApp</span>
+                      <span className="font-medium">
+                        {user?.plan?.monthlyQuoteLimit === -1 ? 'Ilimitadas' : `${user?.plan?.monthlyQuoteLimit || 0} / mes`}
+                      </span>
+                    </div>
+                    <Progress value={user?.plan?.monthlyQuoteLimit === -1 ? 10 : 50} className="h-2 bg-green-100 [&>div]:bg-green-500" />
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
+
+          {/* Available Plans - Only show plans different from current */}
+          {availablePlans.filter(plan => plan.id !== user?.plan?.id).length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Otros Planes Disponibles</CardTitle>
+                <CardDescription>Compara y elige el plan que mejor se adapte a tu negocio</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {availablePlans
+                    .filter(plan => plan.id !== user?.plan?.id)
+                    .map((plan) => (
+                      <div
+                        key={plan.id}
+                        className="p-4 rounded-lg border-2 border-gray-200 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold">{plan.name}</h4>
+                          {parseFloat(plan.price) > (user?.plan?.price || 0) && (
+                            <Badge variant="outline" className="text-xs text-blue-600 border-blue-300">Upgrade</Badge>
+                          )}
+                        </div>
+                        <p className="text-2xl font-bold mb-1">
+                          ${parseFloat(plan.price).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          {parseFloat(plan.price) === 0 ? 'Gratis para siempre' : `${plan.currency || 'MXN'} / ${plan.billing_period === 'yearly' ? 'año' : 'mes'}`}
+                        </p>
+                        <ul className="text-xs space-y-1 text-muted-foreground">
+                          <li className="flex items-center gap-1">
+                            <Check className="h-3 w-3 text-green-500" />
+                            {plan.max_users === -1 ? 'Usuarios ilimitados' : `${plan.max_users} usuarios`}
+                          </li>
+                          <li className="flex items-center gap-1">
+                            <Check className="h-3 w-3 text-green-500" />
+                            {plan.max_locations === -1 ? 'Sucursales ilimitadas' : `${plan.max_locations} sucursales`}
+                          </li>
+                          <li className="flex items-center gap-1">
+                            <Check className="h-3 w-3 text-green-500" />
+                            {plan.max_products === -1 ? 'Productos ilimitados' : `${plan.max_products.toLocaleString()} productos`}
+                          </li>
+                          {plan.whatsapp_enabled && (
+                            <li className="flex items-center gap-1">
+                              <Check className="h-3 w-3 text-green-500" />
+                              WhatsApp habilitado
+                            </li>
+                          )}
+                        </ul>
+                        <Button variant="outline" size="sm" className="w-full mt-4">
+                          {parseFloat(plan.price) > (user?.plan?.price || 0) ? 'Mejorar Plan' : 'Cambiar Plan'}
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* VISUAL & REGIONAL PREFERENCES TAB */}

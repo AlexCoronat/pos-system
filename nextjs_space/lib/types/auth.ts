@@ -53,6 +53,22 @@ export interface AssignedLocation {
   }
 }
 
+// Subscription plan details
+export interface SubscriptionPlan {
+  id: number
+  name: string
+  description?: string
+  price: number
+  currency: string
+  billingPeriod: string
+  maxUsers: number
+  maxLocations: number
+  maxProducts: number
+  features: string[]
+  whatsappEnabled: boolean
+  monthlyQuoteLimit: number
+}
+
 // Main user interface matching the Angular service
 export interface AuthUser {
   id: string
@@ -69,6 +85,7 @@ export interface AuthUser {
   businessName?: string
   planId?: number
   planName?: string
+  plan?: SubscriptionPlan
   isBusinessOwner?: boolean
   // Location info
   defaultLocationId?: number

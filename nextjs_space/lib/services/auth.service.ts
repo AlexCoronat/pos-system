@@ -231,7 +231,20 @@ class AuthService {
 
       if (businessError) throw businessError
 
-      // Create first location
+      // IMPORTANT: Update user_details with business_id FIRST
+      // This is needed before creating location due to RLS policies
+      // that check get_user_business_id() which queries user_details
+      const { error: updateError } = await this.supabase
+        .from('user_details')
+        .update({
+          business_id: business.id,
+          role_id: adminRole?.id || null
+        })
+        .eq('id', userId)
+
+      if (updateError) throw updateError
+
+      // Now create first location (RLS will now allow this because user has business_id)
       const { data: location, error: locationError } = await this.supabase
         .from('locations')
         .insert({
@@ -252,17 +265,15 @@ class AuthService {
 
       if (locationError) throw locationError
 
-      // Update user_details with business_id, admin role, and location
-      const { error: updateError } = await this.supabase
+      // Update user_details with default location
+      const { error: locationUpdateError } = await this.supabase
         .from('user_details')
         .update({
-          business_id: business.id,
-          role_id: adminRole?.id || null,
           default_location_id: location.id
         })
         .eq('id', userId)
 
-      if (updateError) throw updateError
+      if (locationUpdateError) throw locationUpdateError
 
       // Assign user to location
       const { error: assignError } = await this.supabase
@@ -540,7 +551,20 @@ class AuthService {
           name,
           owner_id,
           plan_id,
-          plan:subscription_plans!plan_id(id, name)
+          plan:subscription_plans!plan_id(
+            id,
+            name,
+            description,
+            price,
+            currency,
+            billing_period,
+            max_users,
+            max_locations,
+            max_products,
+            features,
+            whatsapp_enabled,
+            monthly_quote_limit
+          )
         ),
         defaultLocation:locations!default_location_id(*),
         userLocations:user_locations!user_locations_user_id_fkey(
@@ -569,6 +593,23 @@ class AuthService {
     // Get permissions from role
     const permissions = this.parsePermissions(userData.role?.permissions)
 
+    // Transform plan data if exists
+    const planData = userData.business?.plan
+    const plan = planData ? {
+      id: planData.id,
+      name: planData.name,
+      description: planData.description || undefined,
+      price: parseFloat(planData.price) || 0,
+      currency: planData.currency || 'MXN',
+      billingPeriod: planData.billing_period || 'monthly',
+      maxUsers: planData.max_users || 1,
+      maxLocations: planData.max_locations || 1,
+      maxProducts: planData.max_products || 50,
+      features: planData.features || [],
+      whatsappEnabled: planData.whatsapp_enabled || false,
+      monthlyQuoteLimit: planData.monthly_quote_limit || 0
+    } : undefined
+
     // Transform to AuthUser format
     const user: AuthUser = {
       id: userData.id,
@@ -585,6 +626,7 @@ class AuthService {
       businessName: userData.business?.name || undefined,
       planId: userData.business?.plan_id || undefined,
       planName: userData.business?.plan?.name || undefined,
+      plan: plan,
       isBusinessOwner: userData.business?.owner_id === userId,
       // Location info
       defaultLocationId: userData.default_location_id || undefined,
