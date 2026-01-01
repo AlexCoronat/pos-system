@@ -15,6 +15,7 @@ export default getRequestConfig(async ({ locale }) => {
     finalLocale = cookieStore.get('NEXT_LOCALE')?.value || undefined
   }
 
+
   // Default to 'es' if still no locale found
   if (!finalLocale) {
     finalLocale = 'es'
